@@ -43,6 +43,7 @@ This project is an open-source digital implementation of **Android: Netrunner**,
 4. **Determinism:** All randomness goes through the seeded RNG stored in `GameState.rng` (`src/core/rng.ts`); card instance ids come from `GameState.nextInstanceId`. `src/core/` must never call `Math.random`, `Date.now` or `new Date()`. Same seed + same action list = identical state. `tests/enginePurity.test.ts` enforces this and invariant 2.
 5. **Plain-data state:** `GameState` is plain JSON. Card instances store only `cardCode`; look up definitions with `cardDef(card)` / `getCardDefinition(code)` from `src/core/cards.ts`.
 6. **One way in:** Every state change goes through `executeAction(state, action)`, which never mutates its input and throws `IllegalActionError` for illegal moves. Use `getLegalActions(state, side)` to drive UI buttons and AI rather than re-implementing rules checks. Import engine APIs from `src/core` (the `index.ts` barrel).
+7. **Player decisions are prompts:** When the rules need a player to choose (mulligan, discard to hand size, trash on access, and future "you may" effects), the engine pushes a `Prompt` onto `GameState.pendingPrompts` (`src/core/types/prompts.ts`, `engine/prompts.ts`). While any prompt is pending, the only legal action is `RESOLVE_PROMPT` for the first one, from its side. Multi-step flows (e.g. breach via `activeRun.accessQueue`, end of turn via `finishEndTurn`) must be resumable after the answer. Add new decision types as a new `Prompt` kind + `PromptChoice` + a case in `engine/actions/prompt.ts` + answers in `legalActions.ts`.
 
 ---
 
@@ -69,14 +70,16 @@ Netrunner/
 │   │   ├── types/
 │   │   │   ├── card.ts                 <-- Card schema, instances, tokens
 │   │   │   ├── state.ts                <-- GameState, CorpState, RunnerState, RunState
-│   │   │   └── actions.ts              <-- Legal player actions & types
+│   │   │   ├── actions.ts              <-- Legal player actions & types
+│   │   │   └── prompts.ts              <-- Prompt / PromptChoice types
 │   │   └── engine/
 │   │       ├── gameState.ts            <-- createInitialGameState(GameSetup): seeded deal
 │   │       ├── gameEngine.ts           <-- executeAction: clones state, dispatches to handler table
 │   │       ├── legalActions.ts         <-- getLegalActions(state, side)
 │   │       ├── errors.ts               <-- IllegalActionError / NotImplementedError
+│   │       ├── prompts.ts              <-- pushPrompt / activePrompt (player-choice queue)
 │   │       ├── helpers.ts, log.ts      <-- Shared engine utilities
-│   │       └── actions/                <-- One module per action group (basic, install, corp, run, turn)
+│   │       └── actions/                <-- One module per action group (basic, install, corp, run, turn, prompt)
 │   ├── data/
 │   │   ├── cards.ts                    <-- Typed card lookup utilities
 │   │   ├── starterDecks.ts             <-- Starter decks (Catalyst / Syndicate)
@@ -96,6 +99,8 @@ Netrunner/
     ├── gameEngine.test.ts              <-- Core action tests
     ├── determinism.test.ts             <-- Seeded RNG + replay tests
     ├── legalActions.test.ts            <-- getLegalActions tests
+    ├── rulesFixes.test.ts              <-- Regression tests for rules fixes
+    ├── prompts.test.ts                 <-- Mulligan, discard, trash-on-access prompts
     └── enginePurity.test.ts            <-- Guards: no Math.random/Date.now/React/DOM in src/core
 ```
 
@@ -114,7 +119,7 @@ Netrunner/
 - [x] Interactive Tabletop UI with live server columns, rig layout, and log feed.
 - [x] Engine refactor: seeded RNG in state, deterministic ids, cardCode-only instances, per-action handlers, `getLegalActions`.
 - [x] Rules fixes: turn enforcement, install restrictions (no events/operations, no agendas/assets in centrals, one agenda/asset per remote), MU limit, agendas can't be rezzed, ice rezzed only on approach (Corp rez window in run overlay), advancing only advanceable cards, scoring as a separate `SCORE_AGENDA` action, breach accesses HQ (random, seeded) / R&D top / all of Archives, no skipped cards on access, Corp mandatory draw on turn 1.
-- [ ] **NEXT:** Player-choice prompt model (`pendingPrompt` in state) to unlock: trashing accessed cards, discard to hand size, mulligan, must-spend-all-clicks, and "you may" triggers.
+- [x] Player-choice prompt model (`pendingPrompts` + `RESOLVE_PROMPT`): mulligan (Corp then Runner), discard to hand size at end of turn, pay-to-trash on access. Turns can only end once all clicks are spent. UI: `PromptPanel` modal.
 - [ ] **NEXT:** Implement Ice encounter mechanics (Ice strength, Icebreaker matching, breaking subroutines).
 - [ ] **NEXT:** Support Agenda scoring & advancement counters with victory checks.
 
@@ -172,3 +177,4 @@ Netrunner/
 | **2026-10-21** | Antigravity | Fixed action overflow bug: separated active turn action controls into dedicated toolbars; added `min-w-0` to all flex containers to prevent large cards from expanding past the screen; anchored "End Turn" button cleanly within the UI and added a quick "End Turn" button to the sticky top header. |
 | **2026-10-21** | Claude | Engine refactor (no rules changes): seeded mulberry32 RNG stored in `GameState.rng`, deterministic instance ids, removed `Date.now`/`Math.random` from core; card instances now store only `cardCode` (definitions via `cardDef()`); split `executeAction` into a typed per-action handler table under `engine/actions/` with `IllegalActionError`/`NotImplementedError`; added `getLegalActions`/`isLegalAction` and a `src/core/index.ts` barrel; UI shows the seed and accepts `?seed=`; added determinism, legal-action and engine-purity tests; `tests/` now typechecked. |
 | **2026-10-21** | Claude | Rules-bug fixes: turn/run enforcement on every action; install restrictions + MU limit; agendas unrezzable; ice rez only while approached (Corp rez button in `RunOverlay`); new `SCORE_AGENDA` action replaces auto-score, advance limited to agendas and "You can advance this" cards; breach collects candidates first (fixes skipped cards) and accesses HQ/R&D/Archives; Runner can't draw from an empty Stack; Corp mandatory draw on turn 1; Advance/Score/Rez buttons in `ServerColumn` driven by `isLegalAction`; 18 regression tests in `tests/rulesFixes.test.ts`. |
+| **2026-10-21** | Claude | Player-choice prompts: `GameState.pendingPrompts` queue + `RESOLVE_PROMPT` action (only legal action while a prompt is pending); mulligan at setup (Corp first turn and its mandatory draw start after both decide; clicks start at 0); END_TURN requires all clicks spent and prompts a discard when over hand size; breach is now a resumable `accessQueue` with a pay-to-trash prompt for cards with a trash cost (not in Archives); `getLegalActions` enumerates prompt answers; new `PromptPanel` UI and disabled End Turn buttons; `tests/prompts.test.ts` (66 tests total). |

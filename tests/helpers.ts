@@ -1,9 +1,31 @@
-import { createInitialGameState, cardDef, GameState, CardTypeCode } from '../src/core';
+import { createInitialGameState, cardDef, executeAction, GameState, CardTypeCode } from '../src/core';
 import { starterGameSetup } from '../src/data/starterDecks';
 
-/** A fresh starter-deck game. Same seed always gives the same deal. */
-export function newGame(seed = 1): GameState {
+/** A starter-deck game still waiting on both mulligan decisions. */
+export function newGameAtSetup(seed = 1): GameState {
   return createInitialGameState(starterGameSetup(seed));
+}
+
+/** A fresh starter-deck game where both players kept, at the start of Corp turn 1. */
+export function newGame(seed = 1): GameState {
+  let state = newGameAtSetup(seed);
+  while (state.pendingPrompts.length > 0) {
+    const p = state.pendingPrompts[0];
+    state = executeAction(state, {
+      type: 'RESOLVE_PROMPT',
+      player: p.side,
+      promptId: p.id,
+      choice: { kind: 'mulligan', mulligan: false },
+    });
+  }
+  return state;
+}
+
+/** Answers the active prompt (test shorthand). */
+export function answer(state: GameState, choice: import('../src/core').PromptChoice): GameState {
+  const p = state.pendingPrompts[0];
+  if (!p) throw new Error('No prompt pending');
+  return executeAction(state, { type: 'RESOLVE_PROMPT', player: p.side, promptId: p.id, choice });
 }
 
 /**

@@ -2,6 +2,7 @@ import { SideCode } from '../types/card';
 import { GameAction } from '../types/actions';
 import { GameState } from '../types/state';
 import { isLegalAction } from './gameEngine';
+import { activePrompt } from './prompts';
 
 /**
  * Lists every action the given side can legally take right now.
@@ -17,6 +18,9 @@ export function getLegalActions(state: GameState, side: SideCode): GameAction[] 
 }
 
 function candidateActions(state: GameState, side: SideCode): GameAction[] {
+  const prompt = activePrompt(state);
+  if (prompt) return prompt.side === side ? promptAnswers(state) : [];
+
   const candidates: GameAction[] = [];
 
   if (state.activeRun) {
@@ -67,4 +71,30 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
   }
 
   return candidates;
+}
+
+/** Every possible answer to the active prompt. */
+function promptAnswers(state: GameState): GameAction[] {
+  const prompt = activePrompt(state)!;
+  const base = { type: 'RESOLVE_PROMPT' as const, player: prompt.side, promptId: prompt.id };
+  switch (prompt.kind) {
+    case 'mulligan':
+      return [false, true].map(mulligan => ({ ...base, choice: { kind: 'mulligan' as const, mulligan } }));
+    case 'access_trash':
+      return [false, true].map(trash => ({ ...base, choice: { kind: 'access_trash' as const, trash } }));
+    case 'discard': {
+      const hand = prompt.side === 'corp' ? state.corp.hq : state.runner.grip;
+      return combinations(hand.map(c => c.instanceId), prompt.count).map(cardInstanceIds => ({
+        ...base,
+        choice: { kind: 'discard' as const, cardInstanceIds },
+      }));
+    }
+  }
+}
+
+function combinations<T>(items: T[], k: number): T[][] {
+  if (k === 0) return [[]];
+  if (items.length < k) return [];
+  const [first, ...rest] = items;
+  return [...combinations(rest, k - 1).map(c => [first, ...c]), ...combinations(rest, k)];
 }

@@ -18,7 +18,7 @@ describe('Legal actions', () => {
     expect(types).toContain('GAIN_CREDIT');
     expect(types).toContain('DRAW_CARD');
     expect(types).toContain('INSTALL_CARD');
-    expect(types).toContain('END_TURN');
+    expect(types).not.toContain('END_TURN'); // clicks must be spent first
   });
 
   it('drops click actions once clicks run out', () => {

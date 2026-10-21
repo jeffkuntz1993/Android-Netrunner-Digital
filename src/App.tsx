@@ -6,6 +6,7 @@ import { ServerColumn } from './ui/components/ServerColumn';
 import { RigView } from './ui/components/RigView';
 import { RunOverlay } from './ui/components/RunOverlay';
 import { LogFeed } from './ui/components/LogFeed';
+import { PromptPanel } from './ui/components/PromptPanel';
 import { CardZoomModal } from './ui/components/CardZoomModal';
 import {
   Coins,
@@ -86,7 +87,8 @@ export default function App() {
             {/* Quick Sticky End Turn Button */}
             <button
               onClick={() => handleAction({ type: 'END_TURN', player: activePlayer })}
-              className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all shadow flex items-center gap-1 ${
+              disabled={!isLegalAction(gameState, { type: 'END_TURN', player: activePlayer })}
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all shadow flex items-center gap-1 disabled:opacity-40 ${
                 activePlayer === 'corp'
                   ? 'bg-cyan-700 hover:bg-cyan-600 text-white border-cyan-500 shadow-cyan-950'
                   : 'bg-pink-700 hover:bg-pink-600 text-white border-pink-500 shadow-pink-950'
@@ -300,7 +302,8 @@ export default function App() {
               {/* End Turn Button - Prominently Anchored */}
               <button
                 onClick={() => handleAction({ type: 'END_TURN', player: 'corp' })}
-                className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs font-bold rounded-xl border border-cyan-400 transition-all shadow-lg shadow-cyan-950 flex items-center gap-1.5 ml-auto hover:scale-105"
+              disabled={!isLegalAction(gameState, { type: 'END_TURN', player: 'corp' })}
+                className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs font-bold rounded-xl border border-cyan-400 transition-all shadow-lg shadow-cyan-950 flex items-center gap-1.5 ml-auto hover:scale-105 disabled:opacity-40 disabled:hover:scale-100"
               >
                 End Corp Turn <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -420,7 +423,8 @@ export default function App() {
               {/* End Turn Button - Prominently Anchored */}
               <button
                 onClick={() => handleAction({ type: 'END_TURN', player: 'runner' })}
-                className="px-5 py-2 bg-cyber-neonPink hover:bg-pink-600 text-white font-mono text-xs font-bold rounded-xl border border-pink-400 transition-all shadow-lg shadow-pink-950 flex items-center gap-1.5 ml-auto hover:scale-105"
+              disabled={!isLegalAction(gameState, { type: 'END_TURN', player: 'runner' })}
+                className="px-5 py-2 bg-cyber-neonPink hover:bg-pink-600 text-white font-mono text-xs font-bold rounded-xl border border-pink-400 transition-all shadow-lg shadow-pink-950 flex items-center gap-1.5 ml-auto hover:scale-105 disabled:opacity-40 disabled:hover:scale-100"
               >
                 End Runner Turn <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -465,6 +469,16 @@ export default function App() {
             ? () => handleAction(rezAction(approachedIce))
             : undefined
         }
+        onInspectCard={setInspectedCard}
+      />
+
+      {/* Pending player decision (mulligan, discard, trash on access) */}
+      <PromptPanel
+        state={gameState}
+        onAnswer={(choice) => {
+          const prompt = gameState.pendingPrompts[0];
+          if (prompt) handleAction({ type: 'RESOLVE_PROMPT', player: prompt.side, promptId: prompt.id, choice });
+        }}
         onInspectCard={setInspectedCard}
       />
 

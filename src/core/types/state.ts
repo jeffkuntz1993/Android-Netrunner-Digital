@@ -1,5 +1,6 @@
 import { CardInstance, SideCode } from './card';
 import { RngState } from '../rng';
+import { Prompt } from './prompts';
 
 export type CentralServerType = 'hq' | 'rd' | 'archives';
 export type ServerType = CentralServerType | string; // remote names like "remote-1"
@@ -72,6 +73,8 @@ export interface RunState {
   isJackedOut: boolean;
   cannotJackOut: boolean;
   subroutinesToResolve: string[];
+  /** Instance ids still to be accessed during the breach, in order. */
+  accessQueue: string[];
 }
 
 export type TurnPlayer = SideCode;
@@ -96,6 +99,10 @@ export interface GameState {
   rng: RngState;
   /** Counter for deterministic card instance ids. */
   nextInstanceId: number;
+  /** Decisions the game is waiting on; the first one must be resolved next. */
+  pendingPrompts: Prompt[];
+  /** Counter for deterministic prompt ids. */
+  nextPromptId: number;
   turnNumber: number;
   activePlayer: TurnPlayer;
   phase: GamePhase;

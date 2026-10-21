@@ -6,6 +6,7 @@ import { installCard } from './actions/install';
 import { advanceCard, rezCard, scoreAgenda } from './actions/corp';
 import { continueRun, initiateRun, jackOut } from './actions/run';
 import { endTurn } from './actions/turn';
+import { resolvePrompt } from './actions/prompt';
 
 export { addLog } from './log';
 
@@ -33,6 +34,7 @@ const handlers: ActionHandlers = {
   CONTINUE_RUN: continueRun,
   JACK_OUT: jackOut,
   END_TURN: endTurn,
+  RESOLVE_PROMPT: resolvePrompt,
   PLAY_OPERATION_OR_EVENT: notImplemented,
   PURGE_VIRUS: notImplemented,
   BREAK_SUBROUTINE: notImplemented,
@@ -47,6 +49,11 @@ const handlers: ActionHandlers = {
 export function executeAction(prevState: GameState, action: GameAction): GameState {
   if (prevState.winner) {
     throw new IllegalActionError('Game is already over.');
+  }
+  // While a decision is pending, answering it is the only legal action.
+  if (prevState.pendingPrompts.length > 0 && action.type !== 'RESOLVE_PROMPT') {
+    const p = prevState.pendingPrompts[0];
+    throw new IllegalActionError(`Waiting on a decision: ${p.message}`);
   }
   const state = structuredClone(prevState);
   const handler = handlers[action.type] as (state: GameState, action: GameAction) => void;

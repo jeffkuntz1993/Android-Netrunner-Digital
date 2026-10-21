@@ -4,7 +4,8 @@ import { GameState, RunState, ServerState } from '../../types/state';
 import { cardDef } from '../../cards';
 import { nextInt } from '../../rng';
 import { addLog } from '../log';
-import { checkAgendaVictory, illegal, removeCard, requireActionPhase, requireClicks } from '../helpers';
+import { checkAgendaVictory, illegal, locateCorpCard, removeCard, requireActionPhase, requireClicks } from '../helpers';
+import { pushPrompt } from '../prompts';
 
 export function initiateRun(state: GameState, action: InitiateRunAction): void {
   if (action.player !== 'runner') illegal('Only Runner can initiate runs');
@@ -26,6 +27,7 @@ export function initiateRun(state: GameState, action: InitiateRunAction): void {
     isJackedOut: false,
     cannotJackOut: false,
     subroutinesToResolve: [],
+    accessQueue: [],
   };
   state.phase = 'run';
 }
@@ -53,7 +55,6 @@ export function continueRun(state: GameState, action: ContinueRunAction): void {
     run.isSuccessful = true;
     addLog(state, 'runner', `Run successful on ${server.name}! Accessing cards.`);
     breachServer(state, server);
-    endRun(state);
   }
 }
 
@@ -80,47 +81,60 @@ function endRun(state: GameState): void {
   state.phase = 'runner_turn';
 }
 
-/** A card the Runner accesses, plus the zone it currently lives in. */
-interface AccessCandidate {
-  card: CardInstance;
-  zone: CardInstance[];
-}
-
 /**
- * Accesses every card the breach reaches: root cards of any server, plus
+ * Queues every card the breach reaches: root cards of any server, plus
  * 1 random card from HQ, the top card of R&D, or all of Archives.
- * Candidates are collected before anything moves, so stealing a card can't
- * cause another to be skipped.
- * TODO: trashing accessed cards (needs a Runner choice prompt).
+ * Candidates are fixed before anything moves, so stealing a card can't
+ * cause another to be skipped. Accessing may pause on a trash prompt;
+ * resolving it resumes the queue.
  */
 function breachServer(state: GameState, server: ServerState): void {
-  const candidates: AccessCandidate[] = server.root.map(card => ({ card, zone: server.root }));
+  const ids = server.root.map(card => card.instanceId);
 
   if (server.id === 'hq' && state.corp.hq.length > 0) {
-    const card = state.corp.hq[nextInt(state.rng, state.corp.hq.length)];
-    candidates.push({ card, zone: state.corp.hq });
+    ids.push(state.corp.hq[nextInt(state.rng, state.corp.hq.length)].instanceId);
   } else if (server.id === 'rd' && state.corp.rd.length > 0) {
-    candidates.push({ card: state.corp.rd[0], zone: state.corp.rd });
+    ids.push(state.corp.rd[0].instanceId);
   } else if (server.id === 'archives') {
     // Breaching Archives turns all its cards face up.
     state.corp.archives.faceUp.push(...state.corp.archives.faceDown);
     state.corp.archives.faceDown = [];
-    for (const card of state.corp.archives.faceUp) {
-      candidates.push({ card, zone: state.corp.archives.faceUp });
-    }
+    ids.push(...state.corp.archives.faceUp.map(card => card.instanceId));
   }
 
-  for (const { card, zone } of candidates) {
-    accessCard(state, card, zone);
-    if (state.winner) return;
-  }
+  state.activeRun!.accessQueue = ids;
+  continueAccess(state);
 }
 
-function accessCard(state: GameState, card: CardInstance, zone: CardInstance[]): void {
+/** Accesses queued cards until one needs a Runner decision, then ends the run. */
+export function continueAccess(state: GameState): void {
+  const run = state.activeRun!;
+  while (run.accessQueue.length > 0) {
+    const found = locateCorpCard(state, run.accessQueue.shift()!);
+    if (!found) continue;
+    if (accessCard(state, found.card, found.zone, found.inArchives)) return;
+    if (state.winner) return;
+  }
+  endRun(state);
+}
+
+/** Resolves one access. Returns true if it is waiting on a trash decision. */
+function accessCard(state: GameState, card: CardInstance, zone: CardInstance[], inArchives: boolean): boolean {
   const def = cardDef(card);
   if (def.type_code !== 'agenda') {
     addLog(state, 'runner', `Runner accessed ${def.title}.`);
-    return;
+    const trashCost = def.trash_cost;
+    if (!inArchives && trashCost !== null && trashCost !== undefined && state.runner.credits >= trashCost) {
+      pushPrompt(state, {
+        kind: 'access_trash',
+        side: 'runner',
+        cardInstanceId: card.instanceId,
+        trashCost,
+        message: `Runner: pay ${trashCost} [credit] to trash ${def.title}?`,
+      });
+      return true;
+    }
+    return false;
   }
   removeCard(zone, card);
   card.isRezzed = true;
@@ -130,4 +144,5 @@ function accessCard(state: GameState, card: CardInstance, zone: CardInstance[]):
   state.runner.score += pts;
   addLog(state, 'runner', `Runner accessed and stole ${def.title} for ${pts} agenda point(s)! Total: ${state.runner.score}`);
   checkAgendaVictory(state);
+  return false;
 }

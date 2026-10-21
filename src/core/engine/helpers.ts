@@ -51,6 +51,25 @@ export function findInstalledCorpCard(
   return null;
 }
 
+/** Finds a Corp card anywhere the Runner can access it (servers, HQ, R&D, Archives). */
+export function locateCorpCard(
+  state: GameState,
+  instanceId: string
+): { card: CardInstance; zone: CardInstance[]; inArchives: boolean } | null {
+  const zones: [CardInstance[], boolean][] = [
+    ...Object.values(state.corp.servers).flatMap(s => [[s.root, false], [s.ice, false]] as [CardInstance[], boolean][]),
+    [state.corp.hq, false],
+    [state.corp.rd, false],
+    [state.corp.archives.faceUp, true],
+    [state.corp.archives.faceDown, true],
+  ];
+  for (const [zone, inArchives] of zones) {
+    const card = zone.find(c => c.instanceId === instanceId);
+    if (card) return { card, zone, inArchives };
+  }
+  return null;
+}
+
 /** Removes a card from an array by instance id. Returns true if it was there. */
 export function removeCard(cards: CardInstance[], card: CardInstance): boolean {
   const idx = cards.findIndex(c => c.instanceId === card.instanceId);

@@ -1,4 +1,5 @@
 import { SideCode } from './card';
+import { PromptChoice } from './prompts';
 
 export type GameActionType =
   // Basic clicks
@@ -17,6 +18,7 @@ export type GameActionType =
   | 'BREAK_SUBROUTINE'
   | 'ACCESS_CARD'
   | 'PASS_PRIORITY'
+  | 'RESOLVE_PROMPT'
   | 'END_TURN';
 
 export interface BaseAction {
@@ -92,6 +94,12 @@ export interface PassPriorityAction extends BaseAction {
   type: 'PASS_PRIORITY';
 }
 
+export interface ResolvePromptAction extends BaseAction {
+  type: 'RESOLVE_PROMPT';
+  promptId: string;
+  choice: PromptChoice;
+}
+
 export interface EndTurnAction extends BaseAction {
   type: 'END_TURN';
 }
@@ -111,4 +119,5 @@ export type GameAction =
   | BreakSubroutineAction
   | AccessCardAction
   | PassPriorityAction
+  | ResolvePromptAction
   | EndTurnAction;

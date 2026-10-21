@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createRng, nextFloat, shuffleInPlace, executeAction, GameAction, GameState } from '../src/core';
-import { newGame } from './helpers';
+import { newGame, answer } from './helpers';
 
 const deckOrder = (s: GameState) => ({
   hq: s.corp.hq.map(c => c.cardCode),
@@ -39,16 +39,29 @@ describe('Deterministic games', () => {
   it('replays a sequence of actions to an identical state', () => {
     const actions: GameAction[] = [
       { type: 'GAIN_CREDIT', player: 'corp' },
-      { type: 'DRAW_CARD', player: 'corp' },
+      { type: 'GAIN_CREDIT', player: 'corp' },
       { type: 'GAIN_CREDIT', player: 'corp' },
       { type: 'END_TURN', player: 'corp' },
-      { type: 'DRAW_CARD', player: 'runner' },
-      { type: 'INITIATE_RUN', player: 'runner', targetServerId: 'hq' },
+
+      { type: 'INITIATE_RUN', player: 'runner', targetServerId: 'archives' },
       { type: 'CONTINUE_RUN', player: 'runner' },
+      { type: 'GAIN_CREDIT', player: 'runner' },
+      { type: 'GAIN_CREDIT', player: 'runner' },
+      { type: 'GAIN_CREDIT', player: 'runner' },
       { type: 'END_TURN', player: 'runner' },
     ];
-    const play = () => actions.reduce(executeAction, newGame(99));
-    expect(play()).toEqual(play());
+    // Answer any discard prompt with the first card(s) in hand.
+    const step = (state: GameState, action: GameAction) => {
+      const next = executeAction(state, action);
+      const p = next.pendingPrompts[0];
+      if (p?.kind !== 'discard') return next;
+      const hand = p.side === 'corp' ? next.corp.hq : next.runner.grip;
+      return answer(next, { kind: 'discard', cardInstanceIds: hand.slice(0, p.count).map(c => c.instanceId) });
+    };
+    const play = () => actions.reduce(step, newGame(99));
+    const final = play();
+    expect(final).toEqual(play());
+    expect(final.turnNumber).toBe(2);
   });
 
   it('keeps state plain JSON (serializable for saves, replays and multiplayer)', () => {

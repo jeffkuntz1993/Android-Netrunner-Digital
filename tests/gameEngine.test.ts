@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { executeAction } from '../src/core';
-import { newGame } from './helpers';
+import { newGame, answer, startRunnerTurn } from './helpers';
 
 describe('Netrunner Rules Engine', () => {
   it('initializes game state correctly according to official rules', () => {
@@ -20,7 +20,7 @@ describe('Netrunner Rules Engine', () => {
 
     // Runner starting resources
     expect(state.runner.credits).toBe(5);
-    expect(state.runner.clicks).toBe(4);
+    expect(state.runner.clicks).toBe(0); // gained when the Runner's turn begins
     expect(state.runner.grip.length).toBe(5);
   });
 
@@ -43,6 +43,11 @@ describe('Netrunner Rules Engine', () => {
 
     // End corp turn
     state = executeAction(state, { type: 'END_TURN', player: 'corp' });
+    // 6 cards in HQ after the turn-1 draw: discard 1 before the turn passes
+    expect(state.activePlayer).toBe('corp');
+    expect(state.pendingPrompts[0]).toMatchObject({ kind: 'discard', side: 'corp', count: 1 });
+    state = answer(state, { kind: 'discard', cardInstanceIds: [state.corp.hq[0].instanceId] });
+    expect(state.corp.archives.faceDown).toHaveLength(1);
     expect(state.activePlayer).toBe('runner');
     expect(state.phase).toBe('runner_turn');
     expect(state.runner.clicks).toBe(4);
@@ -52,8 +57,7 @@ describe('Netrunner Rules Engine', () => {
     let state = newGame();
 
     // Pass turn to runner
-    state.activePlayer = 'runner';
-    state.phase = 'runner_turn';
+    startRunnerTurn(state);
 
     // Initiate run on HQ
     state = executeAction(state, { type: 'INITIATE_RUN', player: 'runner', targetServerId: 'hq' });

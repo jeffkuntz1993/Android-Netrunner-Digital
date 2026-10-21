@@ -46,12 +46,12 @@ export function createInitialGameState(setup: GameSetup): GameState {
   const shuffledCorpDeck = shuffleInPlace(rng, setup.corpDeck.map(code => createCardInstance(ids, code)));
   const shuffledRunnerDeck = shuffleInPlace(rng, setup.runnerDeck.map(code => createCardInstance(ids, code)));
 
-  // Corp draws opening hand of 5 cards, plus the mandatory draw that
-  // starts every Corp turn, including the first.
-  const corpHand = shuffledCorpDeck.splice(0, 6);
+  // Corp draws opening hand of 5 cards. The turn-1 mandatory draw happens
+  // when the Corp's first turn begins, after both players decide on mulligans.
+  const corpHand = shuffledCorpDeck.splice(0, 5);
   const corpState: CorpState = {
     credits: 5,
-    clicks: 3,
+    clicks: 0, // gained when the first turn begins
     maxClicks: 3,
     badPublicity: 0,
     handSizeLimit: 5,
@@ -75,7 +75,7 @@ export function createInitialGameState(setup: GameSetup): GameState {
 
   const runnerState: RunnerState = {
     credits: 5,
-    clicks: 4,
+    clicks: 0, // gained when the Runner's turn begins
     maxClicks: 4,
     tags: 0,
     coreDamage: 0,
@@ -95,6 +95,11 @@ export function createInitialGameState(setup: GameSetup): GameState {
     id: `game-${rng.seed}`,
     rng,
     nextInstanceId: ids.nextInstanceId,
+    pendingPrompts: [
+      { id: 'prompt-1', side: 'corp', kind: 'mulligan', message: 'Corp: keep your opening hand or mulligan?' },
+      { id: 'prompt-2', side: 'runner', kind: 'mulligan', message: 'Runner: keep your opening hand or mulligan?' },
+    ],
+    nextPromptId: 3,
     turnNumber: 1,
     activePlayer: 'corp', // Corp always goes first in Netrunner
     phase: 'corp_turn',
@@ -108,7 +113,7 @@ export function createInitialGameState(setup: GameSetup): GameState {
         id: 'log-0',
         turnNumber: 1,
         player: 'system',
-        message: `Game started (seed ${rng.seed}). Corp takes the first turn with 3 clicks and 5 credits, after their mandatory draw.`,
+        message: `Game started (seed ${rng.seed}). Both players may mulligan, then the Corp takes the first turn.`,
       },
     ],
   };
