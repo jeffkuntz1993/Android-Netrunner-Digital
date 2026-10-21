@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CardInstance } from '../../core/types/card';
-import { getCardImageUrl } from '../../data/cards';
+import { cardDef, getCardImageUrl } from '../../data/cards';
 import { Shield, Zap, Award, Trash2, Coins, Clock, AlertCircle, Lock } from 'lucide-react';
 
 interface CardPopoutProps {
@@ -19,7 +19,7 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
 }) => {
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [imgSrc, setImgSrc] = useState(() => getCardImageUrl(card.cardCode));
-  const { def } = card;
+  const def = cardDef(card);
 
   useLayoutEffect(() => {
     if (!targetRect) return;

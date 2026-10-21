@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { CardInstance } from '../../core/types/card';
-import { getCardImageUrl, getCardBackUrl } from '../../data/cards';
+import { cardDef, getCardImageUrl, getCardBackUrl } from '../../data/cards';
 import { Layers, Lock, Eye, AlertCircle } from 'lucide-react';
 import { CardPopout } from './CardPopout';
 
@@ -28,7 +28,7 @@ export const CardView: React.FC<CardViewProps> = ({
   const [showTooltip, setShowTooltip] = useState(false);
   const [imageError, setImageError] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-  const { def } = card;
+  const def = cardDef(card);
 
   // Sizing definitions: Much larger than original 64x96!
   // sm: 112x160 (75% larger than original sm)

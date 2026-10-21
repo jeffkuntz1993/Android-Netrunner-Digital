@@ -57,7 +57,6 @@ export interface CardDefinition {
 export interface CardInstance {
   instanceId: string;
   cardCode: string;
-  def: CardDefinition;
   isRezzed: boolean;
   advancementCounters: number;
   tokens: Record<string, number>;

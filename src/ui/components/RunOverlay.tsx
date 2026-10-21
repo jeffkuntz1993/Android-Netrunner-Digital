@@ -2,6 +2,7 @@ import React from 'react';
 import { GameState } from '../../core/types/state';
 import { CardInstance } from '../../core/types/card';
 import { CardView } from './CardView';
+import { cardDef } from '../../data/cards';
 import { ArrowRight, LogOut, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 interface RunOverlayProps {
@@ -56,17 +57,17 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
                 <div className="flex items-center gap-2 mb-1">
                   <ShieldAlert className="w-4 h-4 text-pink-400" />
                   <span className="text-sm font-bold text-slate-100 font-cyber">
-                    {currentIce.isRezzed ? currentIce.def.title : 'Unrezzed Ice Encounter'}
+                    {currentIce.isRezzed ? cardDef(currentIce).title : 'Unrezzed Ice Encounter'}
                   </span>
                 </div>
                 <div className="text-xs text-slate-400 font-mono leading-relaxed">
                   {currentIce.isRezzed ? (
                     <>
                       <div className="text-cyan-300 font-bold">
-                        Strength: {currentIce.def.strength ?? 0} • {currentIce.def.keywords}
+                        Strength: {cardDef(currentIce).strength ?? 0} • {cardDef(currentIce).keywords}
                       </div>
                       <div className="text-[11px] text-slate-300 mt-1 line-clamp-2">
-                        {currentIce.def.text}
+                        {cardDef(currentIce).text}
                       </div>
                     </>
                   ) : (

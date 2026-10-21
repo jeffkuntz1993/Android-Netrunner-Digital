@@ -1,0 +1,11 @@
+// Public surface of the headless engine. UI, AI and server code should import from here.
+export * from './types/card';
+export * from './types/state';
+export * from './types/actions';
+export * from './rng';
+export * from './cards';
+export * from './engine/errors';
+export { createInitialGameState, createCardInstance } from './engine/gameState';
+export type { GameSetup } from './engine/gameState';
+export { executeAction, isLegalAction, addLog } from './engine/gameEngine';
+export { getLegalActions } from './engine/legalActions';

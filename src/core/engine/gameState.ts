@@ -1,17 +1,23 @@
-import { CardDefinition, CardInstance } from '../types/card';
+import { CardInstance } from '../types/card';
 import { CorpState, GameState, RunnerRig, RunnerState, ServerState } from '../types/state';
+import { createRng, shuffleInPlace } from '../rng';
+import { getCardDefinition } from '../cards';
 
-let nextInstanceId = 1;
-
-export function resetInstanceCounter() {
-  nextInstanceId = 1;
+export interface GameSetup {
+  /** Seed for all randomness in the game. Same seed + same actions = same game. */
+  seed: number;
+  corpIdentity: string;
+  corpDeck: string[];
+  runnerIdentity: string;
+  runnerDeck: string[];
 }
 
-export function createCardInstance(def: CardDefinition): CardInstance {
+/** Creates a new card instance with a deterministic id drawn from the state's counter. */
+export function createCardInstance(state: Pick<GameState, 'nextInstanceId'>, cardCode: string): CardInstance {
+  getCardDefinition(cardCode); // fail fast on unknown codes
   return {
-    instanceId: `inst-${nextInstanceId++}`,
-    cardCode: def.code,
-    def,
+    instanceId: `inst-${state.nextInstanceId++}`,
+    cardCode,
     isRezzed: false,
     advancementCounters: 0,
     tokens: {},
@@ -19,27 +25,14 @@ export function createCardInstance(def: CardDefinition): CardInstance {
   };
 }
 
-export function shuffle<T>(array: T[], seed?: number): T[] {
-  const result = [...array];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
+export function createInitialGameState(setup: GameSetup): GameState {
+  const rng = createRng(setup.seed);
+  const ids = { nextInstanceId: 1 };
 
-export function createInitialGameState(
-  corpIdentityDef: CardDefinition,
-  corpDeckDefs: CardDefinition[],
-  runnerIdentityDef: CardDefinition,
-  runnerDeckDefs: CardDefinition[]
-): GameState {
-  resetInstanceCounter();
-
-  const corpIdentity = createCardInstance(corpIdentityDef);
+  const corpIdentity = createCardInstance(ids, setup.corpIdentity);
   corpIdentity.isRezzed = true;
 
-  const runnerIdentity = createCardInstance(runnerIdentityDef);
+  const runnerIdentity = createCardInstance(ids, setup.runnerIdentity);
   runnerIdentity.isRezzed = true;
 
   // Build Central Servers
@@ -50,8 +43,8 @@ export function createInitialGameState(
   };
 
   // Instantiate cards and shuffle decks
-  const shuffledCorpDeck = shuffle(corpDeckDefs.map(createCardInstance));
-  const shuffledRunnerDeck = shuffle(runnerDeckDefs.map(createCardInstance));
+  const shuffledCorpDeck = shuffleInPlace(rng, setup.corpDeck.map(code => createCardInstance(ids, code)));
+  const shuffledRunnerDeck = shuffleInPlace(rng, setup.runnerDeck.map(code => createCardInstance(ids, code)));
 
   // Corp draws opening hand of 5 cards
   const corpHand = shuffledCorpDeck.splice(0, 5);
@@ -98,7 +91,9 @@ export function createInitialGameState(
   };
 
   return {
-    id: `game-${Date.now()}`,
+    id: `game-${rng.seed}`,
+    rng,
+    nextInstanceId: ids.nextInstanceId,
     turnNumber: 1,
     activePlayer: 'corp', // Corp always goes first in Netrunner
     phase: 'corp_turn',
@@ -110,9 +105,9 @@ export function createInitialGameState(
     log: [
       {
         id: 'log-0',
-        timestamp: Date.now(),
+        turnNumber: 1,
         player: 'system',
-        message: 'Game started. Corp takes the first turn with 3 clicks and 5 credits.',
+        message: `Game started (seed ${rng.seed}). Corp takes the first turn with 3 clicks and 5 credits.`,
       },
     ],
   };

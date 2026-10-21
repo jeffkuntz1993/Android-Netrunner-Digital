@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { CardInstance } from '../../core/types/card';
-import { getCardImageUrl } from '../../data/cards';
+import { cardDef, getCardImageUrl } from '../../data/cards';
 import { X, Shield, Zap, Award, Trash2, Coins, AlertCircle } from 'lucide-react';
 
 interface CardZoomModalProps {
@@ -16,7 +16,7 @@ export const CardZoomModal: React.FC<CardZoomModalProps> = ({
   canPeek = true,
 }) => {
   if (!card) return null;
-  const { def } = card;
+  const def = cardDef(card);
   const isCorp = def.side_code === 'corp';
 
   return createPortal(
