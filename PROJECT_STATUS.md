@@ -121,7 +121,8 @@ Netrunner/
 - [ ] Framer Motion card sliding from Hand $\rightarrow$ Rig / Server.
 - [ ] CSS 3D card flip when cards are rezzed or accessed.
 - [ ] Sound effects for clicks, credits, ice rez hum, and run alarms.
-- [ ] Full card zoom modal on click/inspect.
+- [x] Full card zoom modal on click/inspect and high-res hover popout via Portal.
+- [x] Dynamic card scaling system (Normal / Large / Huge) with legible card art and text.
 
 ### Phase 5: Multiplayer with a Friend
 - [ ] Lightweight WebSocket room server (e.g., Node.js + `ws` or Colyseus).
@@ -149,3 +150,5 @@ Netrunner/
 | Date | Agent / Dev | Changes Made |
 | :--- | :--- | :--- |
 | **2026-10-21** | Antigravity | Initial setup: scaffolded Vite + React 19 + TypeScript + Tailwind workspace; fetched 77 System Gateway cards and high-res images to `Resources/Cards/System Gateway`; built headless rules engine (`src/core/`); implemented basic turn/run actions; wrote passing Vitest test suite; created interactive tabletop UI; authored `PROJECT_STATUS.md`. |
+| **2026-10-21** | Antigravity | Enhanced visual readability & fixed pop-outs: copied 77 local card images to `public/cards/`; increased card dimensions across tabletop by 2x–3x with dynamic scaling toggle (Normal/Large/Huge); removed obscuring dark gradient on card images; fixed Corp pop-out bug by creating a Portal-based `CardPopout` with viewport boundary clamping; resolved Rez button mouse event interception in `ServerColumn`; allowed Corp players to peek at unrezzed cards and inspect abilities; added interactive Corp and Runner Identity inspect previews and full-screen `CardZoomModal`. |
+| **2026-10-21** | Antigravity | Fixed action overflow bug: separated active turn action controls into dedicated toolbars; added `min-w-0` to all flex containers to prevent large cards from expanding past the screen; anchored "End Turn" button cleanly within the UI and added a quick "End Turn" button to the sticky top header. |

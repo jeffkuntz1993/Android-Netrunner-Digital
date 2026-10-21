@@ -1,5 +1,5 @@
 import rawCards from './system-gateway-cards.json';
-import { CardDefinition } from '../core/types/card';
+import { CardDefinition, SideCode } from '../core/types/card';
 
 export const SYSTEM_GATEWAY_CARDS: CardDefinition[] = rawCards as unknown as CardDefinition[];
 
@@ -16,6 +16,10 @@ export function getCardDefinition(code: string): CardDefinition {
 }
 
 export function getCardImageUrl(code: string): string {
-  // Can load from remote CDN or local assets
-  return `https://card-images.netrunnerdb.com/v2/large/${code}.jpg`;
+  // Use local fast assets from public/cards, fallback handled by img onError
+  return `/cards/${code}.jpg`;
+}
+
+export function getCardBackUrl(side: SideCode = 'corp', style: 'nsg' | 'classic' = 'nsg'): string {
+  return `/card-backs/${side}-${style}.png`;
 }

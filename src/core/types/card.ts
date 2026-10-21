@@ -48,6 +48,8 @@ export interface CardDefinition {
   base_link?: number | null;
   minimum_deck_size?: number | null;
   influence_limit?: number | null;
+  flavor?: string;
+  illustrator?: string;
   stripped_text?: string;
   stripped_title?: string;
 }
