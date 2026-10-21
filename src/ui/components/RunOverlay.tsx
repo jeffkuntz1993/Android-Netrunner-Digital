@@ -9,6 +9,8 @@ interface RunOverlayProps {
   state: GameState;
   onContinueRun: () => void;
   onJackOut: () => void;
+  /** Present when the Corp may rez the approached ice (hot-seat rez window). */
+  onRezApproachedIce?: () => void;
   onInspectCard?: (card: CardInstance) => void;
 }
 
@@ -16,6 +18,7 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
   state,
   onContinueRun,
   onJackOut,
+  onRezApproachedIce,
   onInspectCard,
 }) => {
   const { activeRun } = state;
@@ -85,6 +88,15 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
 
           {/* Action buttons */}
           <div className="flex flex-col gap-2 shrink-0">
+            {currentIce && onRezApproachedIce && (
+              <button
+                onClick={onRezApproachedIce}
+                className="px-5 py-2 bg-cyan-700 hover:bg-cyan-600 text-white font-mono text-xs font-bold rounded-xl border border-cyan-400 flex items-center justify-center gap-1.5 transition-colors"
+                title="Corp rez window: rez this ice before the Runner continues"
+              >
+                <ShieldAlert className="w-4 h-4" /> Corp: Rez ({cardDef(currentIce).cost || 0}c)
+              </button>
+            )}
             <button
               onClick={onContinueRun}
               className="px-5 py-2.5 bg-cyber-neonPink hover:bg-pink-600 text-white font-mono text-xs font-bold rounded-xl shadow-lg flex items-center justify-center gap-1.5 transition-all hover:scale-105"

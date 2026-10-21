@@ -13,7 +13,7 @@ describe('Netrunner Rules Engine', () => {
     // Corp starting resources
     expect(state.corp.credits).toBe(5);
     expect(state.corp.clicks).toBe(3);
-    expect(state.corp.hq.length).toBe(5);
+    expect(state.corp.hq.length).toBe(6); // 5-card opening hand + turn-1 mandatory draw
     expect(state.corp.servers.hq).toBeDefined();
     expect(state.corp.servers.rd).toBeDefined();
     expect(state.corp.servers.archives).toBeDefined();

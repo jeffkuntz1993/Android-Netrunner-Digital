@@ -26,3 +26,20 @@ export function startRunnerTurn(state: GameState): void {
   state.phase = 'runner_turn';
   state.runner.clicks = state.runner.maxClicks;
 }
+
+/** Moves a specific card (by type) from the Corp deck into a server root or ice, bypassing costs (test setup only). */
+export function installForTest(
+  state: GameState,
+  type: CardTypeCode,
+  serverId: string,
+  where: 'root' | 'ice' = type === 'ice' ? 'ice' : 'root'
+): string {
+  const idx = state.corp.rd.findIndex(c => cardDef(c).type_code === type);
+  if (idx === -1) throw new Error(`No ${type} left in R&D`);
+  const [card] = state.corp.rd.splice(idx, 1);
+  if (!state.corp.servers[serverId]) {
+    state.corp.servers[serverId] = { id: serverId, name: serverId, isRemote: true, ice: [], root: [] };
+  }
+  state.corp.servers[serverId][where].push(card);
+  return card.instanceId;
+}

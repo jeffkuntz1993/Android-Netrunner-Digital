@@ -2,10 +2,11 @@ import { DrawCardAction, GainCreditAction } from '../../types/actions';
 import { GameState } from '../../types/state';
 import { cardDef } from '../../cards';
 import { addLog } from '../log';
-import { requireClicks } from '../helpers';
+import { illegal, requireActionPhase, requireClicks } from '../helpers';
 
 export function gainCredit(state: GameState, action: GainCreditAction): void {
   const side = action.player;
+  requireActionPhase(state, side);
   requireClicks(state, side);
   state[side].clicks -= 1;
   state[side].credits += 1;
@@ -13,8 +14,9 @@ export function gainCredit(state: GameState, action: GainCreditAction): void {
 }
 
 export function drawCard(state: GameState, action: DrawCardAction): void {
+  requireActionPhase(state, action.player);
+  requireClicks(state, action.player);
   if (action.player === 'corp') {
-    requireClicks(state, 'corp');
     if (state.corp.rd.length === 0) {
       state.winner = 'runner';
       state.winReason = 'Corp decked out (R&D is empty)';
@@ -26,12 +28,8 @@ export function drawCard(state: GameState, action: DrawCardAction): void {
     state.corp.hq.push(drawn);
     addLog(state, 'corp', 'Corp spent [click] to draw 1 card.');
   } else {
-    requireClicks(state, 'runner');
+    if (state.runner.stack.length === 0) illegal('Stack is empty');
     state.runner.clicks -= 1;
-    if (state.runner.stack.length === 0) {
-      addLog(state, 'runner', 'Runner attempted to draw, but Stack is empty.');
-      return;
-    }
     const drawn = state.runner.stack.shift()!;
     state.runner.grip.push(drawn);
     addLog(state, 'runner', `Runner spent [click] to draw 1 card (${cardDef(drawn).title}).`);

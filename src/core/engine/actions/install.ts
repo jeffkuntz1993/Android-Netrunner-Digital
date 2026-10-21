@@ -2,9 +2,17 @@ import { InstallCardAction } from '../../types/actions';
 import { GameState } from '../../types/state';
 import { cardDef } from '../../cards';
 import { addLog } from '../log';
-import { createRemoteServer, illegal, requireClicks } from '../helpers';
+import {
+  createRemoteServer,
+  illegal,
+  requireActionPhase,
+  requireClicks,
+  trashInstalledCorpCard,
+} from '../helpers';
 
 export function installCard(state: GameState, action: InstallCardAction): void {
+  requireActionPhase(state, action.player);
+  requireClicks(state, action.player);
   if (action.player === 'corp') {
     installCorpCard(state, action);
   } else {
@@ -13,44 +21,65 @@ export function installCard(state: GameState, action: InstallCardAction): void {
 }
 
 function installCorpCard(state: GameState, action: InstallCardAction): void {
-  requireClicks(state, 'corp');
   const cardIndex = state.corp.hq.findIndex(c => c.instanceId === action.cardInstanceId);
   if (cardIndex === -1) illegal('Card not in HQ');
+  const card = state.corp.hq[cardIndex];
+  const def = cardDef(card);
 
-  const card = state.corp.hq.splice(cardIndex, 1)[0];
+  if (def.type_code === 'operation') illegal('Operations are played, not installed');
+
+  const existing = action.asNewRemote || !action.targetServerId ? null : state.corp.servers[action.targetServerId];
+  if (!(action.asNewRemote || !action.targetServerId) && !existing) illegal('Server not found');
+
+  const isAgendaOrAsset = def.type_code === 'agenda' || def.type_code === 'asset';
+  if (isAgendaOrAsset && existing && !existing.isRemote) {
+    illegal('Agendas and assets can only be installed in a remote server');
+  }
+
+  // Ice install cost: 1 credit per ice already protecting the server
+  const installCost = def.type_code === 'ice' ? existing?.ice.length ?? 0 : 0;
+  if (state.corp.credits < installCost) {
+    illegal(`Need ${installCost} credits to install ice on this server`);
+  }
+
+  state.corp.hq.splice(cardIndex, 1);
   state.corp.clicks -= 1;
+  state.corp.credits -= installCost;
+  const server = existing ?? createRemoteServer(state);
 
-  const server =
-    action.asNewRemote || !action.targetServerId
-      ? createRemoteServer(state)
-      : state.corp.servers[action.targetServerId] ?? illegal('Server not found');
-
-  if (cardDef(card).type_code === 'ice') {
-    // Install cost: 1 credit per ice already protecting this server
-    const installCost = server.ice.length;
-    if (state.corp.credits < installCost) {
-      illegal(`Need ${installCost} credits to install ice on this server`);
-    }
-    state.corp.credits -= installCost;
+  if (def.type_code === 'ice') {
     // Outer ice is placed at the end of the array
     server.ice.push(card);
     addLog(state, 'corp', `Corp installed Ice protecting ${server.name} (cost: ${installCost} [credit]).`);
-  } else {
-    // Asset, Agenda, or Upgrade in server root
-    server.root.push(card);
-    addLog(state, 'corp', `Corp installed a card into ${server.name}.`);
+    return;
   }
+
+  if (isAgendaOrAsset) {
+    // A remote holds at most one agenda or asset; the old one is trashed.
+    for (const old of server.root.filter(c => ['agenda', 'asset'].includes(cardDef(c).type_code))) {
+      trashInstalledCorpCard(state, server, old);
+      addLog(state, 'corp', `Corp trashed a card in ${server.name} to make room.`);
+    }
+  }
+  server.root.push(card);
+  addLog(state, 'corp', `Corp installed a card into ${server.name}.`);
 }
 
 function installRunnerCard(state: GameState, action: InstallCardAction): void {
-  requireClicks(state, 'runner');
   const cardIndex = state.runner.grip.findIndex(c => c.instanceId === action.cardInstanceId);
   if (cardIndex === -1) illegal('Card not in Grip');
 
   const card = state.runner.grip[cardIndex];
   const def = cardDef(card);
+  if (def.type_code === 'event') illegal('Events are played, not installed');
+
   const installCost = def.cost || 0;
   if (state.runner.credits < installCost) illegal('Not enough credits to install');
+
+  const mem = def.type_code === 'program' ? def.memory_cost || 0 : 0;
+  if (state.runner.memoryUnitsUsed + mem > state.runner.memoryUnitsTotal) {
+    illegal('Not enough memory units to install this program');
+  }
 
   state.runner.grip.splice(cardIndex, 1);
   state.runner.clicks -= 1;
@@ -58,7 +87,7 @@ function installRunnerCard(state: GameState, action: InstallCardAction): void {
   card.isRezzed = true; // Runner cards enter the game active / face up
 
   if (def.type_code === 'program') {
-    state.runner.memoryUnitsUsed += def.memory_cost || 0;
+    state.runner.memoryUnitsUsed += mem;
     state.runner.rig.programs.push(card);
   } else if (def.type_code === 'hardware') {
     state.runner.rig.hardware.push(card);

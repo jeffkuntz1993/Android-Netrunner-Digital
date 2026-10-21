@@ -3,7 +3,7 @@ import { ServerState } from '../../core/types/state';
 import { CardInstance } from '../../core/types/card';
 import { CardView } from './CardView';
 import { cardDef } from '../../data/cards';
-import { Database, Crosshair, Zap } from 'lucide-react';
+import { Database, Crosshair, Zap, ChevronsUp, Award } from 'lucide-react';
 
 interface ServerColumnProps {
   server: ServerState;
@@ -14,8 +14,17 @@ interface ServerColumnProps {
   onInitiateRun?: (serverId: string) => void;
   onSelectServer?: (serverId: string) => void;
   onRezCard?: (instanceId: string) => void;
+  onAdvanceCard?: (instanceId: string, serverId: string) => void;
+  onScoreCard?: (instanceId: string) => void;
+  /** Legality checks from the engine; buttons only show when the action is legal. */
+  canRez?: (card: CardInstance) => boolean;
+  canAdvance?: (card: CardInstance) => boolean;
+  canScore?: (card: CardInstance) => boolean;
   onInspectCard?: (card: CardInstance) => void;
 }
+
+const smallButton =
+  'mt-1 px-2 py-0.5 w-full bg-cyan-950 hover:bg-cyan-800 text-cyan-300 text-[11px] font-mono font-bold rounded border border-cyan-600 shadow flex items-center justify-center gap-1 transition-all';
 
 export const ServerColumn: React.FC<ServerColumnProps> = ({
   server,
@@ -26,6 +35,11 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
   onInitiateRun,
   onSelectServer,
   onRezCard,
+  onAdvanceCard,
+  onScoreCard,
+  canRez = () => false,
+  canAdvance = () => false,
+  canScore = () => false,
   onInspectCard,
 }) => {
   const canCorpPeek = perspective !== 'runner';
@@ -76,7 +90,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
                 size={cardSize}
                 onInspect={onInspectCard}
               />
-              {activePlayer === 'corp' && !iceCard.isRezzed && onRezCard && (
+              {canRez(iceCard) && onRezCard && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -86,6 +100,17 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
                   title={`Rez ${cardDef(iceCard).title} for ${cardDef(iceCard).cost || 0} credits`}
                 >
                   <Zap className="w-3.5 h-3.5 text-amber-400" /> Rez ({cardDef(iceCard).cost || 0}c)
+                </button>
+              )}
+              {canAdvance(iceCard) && onAdvanceCard && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAdvanceCard(iceCard.instanceId, server.id);
+                  }}
+                  className={smallButton}
+                >
+                  <ChevronsUp className="w-3 h-3 text-amber-400" /> Advance ({iceCard.advancementCounters})
                 </button>
               )}
             </div>
@@ -111,15 +136,38 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
                   size={cardSize}
                   onInspect={onInspectCard}
                 />
-                {activePlayer === 'corp' && !card.isRezzed && cardDef(card).type_code !== 'agenda' && onRezCard && (
+                {canRez(card) && onRezCard && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onRezCard(card.instanceId);
                     }}
-                    className="mt-1 px-2 py-0.5 w-full bg-cyan-950 hover:bg-cyan-800 text-cyan-300 text-[11px] font-mono font-bold rounded border border-cyan-600 shadow flex items-center justify-center gap-1 transition-all"
+                    className={smallButton}
                   >
                     <Zap className="w-3 h-3 text-amber-400" /> Rez ({cardDef(card).cost || 0}c)
+                  </button>
+                )}
+                {canAdvance(card) && onAdvanceCard && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAdvanceCard(card.instanceId, server.id);
+                    }}
+                    className={smallButton}
+                  >
+                    <ChevronsUp className="w-3 h-3 text-amber-400" /> Advance ({card.advancementCounters}
+                    {cardDef(card).advancement_cost ? `/${cardDef(card).advancement_cost}` : ''})
+                  </button>
+                )}
+                {canScore(card) && onScoreCard && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onScoreCard(card.instanceId);
+                    }}
+                    className={smallButton}
+                  >
+                    <Award className="w-3 h-3 text-amber-400" /> Score
                   </button>
                 )}
               </div>

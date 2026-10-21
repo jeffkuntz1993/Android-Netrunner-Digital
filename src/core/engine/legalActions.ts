@@ -42,8 +42,11 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
         }
       }
       for (const server of servers) {
-        for (const card of server.root) {
+        for (const card of [...server.ice, ...server.root]) {
           candidates.push({ type: 'ADVANCE_CARD', player: 'corp', cardInstanceId: card.instanceId, serverId: server.id });
+        }
+        for (const card of server.root) {
+          candidates.push({ type: 'SCORE_AGENDA', player: 'corp', cardInstanceId: card.instanceId });
         }
       }
     }

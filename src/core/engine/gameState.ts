@@ -46,8 +46,9 @@ export function createInitialGameState(setup: GameSetup): GameState {
   const shuffledCorpDeck = shuffleInPlace(rng, setup.corpDeck.map(code => createCardInstance(ids, code)));
   const shuffledRunnerDeck = shuffleInPlace(rng, setup.runnerDeck.map(code => createCardInstance(ids, code)));
 
-  // Corp draws opening hand of 5 cards
-  const corpHand = shuffledCorpDeck.splice(0, 5);
+  // Corp draws opening hand of 5 cards, plus the mandatory draw that
+  // starts every Corp turn, including the first.
+  const corpHand = shuffledCorpDeck.splice(0, 6);
   const corpState: CorpState = {
     credits: 5,
     clicks: 3,
@@ -107,7 +108,7 @@ export function createInitialGameState(setup: GameSetup): GameState {
         id: 'log-0',
         turnNumber: 1,
         player: 'system',
-        message: `Game started (seed ${rng.seed}). Corp takes the first turn with 3 clicks and 5 credits.`,
+        message: `Game started (seed ${rng.seed}). Corp takes the first turn with 3 clicks and 5 credits, after their mandatory draw.`,
       },
     ],
   };

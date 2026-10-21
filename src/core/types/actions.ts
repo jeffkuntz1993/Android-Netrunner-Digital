@@ -7,6 +7,7 @@ export type GameActionType =
   | 'INSTALL_CARD'
   | 'PLAY_OPERATION_OR_EVENT'
   | 'ADVANCE_CARD'
+  | 'SCORE_AGENDA'
   | 'PURGE_VIRUS'
   | 'INITIATE_RUN'
   // Reactive / Run actions
@@ -47,6 +48,11 @@ export interface AdvanceCardAction extends BaseAction {
   type: 'ADVANCE_CARD';
   cardInstanceId: string;
   serverId: string;
+}
+
+export interface ScoreAgendaAction extends BaseAction {
+  type: 'SCORE_AGENDA';
+  cardInstanceId: string;
 }
 
 export interface PurgeVirusAction extends BaseAction {
@@ -96,6 +102,7 @@ export type GameAction =
   | InstallCardAction
   | PlayOperationOrEventAction
   | AdvanceCardAction
+  | ScoreAgendaAction
   | PurgeVirusAction
   | InitiateRunAction
   | RezCardAction

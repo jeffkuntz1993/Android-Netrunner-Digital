@@ -1,8 +1,12 @@
 import { EndTurnAction } from '../../types/actions';
 import { GameState } from '../../types/state';
 import { addLog } from '../log';
+import { requireActionPhase } from '../helpers';
 
+// TODO: discard down to maximum hand size, and require all clicks to be spent
+// (both need a player choice prompt).
 export function endTurn(state: GameState, action: EndTurnAction): void {
+  requireActionPhase(state, action.player);
   if (action.player === 'corp') {
     state.activePlayer = 'runner';
     state.phase = 'runner_turn';

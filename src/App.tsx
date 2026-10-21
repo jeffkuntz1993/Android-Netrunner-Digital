@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CardInstance, GameAction, cardDef, createInitialGameState, executeAction } from './core';
+import { CardInstance, GameAction, cardDef, createInitialGameState, executeAction, isLegalAction } from './core';
 import { starterGameSetup } from './data/starterDecks';
 import { CardView } from './ui/components/CardView';
 import { ServerColumn } from './ui/components/ServerColumn';
@@ -54,6 +54,12 @@ export default function App() {
   };
 
   const { corp, runner, activePlayer, activeRun, winner, winReason } = gameState;
+
+  const rezAction = (card: CardInstance): GameAction => ({ type: 'REZ_CARD', player: 'corp', cardInstanceId: card.instanceId });
+  const approachedIce =
+    activeRun && activeRun.phase === 'approach_ice' && activeRun.icePosition !== null
+      ? corp.servers[activeRun.server]?.ice[activeRun.icePosition]
+      : undefined;
 
   // Determine size classes according to selected scale
   const handCardSize = cardScale === 'huge' ? 'xl' : cardScale === 'large' ? 'lg' : 'md';
@@ -234,6 +240,19 @@ export default function App() {
                 }
                 onRezCard={(cId) =>
                   handleAction({ type: 'REZ_CARD', player: 'corp', cardInstanceId: cId })
+                }
+                onAdvanceCard={(cId, sId) =>
+                  handleAction({ type: 'ADVANCE_CARD', player: 'corp', cardInstanceId: cId, serverId: sId })
+                }
+                onScoreCard={(cId) =>
+                  handleAction({ type: 'SCORE_AGENDA', player: 'corp', cardInstanceId: cId })
+                }
+                canRez={(card) => isLegalAction(gameState, rezAction(card))}
+                canAdvance={(card) =>
+                  isLegalAction(gameState, { type: 'ADVANCE_CARD', player: 'corp', cardInstanceId: card.instanceId, serverId: server.id })
+                }
+                canScore={(card) =>
+                  isLegalAction(gameState, { type: 'SCORE_AGENDA', player: 'corp', cardInstanceId: card.instanceId })
                 }
                 onInspectCard={(card) => setInspectedCard(card)}
               />
@@ -441,6 +460,11 @@ export default function App() {
         state={gameState}
         onContinueRun={() => handleAction({ type: 'CONTINUE_RUN', player: 'runner' })}
         onJackOut={() => handleAction({ type: 'JACK_OUT', player: 'runner' })}
+        onRezApproachedIce={
+          approachedIce && isLegalAction(gameState, rezAction(approachedIce))
+            ? () => handleAction(rezAction(approachedIce))
+            : undefined
+        }
         onInspectCard={setInspectedCard}
       />
 

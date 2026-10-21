@@ -3,7 +3,7 @@ import { GameState } from '../types/state';
 import { IllegalActionError, NotImplementedError } from './errors';
 import { drawCard, gainCredit } from './actions/basic';
 import { installCard } from './actions/install';
-import { advanceCard, rezCard } from './actions/corp';
+import { advanceCard, rezCard, scoreAgenda } from './actions/corp';
 import { continueRun, initiateRun, jackOut } from './actions/run';
 import { endTurn } from './actions/turn';
 
@@ -27,6 +27,7 @@ const handlers: ActionHandlers = {
   DRAW_CARD: drawCard,
   INSTALL_CARD: installCard,
   ADVANCE_CARD: advanceCard,
+  SCORE_AGENDA: scoreAgenda,
   REZ_CARD: rezCard,
   INITIATE_RUN: initiateRun,
   CONTINUE_RUN: continueRun,
