@@ -9,7 +9,8 @@
 
 ## 1. Project Overview & Rules Reference
 This project is an open-source digital implementation of **Android: Netrunner**, adhering strictly to the **Null Signal Games (NSG)** rules and card formats.
-* **Official Rules Reference:** [Null Signal Games Comprehensive Rules](https://rules.nullsignal.games/)
+* **Local Comprehensive Rulebook (Official PDF):** [`Resources/Rulebook/Null_Signal_Games_Netrunner_Comprehensive_Rules_v26.03.pdf`](Resources/Rulebook/Null_Signal_Games_Netrunner_Comprehensive_Rules_v26.03.pdf) *(Consult this local file for official timing structures, trigger rules, and definitions)*
+* **Online Rules Reference:** [Null Signal Games Comprehensive Rules](https://rules.nullsignal.games/)
 * **Card Database:** Null Signal Games releases via [NetrunnerDB API v2.0](https://netrunnerdb.com/api/2.0/public/cards)
 * **Active Card Pools:**
   * ✅ **System Gateway** (`sg`) — Primary foundation (77 cards)
@@ -51,6 +52,8 @@ Netrunner/
 ├── vite.config.ts
 ├── tailwind.config.js
 ├── Resources/
+│   ├── Rulebook/                       <-- Official NSG Comprehensive Rules PDF (v26.03)
+│   │   └── Null_Signal_Games_Netrunner_Comprehensive_Rules_v26.03.pdf
 │   └── Cards/
 │       └── System Gateway/             <-- Local card assets & high-res images
 │           ├── system-gateway-cards.json

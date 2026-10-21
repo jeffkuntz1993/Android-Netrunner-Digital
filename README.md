@@ -5,7 +5,8 @@ An open-source digital implementation of the card game **Android: Netrunner**, a
 ## 📖 Project Documentation & Collaboration Guide
 
 > **All developers and AI assistants (Antigravity, Claude, etc.):**
-> Please refer to [PROJECT_STATUS.md](PROJECT_STATUS.md) for the active architecture, implementation roadmap, task checklist, and changelog. Update that document whenever features or changes are implemented.
+> - **Local Official Rulebook:** [`Resources/Rulebook/Null_Signal_Games_Netrunner_Comprehensive_Rules_v26.03.pdf`](Resources/Rulebook/Null_Signal_Games_Netrunner_Comprehensive_Rules_v26.03.pdf)
+> - **Project Status & Architecture:** Please refer to [PROJECT_STATUS.md](PROJECT_STATUS.md) for the active architecture, implementation roadmap, task checklist, and changelog. Update that document whenever features or changes are implemented.
 
 ## 🚀 Quick Start
 
