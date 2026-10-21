@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
-import { createInitialGameState } from './core/engine/gameState';
-import { executeAction } from './core/engine/gameEngine';
-import {
-  CORP_STARTER_IDENTITY,
-  RUNNER_STARTER_IDENTITY,
-  getStarterCorpDeck,
-  getStarterRunnerDeck,
-} from './data/starterDecks';
-import { CardInstance } from './core/types/card';
+import { CardInstance, GameAction, cardDef, createInitialGameState, executeAction } from './core';
+import { starterGameSetup } from './data/starterDecks';
 import { CardView } from './ui/components/CardView';
 import { ServerColumn } from './ui/components/ServerColumn';
 import { RigView } from './ui/components/RigView';
@@ -27,22 +20,25 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
+/** Seed from `?seed=123` in the URL (to reproduce a game), otherwise random. */
+function initialSeed(): number {
+  const fromUrl = Number(new URLSearchParams(window.location.search).get('seed'));
+  return Number.isInteger(fromUrl) && fromUrl > 0 ? fromUrl : randomSeed();
+}
+
+function randomSeed(): number {
+  return crypto.getRandomValues(new Uint32Array(1))[0];
+}
+
 export default function App() {
-  const [gameState, setGameState] = useState(() =>
-    createInitialGameState(
-      CORP_STARTER_IDENTITY,
-      getStarterCorpDeck(),
-      RUNNER_STARTER_IDENTITY,
-      getStarterRunnerDeck()
-    )
-  );
+  const [gameState, setGameState] = useState(() => createInitialGameState(starterGameSetup(initialSeed())));
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [perspective, setPerspective] = useState<'both' | 'corp' | 'runner'>('both');
   const [cardScale, setCardScale] = useState<'normal' | 'large' | 'huge'>('large');
   const [inspectedCard, setInspectedCard] = useState<CardInstance | null>(null);
 
-  const handleAction = (action: any) => {
+  const handleAction = (action: GameAction) => {
     try {
       const nextState = executeAction(gameState, action);
       setGameState(nextState);
@@ -53,14 +49,7 @@ export default function App() {
   };
 
   const resetGame = () => {
-    setGameState(
-      createInitialGameState(
-        CORP_STARTER_IDENTITY,
-        getStarterCorpDeck(),
-        RUNNER_STARTER_IDENTITY,
-        getStarterRunnerDeck()
-      )
-    );
+    setGameState(createInitialGameState(starterGameSetup(randomSeed())));
     setSelectedCardId(null);
   };
 
@@ -81,6 +70,12 @@ export default function App() {
           <div className="flex items-center gap-1.5">
             <span className="text-xs bg-slate-900 border border-slate-700 px-2.5 py-1 rounded text-slate-300 font-bold hidden sm:inline">
               TURN {gameState.turnNumber} • {activePlayer.toUpperCase()}'S TURN
+            </span>
+            <span
+              className="text-[10px] text-slate-500 font-mono hidden md:inline"
+              title="Open the app with ?seed=<this number> to replay this deal"
+            >
+              SEED {gameState.rng.seed}
             </span>
             {/* Quick Sticky End Turn Button */}
             <button
@@ -195,7 +190,7 @@ export default function App() {
                 </h2>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs text-slate-300 font-mono font-bold">
-                    {corp.identity.def.title}
+                    {cardDef(corp.identity).title}
                   </span>
                   <button
                     onClick={() => setInspectedCard(corp.identity)}
@@ -327,7 +322,7 @@ export default function App() {
                 </h2>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs text-slate-300 font-mono font-bold">
-                    {runner.identity.def.title}
+                    {cardDef(runner.identity).title}
                   </span>
                   <button
                     onClick={() => setInspectedCard(runner.identity)}

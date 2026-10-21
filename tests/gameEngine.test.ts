@@ -1,16 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { createInitialGameState } from '../src/core/engine/gameState';
-import { executeAction } from '../src/core/engine/gameEngine';
-import { CORP_STARTER_IDENTITY, RUNNER_STARTER_IDENTITY, getStarterCorpDeck, getStarterRunnerDeck } from '../src/data/starterDecks';
+import { executeAction } from '../src/core';
+import { newGame } from './helpers';
 
 describe('Netrunner Rules Engine', () => {
   it('initializes game state correctly according to official rules', () => {
-    const state = createInitialGameState(
-      CORP_STARTER_IDENTITY,
-      getStarterCorpDeck(),
-      RUNNER_STARTER_IDENTITY,
-      getStarterRunnerDeck()
-    );
+    const state = newGame();
 
     // Turn 1 Corp starts
     expect(state.activePlayer).toBe('corp');
@@ -31,12 +25,7 @@ describe('Netrunner Rules Engine', () => {
   });
 
   it('handles gaining credits via clicks', () => {
-    let state = createInitialGameState(
-      CORP_STARTER_IDENTITY,
-      getStarterCorpDeck(),
-      RUNNER_STARTER_IDENTITY,
-      getStarterRunnerDeck()
-    );
+    let state = newGame();
 
     state = executeAction(state, { type: 'GAIN_CREDIT', player: 'corp' });
     expect(state.corp.credits).toBe(6);
@@ -44,12 +33,7 @@ describe('Netrunner Rules Engine', () => {
   });
 
   it('transitions turn from Corp to Runner properly', () => {
-    let state = createInitialGameState(
-      CORP_STARTER_IDENTITY,
-      getStarterCorpDeck(),
-      RUNNER_STARTER_IDENTITY,
-      getStarterRunnerDeck()
-    );
+    let state = newGame();
 
     // Corp spends 3 clicks
     state = executeAction(state, { type: 'GAIN_CREDIT', player: 'corp' });
@@ -65,12 +49,7 @@ describe('Netrunner Rules Engine', () => {
   });
 
   it('allows Runner to initiate and complete a run on a central server', () => {
-    let state = createInitialGameState(
-      CORP_STARTER_IDENTITY,
-      getStarterCorpDeck(),
-      RUNNER_STARTER_IDENTITY,
-      getStarterRunnerDeck()
-    );
+    let state = newGame();
 
     // Pass turn to runner
     state.activePlayer = 'runner';

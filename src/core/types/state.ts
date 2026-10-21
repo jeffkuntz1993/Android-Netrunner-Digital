@@ -1,4 +1,5 @@
 import { CardInstance, SideCode } from './card';
+import { RngState } from '../rng';
 
 export type CentralServerType = 'hq' | 'rd' | 'archives';
 export type ServerType = CentralServerType | string; // remote names like "remote-1"
@@ -83,7 +84,7 @@ export type GamePhase =
 
 export interface LogEntry {
   id: string;
-  timestamp: number;
+  turnNumber: number;
   player: SideCode | 'system';
   message: string;
   cardCode?: string;
@@ -91,6 +92,10 @@ export interface LogEntry {
 
 export interface GameState {
   id: string;
+  /** Seeded RNG; all randomness in the engine must go through this. */
+  rng: RngState;
+  /** Counter for deterministic card instance ids. */
+  nextInstanceId: number;
   turnNumber: number;
   activePlayer: TurnPlayer;
   phase: GamePhase;

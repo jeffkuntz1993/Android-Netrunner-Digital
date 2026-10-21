@@ -2,6 +2,7 @@ import React from 'react';
 import { ServerState } from '../../core/types/state';
 import { CardInstance } from '../../core/types/card';
 import { CardView } from './CardView';
+import { cardDef } from '../../data/cards';
 import { Database, Crosshair, Zap } from 'lucide-react';
 
 interface ServerColumnProps {
@@ -82,9 +83,9 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
                     onRezCard(iceCard.instanceId);
                   }}
                   className="mt-1.5 w-full py-1 bg-cyan-950 hover:bg-cyan-800 text-cyan-300 hover:text-cyan-100 text-xs font-mono font-bold rounded-lg border border-cyan-600 shadow-md flex items-center justify-center gap-1 transition-all"
-                  title={`Rez ${iceCard.def.title} for ${iceCard.def.cost || 0} credits`}
+                  title={`Rez ${cardDef(iceCard).title} for ${cardDef(iceCard).cost || 0} credits`}
                 >
-                  <Zap className="w-3.5 h-3.5 text-amber-400" /> Rez ({iceCard.def.cost || 0}c)
+                  <Zap className="w-3.5 h-3.5 text-amber-400" /> Rez ({cardDef(iceCard).cost || 0}c)
                 </button>
               )}
             </div>
@@ -110,7 +111,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
                   size={cardSize}
                   onInspect={onInspectCard}
                 />
-                {activePlayer === 'corp' && !card.isRezzed && card.def.type_code !== 'agenda' && onRezCard && (
+                {activePlayer === 'corp' && !card.isRezzed && cardDef(card).type_code !== 'agenda' && onRezCard && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -118,7 +119,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
                     }}
                     className="mt-1 px-2 py-0.5 w-full bg-cyan-950 hover:bg-cyan-800 text-cyan-300 text-[11px] font-mono font-bold rounded border border-cyan-600 shadow flex items-center justify-center gap-1 transition-all"
                   >
-                    <Zap className="w-3 h-3 text-amber-400" /> Rez ({card.def.cost || 0}c)
+                    <Zap className="w-3 h-3 text-amber-400" /> Rez ({cardDef(card).cost || 0}c)
                   </button>
                 )}
               </div>
