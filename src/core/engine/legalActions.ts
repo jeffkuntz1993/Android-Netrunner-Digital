@@ -40,6 +40,7 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
   if (side === 'corp') {
     if (!state.activeRun) {
       for (const card of state.corp.hq) {
+        candidates.push({ type: 'PLAY_OPERATION_OR_EVENT', player: 'corp', cardInstanceId: card.instanceId });
         candidates.push({ type: 'INSTALL_CARD', player: 'corp', cardInstanceId: card.instanceId, asNewRemote: true });
         for (const server of servers) {
           candidates.push({ type: 'INSTALL_CARD', player: 'corp', cardInstanceId: card.instanceId, targetServerId: server.id });
@@ -63,6 +64,7 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
     }
   } else if (!state.activeRun) {
     for (const card of state.runner.grip) {
+      candidates.push({ type: 'PLAY_OPERATION_OR_EVENT', player: 'runner', cardInstanceId: card.instanceId });
       candidates.push({ type: 'INSTALL_CARD', player: 'runner', cardInstanceId: card.instanceId });
     }
     for (const server of servers) {
@@ -82,6 +84,17 @@ function promptAnswers(state: GameState): GameAction[] {
       return [false, true].map(mulligan => ({ ...base, choice: { kind: 'mulligan' as const, mulligan } }));
     case 'access_trash':
       return [false, true].map(trash => ({ ...base, choice: { kind: 'access_trash' as const, trash } }));
+    case 'effect_choice':
+      return prompt.options.map(o => ({ ...base, choice: { kind: 'effect_choice' as const, optionId: o.id } }));
+    case 'effect_cards': {
+      const answers: GameAction[] = [];
+      for (let k = prompt.min; k <= prompt.max; k++) {
+        for (const cardInstanceIds of combinations(prompt.candidateIds, k)) {
+          answers.push({ ...base, choice: { kind: 'effect_cards' as const, cardInstanceIds } });
+        }
+      }
+      return answers;
+    }
     case 'discard': {
       const hand = prompt.side === 'corp' ? state.corp.hq : state.runner.grip;
       return combinations(hand.map(c => c.instanceId), prompt.count).map(cardInstanceIds => ({

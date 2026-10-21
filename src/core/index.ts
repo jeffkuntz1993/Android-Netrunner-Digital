@@ -11,4 +11,5 @@ export type { GameSetup } from './engine/gameState';
 export { executeAction, isLegalAction, addLog } from './engine/gameEngine';
 export { getLegalActions } from './engine/legalActions';
 export { activePrompt } from './engine/prompts';
-export { locateCorpCard } from './engine/helpers';
+export { locateCorpCard, findCardAnywhere } from './engine/helpers';
+export { getCardScript, scriptedCardCodes } from './scripts';

@@ -10,6 +10,15 @@ export function illegal(message: string): never {
   throw new IllegalActionError(message);
 }
 
+/** Identifies the current turn, e.g. "3-corp". */
+export function turnKey(state: GameState): string {
+  return `${state.turnNumber}-${state.activePlayer}`;
+}
+
+export function madeSuccessfulRunThisTurn(state: GameState): boolean {
+  return state.runsThisTurn.some(r => r.successful);
+}
+
 export function requireClicks(state: GameState, side: SideCode, count = 1): void {
   if (state[side].clicks < count) illegal('Not enough clicks');
 }
@@ -68,6 +77,38 @@ export function locateCorpCard(
     if (card) return { card, zone, inArchives };
   }
   return null;
+}
+
+/** Finds any card in any zone of either player, for effects and UI. */
+export function findCardAnywhere(state: GameState, instanceId: string): CardInstance | undefined {
+  const corp = locateCorpCard(state, instanceId);
+  if (corp) return corp.card;
+  const r = state.runner;
+  return [r.grip, r.stack, r.heap, r.rig.programs, r.rig.hardware, r.rig.resources, r.scoreArea, state.corp.scoreArea]
+    .flat()
+    .find(c => c.instanceId === instanceId);
+}
+
+/**
+ * Draws up to `count` cards. A Corp draw from an empty R&D loses the game;
+ * the Runner simply draws as many as the Stack holds.
+ */
+export function drawCards(state: GameState, side: SideCode, count: number): number {
+  let drawn = 0;
+  for (let i = 0; i < count; i++) {
+    const deck = side === 'corp' ? state.corp.rd : state.runner.stack;
+    if (deck.length === 0) {
+      if (side === 'corp') {
+        state.winner = 'runner';
+        state.winReason = 'Corp decked out (R&D is empty)';
+        addLog(state, 'system', 'Runner wins: Corp had to draw from an empty R&D.');
+      }
+      break;
+    }
+    (side === 'corp' ? state.corp.hq : state.runner.grip).push(deck.shift()!);
+    drawn++;
+  }
+  return drawn;
 }
 
 /** Removes a card from an array by instance id. Returns true if it was there. */

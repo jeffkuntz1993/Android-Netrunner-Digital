@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CardInstance, GameState, PromptChoice, activePrompt, cardDef, locateCorpCard } from '../../core';
+import { CardInstance, GameState, PromptChoice, activePrompt, cardDef, findCardAnywhere, locateCorpCard } from '../../core';
 import { CardView } from './CardView';
 import { Check, RefreshCw, Trash2, X } from 'lucide-react';
 
@@ -81,6 +81,53 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
                 onClick={() => answer({ kind: 'discard', cardInstanceIds: selected })}
               >
                 <Trash2 className="w-3.5 h-3.5" /> Discard selected
+              </button>
+            </div>
+          </>
+        )}
+
+        {prompt.kind === 'effect_choice' && (
+          <div className="flex gap-2 justify-end flex-wrap">
+            {prompt.options.map(option => (
+              <button
+                key={option.id}
+                className={`${button} bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-100`}
+                onClick={() => answer({ kind: 'effect_choice', optionId: option.id })}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {prompt.kind === 'effect_cards' && (
+          <>
+            <div className="flex gap-2 overflow-x-auto py-2 mb-4">
+              {prompt.candidateIds.map(id => {
+                const card = findCardAnywhere(state, id);
+                return card ? (
+                  <CardView
+                    key={id}
+                    card={card}
+                    size="sm"
+                    isSelectable
+                    isSelected={selected.includes(id)}
+                    onClick={() => toggle(id)}
+                    onInspect={onInspectCard}
+                  />
+                ) : null;
+              })}
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-400">
+                Selected {selected.length} ({prompt.min === prompt.max ? prompt.min : `${prompt.min}-${prompt.max}`})
+              </span>
+              <button
+                className={`${button} bg-emerald-700 hover:bg-emerald-600 border-emerald-500 text-white`}
+                disabled={selected.length < prompt.min || selected.length > prompt.max}
+                onClick={() => answer({ kind: 'effect_cards', cardInstanceIds: selected })}
+              >
+                <Check className="w-3.5 h-3.5" /> Confirm
               </button>
             </div>
           </>

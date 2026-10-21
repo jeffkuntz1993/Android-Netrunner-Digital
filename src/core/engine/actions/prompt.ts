@@ -1,10 +1,12 @@
 import { ResolvePromptAction } from '../../types/actions';
 import { CardInstance } from '../../types/card';
+import { EffectSource, PromptChoice } from '../../types/prompts';
 import { GameState } from '../../types/state';
 import { cardDef } from '../../cards';
 import { shuffleInPlace } from '../../rng';
 import { addLog } from '../log';
-import { illegal, locateCorpCard, removeCard } from '../helpers';
+import { findCardAnywhere, illegal, locateCorpCard, removeCard } from '../helpers';
+import { getCardScript } from '../../scripts';
 import { activePrompt, sideName } from '../prompts';
 import { beginCorpTurn, finishEndTurn } from './turn';
 import { continueAccess } from './run';
@@ -52,6 +54,26 @@ export function resolvePrompt(state: GameState, action: ResolvePromptAction): vo
       return;
     }
 
+    case 'effect_choice': {
+      if (choice.kind !== 'effect_choice') return;
+      if (!prompt.options.some(o => o.id === choice.optionId)) illegal('Not one of the options');
+      runScriptAnswer(state, prompt.source, choice);
+      return;
+    }
+
+    case 'effect_cards': {
+      if (choice.kind !== 'effect_cards') return;
+      const ids = choice.cardInstanceIds;
+      if (new Set(ids).size !== ids.length || ids.some(id => !prompt.candidateIds.includes(id))) {
+        illegal('Choose only from the offered cards');
+      }
+      if (ids.length < prompt.min || ids.length > prompt.max) {
+        illegal(prompt.min === prompt.max ? `Choose exactly ${prompt.min} card(s)` : `Choose ${prompt.min}-${prompt.max} card(s)`);
+      }
+      runScriptAnswer(state, prompt.source, choice);
+      return;
+    }
+
     case 'access_trash': {
       if (choice.kind !== 'access_trash') return;
       if (choice.trash) {
@@ -67,6 +89,19 @@ export function resolvePrompt(state: GameState, action: ResolvePromptAction): vo
       return;
     }
   }
+}
+
+function runScriptAnswer(
+  state: GameState,
+  source: EffectSource,
+  answer: Extract<PromptChoice, { kind: 'effect_choice' | 'effect_cards' }>
+): void {
+  const card = findCardAnywhere(state, source.instanceId);
+  const script = getCardScript(source.cardCode);
+  if (!card || !script?.onPromptAnswer) illegal('The effect waiting on this prompt is gone');
+  // The card's controller resolves the effect even when the other side answers.
+  const controller = cardDef(card).side_code;
+  script.onPromptAnswer({ state, card, side: controller }, source, answer);
 }
 
 function trashAccessedCard(state: GameState, card: CardInstance, zone: CardInstance[]): void {

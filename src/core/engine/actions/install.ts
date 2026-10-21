@@ -2,12 +2,15 @@ import { InstallCardAction } from '../../types/actions';
 import { GameState } from '../../types/state';
 import { cardDef } from '../../cards';
 import { addLog } from '../log';
+import { CardInstance } from '../../types/card';
 import {
   createRemoteServer,
   illegal,
+  removeCard,
   requireActionPhase,
   requireClicks,
   trashInstalledCorpCard,
+  turnKey,
 } from '../helpers';
 
 export function installCard(state: GameState, action: InstallCardAction): void {
@@ -44,6 +47,7 @@ function installCorpCard(state: GameState, action: InstallCardAction): void {
 
   state.corp.hq.splice(cardIndex, 1);
   state.corp.clicks -= 1;
+  card.installedTurn = turnKey(state);
   state.corp.credits -= installCost;
   const server = existing ?? createRemoteServer(state);
 
@@ -70,21 +74,37 @@ function installRunnerCard(state: GameState, action: InstallCardAction): void {
   if (cardIndex === -1) illegal('Card not in Grip');
 
   const card = state.runner.grip[cardIndex];
+  if (cardDef(card).type_code === 'event') illegal('Events are played, not installed');
+  state.runner.clicks -= 1;
+  installRunnerCardFrom(state, card, state.runner.grip);
+}
+
+/** Can the Runner pay to install this card right now (credits and MU)? Returns a reason if not. */
+export function runnerInstallBlocker(state: GameState, card: CardInstance): string | null {
   const def = cardDef(card);
-  if (def.type_code === 'event') illegal('Events are played, not installed');
-
-  const installCost = def.cost || 0;
-  if (state.runner.credits < installCost) illegal('Not enough credits to install');
-
+  if (state.runner.credits < (def.cost || 0)) return 'Not enough credits to install';
   const mem = def.type_code === 'program' ? def.memory_cost || 0 : 0;
   if (state.runner.memoryUnitsUsed + mem > state.runner.memoryUnitsTotal) {
-    illegal('Not enough memory units to install this program');
+    return 'Not enough memory units to install this program';
   }
+  return null;
+}
 
-  state.runner.grip.splice(cardIndex, 1);
-  state.runner.clicks -= 1;
+/**
+ * Installs a Runner card from any zone, paying its install cost (but no
+ * click). Used by the install action and by effects like Mutual Favor.
+ */
+export function installRunnerCardFrom(state: GameState, card: CardInstance, zone: CardInstance[]): void {
+  const blocker = runnerInstallBlocker(state, card);
+  if (blocker) illegal(blocker);
+  const def = cardDef(card);
+  const installCost = def.cost || 0;
+  const mem = def.type_code === 'program' ? def.memory_cost || 0 : 0;
+
+  removeCard(zone, card);
   state.runner.credits -= installCost;
   card.isRezzed = true; // Runner cards enter the game active / face up
+  card.installedTurn = turnKey(state);
 
   if (def.type_code === 'program') {
     state.runner.memoryUnitsUsed += mem;
@@ -95,5 +115,5 @@ function installRunnerCard(state: GameState, action: InstallCardAction): void {
     state.runner.rig.resources.push(card);
   }
 
-  addLog(state, 'runner', `Runner spent [click] and ${installCost} [credit] to install ${def.title}.`);
+  addLog(state, 'runner', `Runner paid ${installCost} [credit] to install ${def.title}.`);
 }

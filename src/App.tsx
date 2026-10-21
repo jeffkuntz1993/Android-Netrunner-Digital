@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CardInstance, GameAction, cardDef, createInitialGameState, executeAction, isLegalAction } from './core';
+import { CardInstance, GameAction, cardDef, createInitialGameState, executeAction, getCardScript, isLegalAction } from './core';
 import { starterGameSetup } from './data/starterDecks';
 import { CardView } from './ui/components/CardView';
 import { ServerColumn } from './ui/components/ServerColumn';
@@ -55,6 +55,24 @@ export default function App() {
   };
 
   const { corp, runner, activePlayer, activeRun, winner, winReason } = gameState;
+
+  const selectedCard = [...corp.hq, ...runner.grip].find(c => c.instanceId === selectedCardId);
+  const selectedIsPlayable = selectedCard && ['operation', 'event'].includes(cardDef(selectedCard).type_code);
+  const playButton = (side: 'corp' | 'runner') => {
+    if (!selectedCard || !selectedIsPlayable || cardDef(selectedCard).side_code !== side) return null;
+    const action: GameAction = { type: 'PLAY_OPERATION_OR_EVENT', player: side, cardInstanceId: selectedCard.instanceId };
+    const implemented = Boolean(getCardScript(selectedCard.cardCode)?.onPlay);
+    return (
+      <button
+        onClick={() => handleAction(action)}
+        disabled={!isLegalAction(gameState, action)}
+        title={implemented ? undefined : 'This card\'s effect is not implemented yet'}
+        className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-lg disabled:opacity-40 disabled:animate-none animate-pulse"
+      >
+        <Zap className="w-3.5 h-3.5" /> {implemented ? `Play ${cardDef(selectedCard).title}` : 'Effect not implemented yet'}
+      </button>
+    );
+  };
 
   const rezAction = (card: CardInstance): GameAction => ({ type: 'REZ_CARD', player: 'corp', cardInstanceId: card.instanceId });
   const approachedIce =
@@ -282,7 +300,8 @@ export default function App() {
                 >
                   <Layers className="w-3.5 h-3.5 text-cyan-400" /> Draw Card
                 </button>
-                {selectedCardId && (
+                {playButton('corp')}
+                {selectedCardId && !selectedIsPlayable && (
                   <button
                     onClick={() => {
                       handleAction({
@@ -404,7 +423,8 @@ export default function App() {
                 >
                   <Layers className="w-3.5 h-3.5 text-pink-400" /> Draw Card
                 </button>
-                {selectedCardId && (
+                {playButton('runner')}
+                {selectedCardId && !selectedIsPlayable && (
                   <button
                     onClick={() => {
                       handleAction({

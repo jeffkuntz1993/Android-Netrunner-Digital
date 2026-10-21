@@ -1,4 +1,4 @@
-import { createInitialGameState, cardDef, executeAction, GameState, CardTypeCode } from '../src/core';
+import { createInitialGameState, createCardInstance, cardDef, executeAction, GameState, CardTypeCode } from '../src/core';
 import { starterGameSetup } from '../src/data/starterDecks';
 
 /** A starter-deck game still waiting on both mulligan decisions. */
@@ -64,4 +64,16 @@ export function installForTest(
   }
   state.corp.servers[serverId][where].push(card);
   return card.instanceId;
+}
+
+/** Creates a new copy of a card (by code) directly in a player's hand (test setup only). */
+export function giveCard(state: GameState, side: 'corp' | 'runner', code: string): string {
+  const card = createCardInstance(state, code);
+  (side === 'corp' ? state.corp.hq : state.runner.grip).push(card);
+  return card.instanceId;
+}
+
+/** Plays a card from hand (test shorthand). */
+export function play(state: GameState, side: 'corp' | 'runner', cardInstanceId: string): GameState {
+  return executeAction(state, { type: 'PLAY_OPERATION_OR_EVENT', player: side, cardInstanceId });
 }

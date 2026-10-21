@@ -103,6 +103,8 @@ export interface GameState {
   pendingPrompts: Prompt[];
   /** Counter for deterministic prompt ids. */
   nextPromptId: number;
+  /** Runs made during the current turn (reset when the turn passes). */
+  runsThisTurn: { server: string; successful: boolean }[];
   turnNumber: number;
   activePlayer: TurnPlayer;
   phase: GamePhase;

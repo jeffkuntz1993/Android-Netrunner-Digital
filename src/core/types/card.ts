@@ -62,4 +62,6 @@ export interface CardInstance {
   tokens: Record<string, number>;
   hostedCardIds: string[];
   hostedOnId?: string;
+  /** Turn key (see turnKey()) when this card was installed, for "this turn" checks. */
+  installedTurn?: string;
 }

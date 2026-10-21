@@ -100,6 +100,7 @@ export function createInitialGameState(setup: GameSetup): GameState {
       { id: 'prompt-2', side: 'runner', kind: 'mulligan', message: 'Runner: keep your opening hand or mulligan?' },
     ],
     nextPromptId: 3,
+    runsThisTurn: [],
     turnNumber: 1,
     activePlayer: 'corp', // Corp always goes first in Netrunner
     phase: 'corp_turn',

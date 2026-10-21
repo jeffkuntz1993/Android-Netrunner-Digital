@@ -7,6 +7,7 @@ import { advanceCard, rezCard, scoreAgenda } from './actions/corp';
 import { continueRun, initiateRun, jackOut } from './actions/run';
 import { endTurn } from './actions/turn';
 import { resolvePrompt } from './actions/prompt';
+import { playOperationOrEvent } from './actions/play';
 
 export { addLog } from './log';
 
@@ -35,7 +36,7 @@ const handlers: ActionHandlers = {
   JACK_OUT: jackOut,
   END_TURN: endTurn,
   RESOLVE_PROMPT: resolvePrompt,
-  PLAY_OPERATION_OR_EVENT: notImplemented,
+  PLAY_OPERATION_OR_EVENT: playOperationOrEvent,
   PURGE_VIRUS: notImplemented,
   BREAK_SUBROUTINE: notImplemented,
   ACCESS_CARD: notImplemented,

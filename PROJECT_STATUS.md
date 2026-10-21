@@ -43,7 +43,8 @@ This project is an open-source digital implementation of **Android: Netrunner**,
 4. **Determinism:** All randomness goes through the seeded RNG stored in `GameState.rng` (`src/core/rng.ts`); card instance ids come from `GameState.nextInstanceId`. `src/core/` must never call `Math.random`, `Date.now` or `new Date()`. Same seed + same action list = identical state. `tests/enginePurity.test.ts` enforces this and invariant 2.
 5. **Plain-data state:** `GameState` is plain JSON. Card instances store only `cardCode`; look up definitions with `cardDef(card)` / `getCardDefinition(code)` from `src/core/cards.ts`.
 6. **One way in:** Every state change goes through `executeAction(state, action)`, which never mutates its input and throws `IllegalActionError` for illegal moves. Use `getLegalActions(state, side)` to drive UI buttons and AI rather than re-implementing rules checks. Import engine APIs from `src/core` (the `index.ts` barrel).
-7. **Player decisions are prompts:** When the rules need a player to choose (mulligan, discard to hand size, trash on access, and future "you may" effects), the engine pushes a `Prompt` onto `GameState.pendingPrompts` (`src/core/types/prompts.ts`, `engine/prompts.ts`). While any prompt is pending, the only legal action is `RESOLVE_PROMPT` for the first one, from its side. Multi-step flows (e.g. breach via `activeRun.accessQueue`, end of turn via `finishEndTurn`) must be resumable after the answer. Add new decision types as a new `Prompt` kind + `PromptChoice` + a case in `engine/actions/prompt.ts` + answers in `legalActions.ts`.
+7. **Player decisions are prompts:** When the rules need a player to choose (mulligan, discard to hand size, trash on access, and future "you may" effects), the engine pushes a `Prompt` onto `GameState.pendingPrompts` (`src/core/types/prompts.ts`, `engine/prompts.ts`). While any prompt is pending, the only legal action is `RESOLVE_PROMPT` for the first one, from its side. Multi-step flows (e.g. breach via `activeRun.accessQueue`, end of turn via `finishEndTurn`) must be resumable after the answer. Add new decision types as a new `Prompt` kind + `PromptChoice` + a case in `engine/actions/prompt.ts` + answers in `legalActions.ts`. Card effects use the generic `effect_choice` / `effect_cards` prompts via `askChoice` / `askCards` in `src/core/scripts/effects.ts`.
+8. **Card scripts:** Card abilities live in `src/core/scripts/` as a `CardScript` per card code (`canPlay`, `onPlay`, `onPromptAnswer`), registered in `scripts/index.ts`. A card with no script is treated as not implemented (`NotImplementedError`), so it is never offered as a legal play. Each scripted card gets a test in `tests/`.
 
 ---
 
@@ -67,6 +68,7 @@ Netrunner/
 │   │   ├── index.ts                    <-- Public engine API (import from here)
 │   │   ├── rng.ts                      <-- Seeded PRNG (mulberry32) + shuffle
 │   │   ├── cards.ts                    <-- Card definition registry (cardDef / getCardDefinition)
+│   │   ├── scripts/                    <-- Card abilities: types, effects helpers, operations.ts, events.ts, index.ts registry
 │   │   ├── types/
 │   │   │   ├── card.ts                 <-- Card schema, instances, tokens
 │   │   │   ├── state.ts                <-- GameState, CorpState, RunnerState, RunState
@@ -79,7 +81,7 @@ Netrunner/
 │   │       ├── errors.ts               <-- IllegalActionError / NotImplementedError
 │   │       ├── prompts.ts              <-- pushPrompt / activePrompt (player-choice queue)
 │   │       ├── helpers.ts, log.ts      <-- Shared engine utilities
-│   │       └── actions/                <-- One module per action group (basic, install, corp, run, turn, prompt)
+│   │       └── actions/                <-- One module per action group (basic, install, play, corp, run, turn, prompt)
 │   ├── data/
 │   │   ├── cards.ts                    <-- Typed card lookup utilities
 │   │   ├── starterDecks.ts             <-- Starter decks (Catalyst / Syndicate)
@@ -101,6 +103,7 @@ Netrunner/
     ├── legalActions.test.ts            <-- getLegalActions tests
     ├── rulesFixes.test.ts              <-- Regression tests for rules fixes
     ├── prompts.test.ts                 <-- Mulligan, discard, trash-on-access prompts
+    ├── operationsEvents.test.ts        <-- Playing operations/events + each scripted card
     └── enginePurity.test.ts            <-- Guards: no Math.random/Date.now/React/DOM in src/core
 ```
 
@@ -120,6 +123,7 @@ Netrunner/
 - [x] Engine refactor: seeded RNG in state, deterministic ids, cardCode-only instances, per-action handlers, `getLegalActions`.
 - [x] Rules fixes: turn enforcement, install restrictions (no events/operations, no agendas/assets in centrals, one agenda/asset per remote), MU limit, agendas can't be rezzed, ice rezzed only on approach (Corp rez window in run overlay), advancing only advanceable cards, scoring as a separate `SCORE_AGENDA` action, breach accesses HQ (random, seeded) / R&D top / all of Archives, no skipped cards on access, Corp mandatory draw on turn 1.
 - [x] Player-choice prompt model (`pendingPrompts` + `RESOLVE_PROMPT`): mulligan (Corp then Runner), discard to hand size at end of turn, pay-to-trash on access. Turns can only end once all clicks are spent. UI: `PromptPanel` modal.
+- [x] Roadmap M1 — play operations & events: `PLAY_OPERATION_OR_EVENT`, card script registry, effect prompts, run/install-turn tracking. Scripted: Sure Gamble, Creative Commission, VRcation, Wildcat Strike, Mutual Favor, Hedge Fund, Government Subsidy, Hansei Review, Sprint, Predictive Planogram, Seamless Launch. (Full roadmap: https://claude.ai/artifact/HzYaWkAZGsA2ehdMqTGPZW)
 - [ ] **NEXT:** Implement Ice encounter mechanics (Ice strength, Icebreaker matching, breaking subroutines).
 - [ ] **NEXT:** Support Agenda scoring & advancement counters with victory checks.
 
@@ -178,3 +182,4 @@ Netrunner/
 | **2026-10-21** | Claude | Engine refactor (no rules changes): seeded mulberry32 RNG stored in `GameState.rng`, deterministic instance ids, removed `Date.now`/`Math.random` from core; card instances now store only `cardCode` (definitions via `cardDef()`); split `executeAction` into a typed per-action handler table under `engine/actions/` with `IllegalActionError`/`NotImplementedError`; added `getLegalActions`/`isLegalAction` and a `src/core/index.ts` barrel; UI shows the seed and accepts `?seed=`; added determinism, legal-action and engine-purity tests; `tests/` now typechecked. |
 | **2026-10-21** | Claude | Rules-bug fixes: turn/run enforcement on every action; install restrictions + MU limit; agendas unrezzable; ice rez only while approached (Corp rez button in `RunOverlay`); new `SCORE_AGENDA` action replaces auto-score, advance limited to agendas and "You can advance this" cards; breach collects candidates first (fixes skipped cards) and accesses HQ/R&D/Archives; Runner can't draw from an empty Stack; Corp mandatory draw on turn 1; Advance/Score/Rez buttons in `ServerColumn` driven by `isLegalAction`; 18 regression tests in `tests/rulesFixes.test.ts`. |
 | **2026-10-21** | Claude | Player-choice prompts: `GameState.pendingPrompts` queue + `RESOLVE_PROMPT` action (only legal action while a prompt is pending); mulligan at setup (Corp first turn and its mandatory draw start after both decide; clicks start at 0); END_TURN requires all clicks spent and prompts a discard when over hand size; breach is now a resumable `accessQueue` with a pay-to-trash prompt for cards with a trash cost (not in Archives); `getLegalActions` enumerates prompt answers; new `PromptPanel` UI and disabled End Turn buttons; `tests/prompts.test.ts` (66 tests total). |
+| **2026-10-21** | Claude | Roadmap M1: `PLAY_OPERATION_OR_EVENT` basic action (click + cost, card to Archives/heap face up, then effect); `src/core/scripts/` card-script registry (`canPlay`/`onPlay`/`onPromptAnswer`) with generic `effect_choice`/`effect_cards` prompts; `runsThisTurn` and `CardInstance.installedTurn` tracking; `drawCards` helper; `installRunnerCardFrom` for installs from effects. Scripted 11 cards (see roadmap above). UI: Play button for selected operations/events (disabled with "not implemented" for unscripted cards), effect prompts in `PromptPanel`. `tests/operationsEvents.test.ts` (92 tests total). |

@@ -30,6 +30,7 @@ export function endTurn(state: GameState, action: EndTurnAction): void {
 
 /** Hands the turn to the other player (after any end-of-turn discard). */
 export function finishEndTurn(state: GameState, side: SideCode): void {
+  state.runsThisTurn = [];
   if (side === 'corp') {
     state.activePlayer = 'runner';
     state.phase = 'runner_turn';

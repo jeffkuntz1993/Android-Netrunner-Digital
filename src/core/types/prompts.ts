@@ -5,7 +5,7 @@ import { SideCode } from './card';
  * legal action is RESOLVE_PROMPT for the first prompt in the queue, made by
  * the prompt's side.
  */
-export type Prompt = MulliganPrompt | DiscardPrompt | AccessTrashPrompt;
+export type Prompt = MulliganPrompt | DiscardPrompt | AccessTrashPrompt | EffectChoicePrompt | EffectCardsPrompt;
 
 interface BasePrompt {
   id: string;
@@ -31,7 +31,36 @@ export interface AccessTrashPrompt extends BasePrompt {
   trashCost: number;
 }
 
+/**
+ * Identifies the card script waiting on a prompt answer and where it is in
+ * its resolution. `data` must stay plain JSON.
+ */
+export interface EffectSource {
+  cardCode: string;
+  instanceId: string;
+  step: string;
+  data?: Record<string, string | number | boolean | string[]>;
+}
+
+/** A card effect asks a player to pick one option. */
+export interface EffectChoicePrompt extends BasePrompt {
+  kind: 'effect_choice';
+  options: { id: string; label: string }[];
+  source: EffectSource;
+}
+
+/** A card effect asks a player to pick between `min` and `max` of the candidate cards. */
+export interface EffectCardsPrompt extends BasePrompt {
+  kind: 'effect_cards';
+  candidateIds: string[];
+  min: number;
+  max: number;
+  source: EffectSource;
+}
+
 export type PromptChoice =
   | { kind: 'mulligan'; mulligan: boolean }
   | { kind: 'discard'; cardInstanceIds: string[] }
-  | { kind: 'access_trash'; trash: boolean };
+  | { kind: 'access_trash'; trash: boolean }
+  | { kind: 'effect_choice'; optionId: string }
+  | { kind: 'effect_cards'; cardInstanceIds: string[] };

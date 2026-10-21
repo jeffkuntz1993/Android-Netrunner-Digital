@@ -19,6 +19,7 @@ export function initiateRun(state: GameState, action: InitiateRunAction): void {
 
   addLog(state, 'runner', `Runner initiated a run on ${targetServer.name}!`);
 
+  state.runsThisTurn.push({ server: targetServer.id, successful: false });
   state.activeRun = {
     server: targetServer.id,
     phase: iceCount > 0 ? 'approach_ice' : 'approach_server',
@@ -53,6 +54,7 @@ export function continueRun(state: GameState, action: ContinueRunAction): void {
   } else if (run.phase === 'approach_server') {
     run.phase = 'access';
     run.isSuccessful = true;
+    state.runsThisTurn[state.runsThisTurn.length - 1].successful = true;
     addLog(state, 'runner', `Run successful on ${server.name}! Accessing cards.`);
     breachServer(state, server);
   }
