@@ -180,7 +180,7 @@ function accessCard(state: GameState, card: CardInstance, zone: CardInstance[], 
   const def = cardDef(card);
   const run = state.activeRun!;
   run.accessedCount += 1;
-  addLog(state, 'runner', `Runner accessed ${def.title}.`);
+  addLog(state, 'runner', `Runner accessed ${def.title}.`, card.cardCode);
 
   const installed = Object.values(state.corp.servers).some(s => s.root.includes(card) || s.ice.includes(card));
   if (installed) getCardScript(card.cardCode)?.onAccessed?.({ state, card, side: 'corp' });
