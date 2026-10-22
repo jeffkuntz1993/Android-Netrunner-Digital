@@ -65,6 +65,17 @@ export type RunPhase =
   | 'access'
   | 'complete';
 
+/** The Runner's current encounter with a piece of ice. */
+export interface EncounterState {
+  iceId: string;
+  /** One entry per subroutine on the ice: has it been broken? */
+  broken: boolean[];
+  /** Strength added to each icebreaker (by instance id) for this encounter. */
+  boosts: Record<string, number>;
+  /** Index of the next unbroken subroutine to resolve, once resolution has started. */
+  resolvingIndex: number | null;
+}
+
 export interface RunState {
   server: string;
   phase: RunPhase;
@@ -72,9 +83,16 @@ export interface RunState {
   isSuccessful: boolean;
   isJackedOut: boolean;
   cannotJackOut: boolean;
-  subroutinesToResolve: string[];
   /** Instance ids still to be accessed during the breach, in order. */
   accessQueue: string[];
+  /** The encounter in progress, if the Runner is encountering ice. */
+  encounter: EncounterState | null;
+  /** Number of pieces of ice the Runner has passed (jacking out needs at least 1). */
+  icePassed: number;
+  /** Set by Ansel 1.0: the Runner cannot steal or trash Corp cards this run. */
+  cannotStealOrTrash: boolean;
+  /** Programs to trash when the run ends (e.g. Mayfly after using its ability). */
+  trashAtRunEnd: string[];
 }
 
 export type TurnPlayer = SideCode;

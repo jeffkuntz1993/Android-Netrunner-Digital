@@ -8,6 +8,7 @@ import { continueRun, initiateRun, jackOut } from './actions/run';
 import { endTurn } from './actions/turn';
 import { resolvePrompt } from './actions/prompt';
 import { playOperationOrEvent } from './actions/play';
+import { bioroidBreak, boostBreaker, breakSubroutine } from './actions/breaking';
 
 export { addLog } from './log';
 
@@ -38,7 +39,9 @@ const handlers: ActionHandlers = {
   RESOLVE_PROMPT: resolvePrompt,
   PLAY_OPERATION_OR_EVENT: playOperationOrEvent,
   PURGE_VIRUS: notImplemented,
-  BREAK_SUBROUTINE: notImplemented,
+  BREAK_SUBROUTINE: breakSubroutine,
+  BOOST_BREAKER: boostBreaker,
+  BIOROID_BREAK: bioroidBreak,
   ACCESS_CARD: notImplemented,
   PASS_PRIORITY: notImplemented,
 };

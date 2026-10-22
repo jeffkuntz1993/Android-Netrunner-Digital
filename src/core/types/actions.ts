@@ -17,6 +17,8 @@ export type GameActionType =
   | 'JACK_OUT'
   | 'BREAK_SUBROUTINE'
   | 'ACCESS_CARD'
+  | 'BOOST_BREAKER'
+  | 'BIOROID_BREAK'
   | 'PASS_PRIORITY'
   | 'RESOLVE_PROMPT'
   | 'END_TURN';
@@ -79,10 +81,23 @@ export interface JackOutAction extends BaseAction {
   type: 'JACK_OUT';
 }
 
+/** Use an icebreaker's interface ability to break subroutines on the encountered ice. */
 export interface BreakSubroutineAction extends BaseAction {
   type: 'BREAK_SUBROUTINE';
-  subroutineIndex: number;
   breakerInstanceId: string;
+  subroutineIndices: number[];
+}
+
+/** Use an icebreaker's strength ability once (lasts for the current encounter). */
+export interface BoostBreakerAction extends BaseAction {
+  type: 'BOOST_BREAKER';
+  breakerInstanceId: string;
+}
+
+/** Spend a click to break 1 subroutine on encountered bioroid ice (Ansel 1.0, Brân 1.0). */
+export interface BioroidBreakAction extends BaseAction {
+  type: 'BIOROID_BREAK';
+  subroutineIndex: number;
 }
 
 export interface AccessCardAction extends BaseAction {
@@ -117,6 +132,8 @@ export type GameAction =
   | ContinueRunAction
   | JackOutAction
   | BreakSubroutineAction
+  | BoostBreakerAction
+  | BioroidBreakAction
   | AccessCardAction
   | PassPriorityAction
   | ResolvePromptAction

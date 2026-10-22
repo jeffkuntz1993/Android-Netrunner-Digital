@@ -3,6 +3,7 @@ import { GameAction } from '../types/actions';
 import { GameState } from '../types/state';
 import { isLegalAction } from './gameEngine';
 import { activePrompt } from './prompts';
+import { breakerScript } from './ice';
 
 /**
  * Lists every action the given side can legally take right now.
@@ -26,6 +27,7 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
   if (state.activeRun) {
     if (side === 'runner') {
       candidates.push({ type: 'CONTINUE_RUN', player: 'runner' }, { type: 'JACK_OUT', player: 'runner' });
+      candidates.push(...breakCandidates(state));
     }
   } else {
     candidates.push(
@@ -73,6 +75,28 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
   }
 
   return candidates;
+}
+
+/** Break, boost and bioroid-break options for the current encounter. */
+function breakCandidates(state: GameState): GameAction[] {
+  const encounter = state.activeRun?.encounter;
+  if (!encounter) return [];
+  const unbroken = encounter.broken.flatMap((b, i) => (b ? [] : [i]));
+  const actions: GameAction[] = [];
+  for (const card of state.runner.rig.programs) {
+    const script = breakerScript(card);
+    if (!script) continue;
+    actions.push({ type: 'BOOST_BREAKER', player: 'runner', breakerInstanceId: card.instanceId });
+    for (let k = 1; k <= script.breakMax; k++) {
+      for (const subroutineIndices of combinations(unbroken, k)) {
+        actions.push({ type: 'BREAK_SUBROUTINE', player: 'runner', breakerInstanceId: card.instanceId, subroutineIndices });
+      }
+    }
+  }
+  for (const subroutineIndex of unbroken) {
+    actions.push({ type: 'BIOROID_BREAK', player: 'runner', subroutineIndex });
+  }
+  return actions;
 }
 
 /** Every possible answer to the active prompt. */

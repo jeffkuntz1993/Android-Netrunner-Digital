@@ -1,6 +1,7 @@
 import { AdvanceCardAction, RezCardAction, ScoreAgendaAction } from '../../types/actions';
 import { GameState } from '../../types/state';
 import { cardDef } from '../../cards';
+import { getCardScript } from '../../scripts';
 import { addLog } from '../log';
 import {
   checkAgendaVictory,
@@ -82,4 +83,7 @@ export function rezCard(state: GameState, action: RezCardAction): void {
   state.corp.credits -= rezCost;
   card.isRezzed = true;
   addLog(state, 'corp', `Corp spent ${rezCost} [credit] to rez ${def.title}.`);
+  if (state.activeRun?.server === server.id) {
+    getCardScript(card.cardCode)?.ice?.onRezDuringRunOnServer?.({ state, card, side: 'corp' });
+  }
 }

@@ -10,8 +10,15 @@ import { getCardScript } from '../../scripts';
 import { activePrompt, sideName } from '../prompts';
 import { beginCorpTurn, finishEndTurn } from './turn';
 import { continueAccess } from './run';
+import { resumeEncounter } from '../ice';
 
 export function resolvePrompt(state: GameState, action: ResolvePromptAction): void {
+  answerPrompt(state, action);
+  // A subroutine may have been waiting on this answer.
+  resumeEncounter(state);
+}
+
+function answerPrompt(state: GameState, action: ResolvePromptAction): void {
   const prompt = activePrompt(state);
   if (!prompt || prompt.id !== action.promptId) illegal('That prompt is not waiting for an answer');
   if (prompt.side !== action.player) illegal(`Waiting on the ${sideName(prompt.side)}`);

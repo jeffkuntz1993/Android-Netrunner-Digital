@@ -13,3 +13,4 @@ export { getLegalActions } from './engine/legalActions';
 export { activePrompt } from './engine/prompts';
 export { locateCorpCard, findCardAnywhere } from './engine/helpers';
 export { getCardScript, scriptedCardCodes } from './scripts';
+export { encounteredIce, iceScript, breakerScript, iceStrength, breakerStrength, installedIcebreakers } from './engine/ice';

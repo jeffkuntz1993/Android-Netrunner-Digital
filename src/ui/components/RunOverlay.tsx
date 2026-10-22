@@ -3,6 +3,8 @@ import { GameState } from '../../core/types/state';
 import { CardInstance } from '../../core/types/card';
 import { CardView } from './CardView';
 import { cardDef } from '../../data/cards';
+import { GameAction, iceStrength, isLegalAction } from '../../core';
+import { EncounterPanel } from './EncounterPanel';
 import { ArrowRight, LogOut, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 interface RunOverlayProps {
@@ -12,6 +14,8 @@ interface RunOverlayProps {
   /** Present when the Corp may rez the approached ice (hot-seat rez window). */
   onRezApproachedIce?: () => void;
   onInspectCard?: (card: CardInstance) => void;
+  /** Dispatches break / boost / bioroid actions from the encounter panel. */
+  onAction: (action: GameAction) => void;
 }
 
 export const RunOverlay: React.FC<RunOverlayProps> = ({
@@ -20,6 +24,7 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
   onJackOut,
   onRezApproachedIce,
   onInspectCard,
+  onAction,
 }) => {
   const { activeRun } = state;
   if (!activeRun) return null;
@@ -27,6 +32,15 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
   const server = state.corp.servers[activeRun.server];
   const currentIce =
     activeRun.icePosition !== null && server ? server.ice[activeRun.icePosition] : null;
+  const canJackOut = isLegalAction(state, { type: 'JACK_OUT', player: 'runner' });
+  const continueLabel =
+    activeRun.phase === 'encounter_ice'
+      ? activeRun.encounter?.broken.some(b => !b)
+        ? 'Let Subroutines Fire'
+        : 'Pass Ice'
+      : activeRun.phase === 'approach_ice' && currentIce && !currentIce.isRezzed
+        ? 'Pass Unrezzed Ice'
+        : 'Continue Run';
 
   return (
     <div className="fixed inset-x-0 bottom-6 z-40 max-w-3xl mx-auto px-4 pointer-events-auto">
@@ -67,7 +81,7 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
                   {currentIce.isRezzed ? (
                     <>
                       <div className="text-cyan-300 font-bold">
-                        Strength: {cardDef(currentIce).strength ?? 0} • {cardDef(currentIce).keywords}
+                        Strength: {iceStrength(state, currentIce)} • {cardDef(currentIce).keywords}
                       </div>
                       <div className="text-[11px] text-slate-300 mt-1 line-clamp-2">
                         {cardDef(currentIce).text}
@@ -101,16 +115,20 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
               onClick={onContinueRun}
               className="px-5 py-2.5 bg-cyber-neonPink hover:bg-pink-600 text-white font-mono text-xs font-bold rounded-xl shadow-lg flex items-center justify-center gap-1.5 transition-all hover:scale-105"
             >
-              Continue Run <ArrowRight className="w-4 h-4" />
+              {continueLabel} <ArrowRight className="w-4 h-4" />
             </button>
             <button
               onClick={onJackOut}
-              className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs font-semibold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition-colors"
+              disabled={!canJackOut}
+              title={canJackOut ? 'End the run now' : 'You can jack out only while approaching, after passing at least one ice'}
+              className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs font-semibold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40 disabled:hover:bg-slate-800"
             >
               <LogOut className="w-4 h-4" /> Jack Out
             </button>
           </div>
         </div>
+
+        <EncounterPanel state={state} onAction={onAction} />
       </div>
     </div>
   );

@@ -490,6 +490,7 @@ export default function App() {
             : undefined
         }
         onInspectCard={setInspectedCard}
+        onAction={handleAction}
       />
 
       {/* Pending player decision (mulligan, discard, trash on access) */}

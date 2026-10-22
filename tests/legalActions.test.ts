@@ -33,7 +33,9 @@ describe('Legal actions', () => {
     let state = newGame(3);
     startRunnerTurn(state);
     state = executeAction(state, { type: 'INITIATE_RUN', player: 'runner', targetServerId: 'rd' });
-    expect(getLegalActions(state, 'runner').map(a => a.type).sort()).toEqual(['CONTINUE_RUN', 'JACK_OUT']);
+    // No ice passed yet, so the Runner cannot jack out
+    expect(getLegalActions(state, 'runner').map(a => a.type).sort()).toEqual(['CONTINUE_RUN']);
+    expect(getLegalActions(state, 'corp')).toEqual([]);
   });
 
   it('rejects illegal and unimplemented actions with typed errors', () => {

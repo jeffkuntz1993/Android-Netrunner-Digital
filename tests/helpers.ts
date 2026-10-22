@@ -77,3 +77,32 @@ export function giveCard(state: GameState, side: 'corp' | 'runner', code: string
 export function play(state: GameState, side: 'corp' | 'runner', cardInstanceId: string): GameState {
   return executeAction(state, { type: 'PLAY_OPERATION_OR_EVENT', player: side, cardInstanceId });
 }
+
+/** Installs a specific ice (by code) as the outermost ice on a server, rezzed by default (test setup only). */
+export function installIceForTest(state: GameState, code: string, serverId: string, rezzed = true): string {
+  const card = createCardInstance(state, code);
+  card.isRezzed = rezzed;
+  if (!state.corp.servers[serverId]) {
+    state.corp.servers[serverId] = { id: serverId, name: serverId, isRemote: true, ice: [], root: [] };
+  }
+  state.corp.servers[serverId].ice.push(card);
+  return card.instanceId;
+}
+
+/** Puts a specific program into the Runner's rig, bypassing costs (test setup only). */
+export function installProgramForTest(state: GameState, code: string): string {
+  const card = createCardInstance(state, code);
+  card.isRezzed = true;
+  state.runner.rig.programs.push(card);
+  state.runner.memoryUnitsUsed += cardDef(card).memory_cost || 0;
+  return card.instanceId;
+}
+
+/** Starts the Runner's turn, runs the server and continues once (into the first encounter). */
+export function runIntoFirstIce(state: GameState, serverId: string): GameState {
+  startRunnerTurn(state);
+  const s = executeAction(state, { type: 'INITIATE_RUN', player: 'runner', targetServerId: serverId });
+  return executeAction(s, { type: 'CONTINUE_RUN', player: 'runner' });
+}
+
+export const cont = (state: GameState) => executeAction(state, { type: 'CONTINUE_RUN', player: 'runner' });

@@ -1,11 +1,13 @@
 import { ContinueRunAction, InitiateRunAction, JackOutAction } from '../../types/actions';
 import { CardInstance } from '../../types/card';
-import { GameState, RunState, ServerState } from '../../types/state';
+import { GameState, ServerState } from '../../types/state';
 import { cardDef } from '../../cards';
 import { nextInt } from '../../rng';
 import { addLog } from '../log';
 import { checkAgendaVictory, illegal, locateCorpCard, removeCard, requireActionPhase, requireClicks } from '../helpers';
 import { pushPrompt } from '../prompts';
+import { beginEncounter, passIce, startSubroutineResolution } from '../ice';
+import { endRun } from '../runEnd';
 
 export function initiateRun(state: GameState, action: InitiateRunAction): void {
   if (action.player !== 'runner') illegal('Only Runner can initiate runs');
@@ -27,8 +29,11 @@ export function initiateRun(state: GameState, action: InitiateRunAction): void {
     isSuccessful: false,
     isJackedOut: false,
     cannotJackOut: false,
-    subroutinesToResolve: [],
     accessQueue: [],
+    encounter: null,
+    icePassed: 0,
+    cannotStealOrTrash: false,
+    trashAtRunEnd: [],
   };
   state.phase = 'run';
 }
@@ -43,14 +48,15 @@ export function continueRun(state: GameState, action: ContinueRunAction): void {
     // The Corp's rez window for this ice is before the Runner continues.
     const currentIce = server.ice[run.icePosition!];
     if (currentIce && currentIce.isRezzed) {
-      run.phase = 'encounter_ice';
-      addLog(state, 'system', `Encountering rezzed Ice: ${cardDef(currentIce).title}.`);
+      beginEncounter(state, currentIce);
     } else {
       addLog(state, 'runner', `Passed unrezzed Ice position ${run.icePosition! + 1}.`);
-      moveInward(run);
+      passIce(state);
     }
   } else if (run.phase === 'encounter_ice') {
-    moveInward(run);
+    // Done breaking: unbroken subroutines resolve, then the ice is passed.
+    if (run.encounter?.resolvingIndex != null) illegal('Subroutines are already resolving');
+    startSubroutineResolution(state);
   } else if (run.phase === 'approach_server') {
     run.phase = 'access';
     run.isSuccessful = true;
@@ -60,27 +66,19 @@ export function continueRun(state: GameState, action: ContinueRunAction): void {
   }
 }
 
+/**
+ * The Runner may jack out during the movement phase, i.e. after passing at
+ * least one piece of ice and before encountering the next one or breaching.
+ */
 export function jackOut(state: GameState, action: JackOutAction): void {
   if (action.player !== 'runner') illegal('Only the Runner can jack out');
-  if (!state.activeRun) illegal('No active run');
+  const run = state.activeRun;
+  if (!run) illegal('No active run');
+  if (!['approach_ice', 'approach_server'].includes(run.phase) || run.icePassed === 0) {
+    illegal('You can only jack out after passing a piece of ice');
+  }
   addLog(state, 'runner', 'Runner jacked out. Run ended unsuccessfully.');
   endRun(state);
-}
-
-/** Pass the current ice and approach the next one inward, or the server. */
-function moveInward(run: RunState): void {
-  if (run.icePosition! > 0) {
-    run.icePosition! -= 1;
-    run.phase = 'approach_ice';
-  } else {
-    run.phase = 'approach_server';
-    run.icePosition = null;
-  }
-}
-
-function endRun(state: GameState): void {
-  state.activeRun = null;
-  state.phase = 'runner_turn';
 }
 
 /**
@@ -123,10 +121,11 @@ export function continueAccess(state: GameState): void {
 /** Resolves one access. Returns true if it is waiting on a trash decision. */
 function accessCard(state: GameState, card: CardInstance, zone: CardInstance[], inArchives: boolean): boolean {
   const def = cardDef(card);
+  const blocked = state.activeRun?.cannotStealOrTrash ?? false;
   if (def.type_code !== 'agenda') {
     addLog(state, 'runner', `Runner accessed ${def.title}.`);
     const trashCost = def.trash_cost;
-    if (!inArchives && trashCost !== null && trashCost !== undefined && state.runner.credits >= trashCost) {
+    if (!blocked && !inArchives && trashCost !== null && trashCost !== undefined && state.runner.credits >= trashCost) {
       pushPrompt(state, {
         kind: 'access_trash',
         side: 'runner',
@@ -136,6 +135,10 @@ function accessCard(state: GameState, card: CardInstance, zone: CardInstance[], 
       });
       return true;
     }
+    return false;
+  }
+  if (blocked) {
+    addLog(state, 'runner', `Runner accessed ${def.title} but cannot steal it this run.`);
     return false;
   }
   removeCard(zone, card);
