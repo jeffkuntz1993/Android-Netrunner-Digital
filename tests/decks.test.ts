@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialGameState, requiredAgendaPoints, validateDeck } from '../src/core';
-import { DECKS, deckCodes, deckGameSetup } from '../src/data/decks';
+import { DECKS, DeckList, deckCodes, deckGameSetup, pickRandomDeck, randomDeckPool } from '../src/data/decks';
 import { playout } from './helpers';
 
 describe('decklists', () => {
@@ -58,5 +58,25 @@ describe('real deck playouts', () => {
       const state = playout(100 + i, 500, deckGameSetup(100 + i, corp.id, runner.id));
       expect(state.turnNumber).toBeGreaterThan(1);
     });
+  });
+});
+
+describe('random deck', () => {
+  it('never picks a starter deck and only picks legal decks of the right side', () => {
+    const illegal: DeckList = { id: 'bad', name: 'Bad', side: 'corp', identity: DECKS[0].identity, cards: {}, source: 'custom' };
+    for (const side of ['corp', 'runner'] as const) {
+      const pool = randomDeckPool([...DECKS, illegal], side);
+      expect(pool.length).toBeGreaterThan(1);
+      expect(pool.every(d => d.side === side && d.source !== 'official starter')).toBe(true);
+      expect(pool.some(d => d.id === 'bad')).toBe(false);
+    }
+  });
+
+  it('picks a different deck from the current one', () => {
+    const pool = randomDeckPool(DECKS, 'runner');
+    for (let i = 0; i < 20; i++) {
+      const r = i / 20;
+      expect(pickRandomDeck(DECKS, 'runner', pool[0].id, () => r)!.id).not.toBe(pool[0].id);
+    }
   });
 });

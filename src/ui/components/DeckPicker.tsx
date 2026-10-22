@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { SideCode, getCardDefinition, influenceCost, validateDeck } from '../../core';
-import { DECKS, DeckList, deckCodes } from '../../data/decks';
+import { DECKS, DeckList, deckCodes, pickRandomDeck, randomDeckPool } from '../../data/decks';
 import { SYSTEM_GATEWAY_CARDS, getCardImageUrl } from '../../data/cards';
 import { loadCustomDecks, newCustomDeckId, saveCustomDecks } from '../../data/customDecks';
 import { DeckBuilder } from './DeckBuilder';
 import type { Difficulty } from '../../ai';
-import { CheckCircle2, AlertTriangle, Play, Plus, Pencil, Copy, Trash2 } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Play, Plus, Pencil, Copy, Trash2, Dices } from 'lucide-react';
 
 interface DeckPickerProps {
   initialCorpDeckId: string;
@@ -155,19 +155,35 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
 
   const column = (side: 'corp' | 'runner', selected: string, select: (id: string) => void) => {
     const accent = side === 'corp' ? 'cyan' : 'pink';
+    const allDecks = summaries.map(s => s.deck);
+    const canRandomize = randomDeckPool(allDecks, side).some(d => d.id !== selected);
     return (
       <section className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-3">
           <h2 className={`font-cyber font-bold text-sm tracking-wider ${side === 'corp' ? 'text-cyan-400' : 'text-pink-400'}`}>
             {side === 'corp' ? 'CORP DECK' : 'RUNNER DECK'}
           </h2>
-          <button
-            onClick={() => setEditing(emptyDeck(side))}
-            data-testid={`new-${side}-deck`}
-            className="px-2.5 py-1 rounded-lg border border-slate-700 hover:border-slate-500 text-xs flex items-center gap-1"
-          >
-            <Plus className="w-3.5 h-3.5" /> New deck
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const deck = pickRandomDeck(allDecks, side, selected);
+                if (deck) select(deck.id);
+              }}
+              disabled={!canRandomize}
+              title="Pick a random legal deck (never a starter deck)"
+              data-testid={`random-${side}-deck`}
+              className="disabled:opacity-40 disabled:cursor-not-allowed px-2.5 py-1 rounded-lg border border-slate-700 hover:border-slate-500 text-xs flex items-center gap-1"
+            >
+              <Dices className="w-3.5 h-3.5" /> Random deck
+            </button>
+            <button
+              onClick={() => setEditing(emptyDeck(side))}
+              data-testid={`new-${side}-deck`}
+              className="px-2.5 py-1 rounded-lg border border-slate-700 hover:border-slate-500 text-xs flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> New deck
+            </button>
+          </div>
         </div>
         <div className="flex flex-col gap-2">
           {summaries

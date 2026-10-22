@@ -1,6 +1,7 @@
 import { GameSetup } from '../core/engine/gameState';
 import { SideCode } from '../core/types/card';
 import { SYSTEM_GATEWAY_CARDS } from './cards';
+import { validateDeck } from '../core/deckValidation';
 
 /**
  * Playable System Gateway decks.
@@ -168,6 +169,31 @@ export function deckCodes(deck: DeckList): { identity: string; cards: string[] }
     identity: codeOf(deck.identity),
     cards: Object.entries(deck.cards).flatMap(([title, n]) => Array<string>(n).fill(codeOf(title))),
   };
+}
+
+/** Decks the Random deck button can pick for a side: legal, and not one of the starter decks. */
+export function randomDeckPool(decks: DeckList[], side: SideCode): DeckList[] {
+  return decks.filter(d => {
+    if (d.side !== side || d.source === 'official starter') return false;
+    try {
+      return validateDeck(deckCodes(d)).length === 0;
+    } catch {
+      return false;
+    }
+  });
+}
+
+/** A random deck from the pool, avoiding `currentId` when there is anything else to pick. */
+export function pickRandomDeck(
+  decks: DeckList[],
+  side: SideCode,
+  currentId: string,
+  random: () => number = Math.random,
+): DeckList | null {
+  const pool = randomDeckPool(decks, side);
+  const others = pool.filter(d => d.id !== currentId);
+  const choices = others.length > 0 ? others : pool;
+  return choices.length > 0 ? choices[Math.floor(random() * choices.length)] : null;
 }
 
 export const DEFAULT_CORP_DECK = 'syndicate-starter';
