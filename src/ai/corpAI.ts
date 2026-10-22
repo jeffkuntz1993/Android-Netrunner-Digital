@@ -1,7 +1,7 @@
 import { CardInstance, GameAction, GameState, ServerState, activePrompt, cardDef, getLegalActions } from '../core';
 import { iceScript } from '../core/engine/ice';
 import { counters } from '../core/engine/cardEffects';
-import { Agent } from './agent';
+import { Agent, ScoredAction } from './agent';
 import { evaluate } from './evaluate';
 import { answerPrompt, simulate } from './prompts';
 
@@ -37,24 +37,26 @@ export class HeuristicCorpAI implements Agent {
   chooseAction(state: GameState): GameAction {
     if (activePrompt(state)) return answerPrompt(state, 'corp');
     const legal = getLegalActions(state, 'corp');
+    const ranked = this.rankMainActions(state, legal);
+    const chosen = ranked[0]?.score > -Infinity ? ranked[0].action : legal.find(a => a.type === 'END_TURN') ?? legal[0];
+    this.notePlayed(chosen);
+    return chosen;
+  }
+
+  /** Counts actions in a row that spent no click (loop guard). */
+  notePlayed(action: GameAction) {
+    if (action.type !== 'END_TURN') this.freeActions++;
+  }
+
+  /** Main-phase actions, best first, with this AI's score for each (the search AI starts from these). */
+  rankMainActions(state: GameState, legal = getLegalActions(state, 'corp')): ScoredAction[] {
     const key = `${state.turnNumber}|${state.corp.clicks}`;
     if (key !== this.freeKey) {
       this.freeKey = key;
       this.freeActions = 0;
     }
     const before = evaluate(state, 'corp');
-    let best: GameAction | undefined;
-    let bestScore = -Infinity;
-    for (const action of legal) {
-      const score = this.score(state, action, before);
-      if (score > bestScore) {
-        bestScore = score;
-        best = action;
-      }
-    }
-    const chosen = best ?? legal.find(a => a.type === 'END_TURN') ?? legal[0];
-    if (chosen.type !== 'END_TURN') this.freeActions++;
-    return chosen;
+    return legal.map(action => ({ action, score: this.score(state, action, before) })).sort((a, b) => b.score - a.score);
   }
 
   chooseRez(state: GameState, cards: CardInstance[]): GameAction | null {

@@ -1,7 +1,7 @@
 import { GameAction, GameState, activePrompt, getLegalActions } from '../core';
 import { encounteredIce, iceScript, isBioroid } from '../core/engine/ice';
 import { availableCredits } from '../core/engine/cardEffects';
-import { Agent } from './agent';
+import { Agent, ScoredAction } from './agent';
 import { evaluate, rigCoverage } from './evaluate';
 import { answerPrompt, runEventOptions, simulate } from './prompts';
 import { RunnerMemory, bestBreakPlan, iceCost, needsBiggerHand, runScore, subroutineCost } from './runs';
@@ -103,6 +103,19 @@ export class HeuristicRunnerAI implements Agent {
   }
 
   private mainAction(state: GameState, legal: GameAction[]): GameAction {
+    const ranked = this.rankMainActions(state, legal);
+    const chosen = ranked[0]?.score > -Infinity ? ranked[0].action : legal.find(a => a.type === 'END_TURN') ?? legal[0];
+    this.notePlayed(chosen);
+    return chosen;
+  }
+
+  /** Counts actions in a row that spent no click (loop guard). */
+  notePlayed(action: GameAction) {
+    if (action.type !== 'END_TURN' && action.type !== 'INITIATE_RUN') this.freeActions++;
+  }
+
+  /** Main-phase actions, best first, with this AI's score for each (the search AI starts from these). */
+  rankMainActions(state: GameState, legal = getLegalActions(state, 'runner')): ScoredAction[] {
     const key = `${state.turnNumber}|${state.runner.clicks}`;
     if (key !== this.freeKey) {
       this.freeKey = key;
@@ -113,18 +126,17 @@ export class HeuristicRunnerAI implements Agent {
     this.digForBreakers =
       rigCoverage(state.runner.rig.programs).covered.size < 3 &&
       !legal.some(a => a.type === 'INITIATE_RUN' && runScore(state, a.targetServerId, { memory: this.memory }) > 0);
-    let best: GameAction | undefined;
-    let bestScore = -Infinity;
-    for (const action of legal) {
-      const score = this.scoreMain(state, action, before);
-      if (score > bestScore) {
-        bestScore = score;
-        best = action;
-      }
-    }
-    const chosen = best ?? legal.find(a => a.type === 'END_TURN') ?? legal[0];
-    if (chosen.type !== 'END_TURN' && chosen.type !== 'INITIATE_RUN') this.freeActions++;
-    return chosen;
+    return legal.map(action => ({ action, score: this.scoreMain(state, action, before) })).sort((a, b) => b.score - a.score);
+  }
+
+  /** Cards seen so far (for the search AI's guesses about hidden cards). */
+  knownCards(): RunnerMemory {
+    return this.memory;
+  }
+
+  /** Lets the search AI record what the Runner has seen before it ranks actions. */
+  observe(state: GameState) {
+    this.remember(state);
   }
 
   private scoreMain(state: GameState, action: GameAction, before: number): number {

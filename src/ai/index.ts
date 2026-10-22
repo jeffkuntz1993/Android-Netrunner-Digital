@@ -1,14 +1,21 @@
-import { GameState, SideCode, executeAction } from '../core';
-import { actingSide, corpRezWindow } from '../ui/viewer';
+import { GameState, SideCode } from '../core';
 import { Agent } from './agent';
 import { HeuristicCorpAI } from './corpAI';
 import { HeuristicRunnerAI } from './runnerAI';
+import { SearchAI, SearchOptions } from './search';
+import { GameRunner } from './playout';
 
 export type { Agent } from './agent';
 export { HeuristicCorpAI } from './corpAI';
 export { HeuristicRunnerAI } from './runnerAI';
+export { SearchAI } from './search';
+export { GameRunner } from './playout';
 
-export function createAgent(side: SideCode): Agent {
+/** Normal: the rule-based AI. Hard: the rule-based AI plus Monte Carlo look-ahead. */
+export type Difficulty = 'normal' | 'hard';
+
+export function createAgent(side: SideCode, difficulty: Difficulty = 'normal', search: Partial<SearchOptions> = {}): Agent {
+  if (difficulty === 'hard') return new SearchAI(side, search);
   return side === 'corp' ? new HeuristicCorpAI() : new HeuristicRunnerAI();
 }
 
@@ -17,35 +24,15 @@ export interface AIGameResult {
   steps: number;
 }
 
-/**
- * Plays a game with the computer on both sides (tests and balancing). The
- * Corp gets the same rez windows a person would: before the Runner
- * continues past approached ice, and when the Runner approaches the server.
- */
-export function playAIGame(start: GameState, maxSteps = 3000, maxTurns = 80): AIGameResult {
-  const agents = { corp: createAgent('corp'), runner: createAgent('runner') };
-  let state = start;
-  let runSerial = 0;
-  const passed = new Set<string>();
+/** Plays a game with the computer on both sides (tests and balancing). */
+export function playAIGame(
+  start: GameState,
+  maxSteps = 3000,
+  maxTurns = 80,
+  agents: Record<SideCode, Agent> = { corp: createAgent('corp'), runner: createAgent('runner') }
+): AIGameResult {
+  const runner = new GameRunner(start, agents);
   let steps = 0;
-  for (; steps < maxSteps && !state.winner && state.turnNumber <= maxTurns; steps++) {
-    const window = corpRezWindow(state, runSerial);
-    const windowOpen = window !== null && !passed.has(window.key);
-    if (windowOpen) {
-      const rez = agents.corp.chooseRez?.(state, window.cards) ?? null;
-      if (!rez) {
-        passed.add(window.key);
-        continue;
-      }
-      state = executeAction(state, rez);
-      continue;
-    }
-    const side = actingSide(state, false);
-    if (!side) break;
-    const action = agents[side].chooseAction(state);
-    const next = executeAction(state, action);
-    if (!state.activeRun && next.activeRun) runSerial++;
-    state = next;
-  }
-  return { state, steps };
+  while (steps < maxSteps && runner.state.turnNumber <= maxTurns && runner.step()) steps++;
+  return { state: runner.state, steps };
 }

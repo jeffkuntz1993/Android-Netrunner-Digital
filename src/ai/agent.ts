@@ -14,3 +14,9 @@ export interface Agent {
    */
   chooseRez?(state: GameState, cards: CardInstance[]): GameAction | null;
 }
+
+/** An action with an AI's score for it (higher is better). */
+export interface ScoredAction {
+  action: GameAction;
+  score: number;
+}

@@ -11,7 +11,8 @@ import {
   isLegalAction,
   SideCode,
 } from './core';
-import { Agent, createAgent } from './ai';
+import { Difficulty } from './ai';
+import { AIClient } from './ai/client';
 import { DECKS, DEFAULT_CORP_DECK, DEFAULT_RUNNER_DECK, DeckList, deckGameSetup } from './data/decks';
 import { loadCustomDecks } from './data/customDecks';
 import { DeckPicker } from './ui/components/DeckPicker';
@@ -72,12 +73,13 @@ interface GameConfig {
   runnerDeck: DeckList;
   /** The side the computer plays, or null for two people. */
   ai: SideCode | null;
+  difficulty: Difficulty;
 }
 
 /**
  * `?seed=123&corp=<deck id>&runner=<deck id>` starts that exact game (to
  * replay a deal), and `&ai=corp` or `&ai=runner` hands one side to the
- * computer; without a seed the app opens on the deck picker.
+ * computer (`&difficulty=hard` for the search AI); without a seed the app opens on the deck picker.
  */
 function configFromUrl(): GameConfig | null {
   const params = new URLSearchParams(window.location.search);
@@ -91,6 +93,7 @@ function configFromUrl(): GameConfig | null {
     corpDeck: find(params.get('corp'), 'corp', DEFAULT_CORP_DECK),
     runnerDeck: find(params.get('runner'), 'runner', DEFAULT_RUNNER_DECK),
     ai: params.get('ai') === 'corp' || params.get('ai') === 'runner' ? (params.get('ai') as SideCode) : null,
+    difficulty: params.get('difficulty') === 'hard' ? 'hard' : 'normal',
   };
 }
 
@@ -103,9 +106,9 @@ export default function App() {
       <DeckPicker
         initialCorpDeckId={lastDecks.corp}
         initialRunnerDeckId={lastDecks.runner}
-        onStart={(corpDeck, runnerDeck, ai) => {
+        onStart={(corpDeck, runnerDeck, ai, difficulty) => {
           setLastDecks({ corp: corpDeck.id, runner: runnerDeck.id });
-          setConfig({ seed: randomSeed(), corpDeck, runnerDeck, ai });
+          setConfig({ seed: randomSeed(), corpDeck, runnerDeck, ai, difficulty });
         }}
       />
     );
@@ -153,7 +156,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
   // side (or everything, with Open table).
   const aiSide = config.ai;
   const humanSide: SideCode | null = aiSide === 'corp' ? 'runner' : aiSide === 'runner' ? 'corp' : null;
-  const agentRef = useRef<Agent | null>(aiSide ? createAgent(aiSide) : null);
+  const aiRef = useRef<AIClient | null>(null);
 
   // The Corp gets rez windows during runs in pass and play, and whenever the computer plays a side
   const rezWindowsOn = viewMode === 'hotseat' || aiSide !== null;
@@ -203,24 +206,39 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
     }
   };
 
-  // The computer moves on its own, after a short pause so its moves can be followed
+  // The computer thinks in a background worker, then moves after a short pause so its moves can be followed
   useEffect(() => {
-    const agent = agentRef.current;
-    if (!agent || !aiSide || gameState.winner || acting !== aiSide) return;
-    const timer = window.setTimeout(() => {
-      try {
-        if (aiSide === 'corp' && rezWindowOpen && rezWindow) {
-          const rez = agent.chooseRez?.(gameState, rezWindow.cards) ?? null;
-          if (rez) handleAction(rez);
-          else setPassedRezWindows(keys => [...keys, rezWindow.key]);
-          return;
-        }
-        handleAction(agent.chooseAction(gameState));
-      } catch (err) {
-        console.error('AI failed to move', err);
-      }
-    }, AI_DELAY_MS);
-    return () => window.clearTimeout(timer);
+    if (!aiSide) return;
+    const client = new AIClient(aiSide, config.difficulty);
+    aiRef.current = client;
+    return () => {
+      client.dispose();
+      aiRef.current = null;
+    };
+  }, [aiSide, config.difficulty]);
+
+  useEffect(() => {
+    const ai = aiRef.current;
+    if (!ai || !aiSide || gameState.winner || acting !== aiSide) return;
+    let cancelled = false;
+    let timer: number | undefined;
+    const started = Date.now();
+    const window_ = aiSide === 'corp' && rezWindowOpen ? rezWindow : null;
+    const request = window_ ? ai.chooseRez(gameState, window_.cards) : ai.chooseAction(gameState);
+    request
+      .then(action => {
+        if (cancelled) return;
+        timer = window.setTimeout(() => {
+          if (cancelled) return;
+          if (action) handleAction(action);
+          else if (window_) setPassedRezWindows(keys => [...keys, window_.key]);
+        }, Math.max(0, AI_DELAY_MS - (Date.now() - started)));
+      })
+      .catch(err => console.error('AI failed to move', err));
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState, acting, rezWindowOpen]);
 
@@ -312,7 +330,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
             </span>
             <span
               className="text-[10px] text-slate-500 font-mono hidden md:inline"
-              title={`Open the app with ?seed=${gameState.rng.seed}&corp=${config.corpDeck.id}&runner=${config.runnerDeck.id}${aiSide ? `&ai=${aiSide}` : ''} to replay this deal`}
+              title={`Open the app with ?seed=${gameState.rng.seed}&corp=${config.corpDeck.id}&runner=${config.runnerDeck.id}${aiSide ? `&ai=${aiSide}&difficulty=${config.difficulty}` : ''} to replay this deal`}
             >
               SEED {gameState.rng.seed}
             </span>
@@ -324,7 +342,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
                 }`}
                 title={`The computer plays the ${aiSide === 'corp' ? 'Corp' : 'Runner'}`}
               >
-                {aiThinking ? 'AI THINKING…' : `AI: ${aiSide.toUpperCase()}`}
+                {aiThinking ? 'AI THINKING…' : `AI: ${aiSide.toUpperCase()}${config.difficulty === 'hard' ? ' (HARD)' : ''}`}
               </span>
             )}
             {/* Quick Sticky End Turn Button */}

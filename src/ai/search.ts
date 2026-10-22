@@ -1,0 +1,208 @@
+import { CardInstance, GameAction, GameState, SideCode, activePrompt, getCardDefinition } from '../core';
+import { isAdvanceable } from '../core/engine/helpers';
+import { Agent, ScoredAction } from './agent';
+import { HeuristicCorpAI } from './corpAI';
+import { HeuristicRunnerAI } from './runnerAI';
+import { evaluate } from './evaluate';
+import { GameRunner } from './playout';
+import { RunnerMemory } from './runs';
+
+/**
+ * Hard AI: Monte Carlo look-ahead on top of the rule-based AI.
+ *
+ * For each decision that matters (a main-phase action, or the Corp's rez
+ * choice when the Runner approaches), it takes the rule-based AI's few best
+ * candidates and plays each one forward through the opponent's next turn,
+ * many times, with both sides played by the rule-based AI. Before every
+ * playout it re-deals what it can't see (the Runner's guesses at unrezzed
+ * cards, HQ and R&D; the Corp's guesses at the Grip and Stack), so it never
+ * peeks. The candidate with the best average outcome wins.
+ */
+
+export interface SearchOptions {
+  /** Thinking time per decision, in milliseconds. */
+  timeMs: number;
+  /** Fixed number of guessed deals per decision instead of a time limit (tests). */
+  samples?: number;
+  /** How many of the rule-based AI's best candidates to compare. */
+  candidates: number;
+  /** Seed for the guesses (tests); random otherwise. */
+  seed?: number;
+}
+
+const DEFAULTS: SearchOptions = { timeMs: 1500, candidates: 4 };
+/** Upper bound on decisions in one playout (a safety net; turns end well before). */
+const MAX_PLAYOUT_STEPS = 160;
+
+type Random = () => number;
+
+function mulberry(seed: number): Random {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffle<T>(items: T[], random: Random): T[] {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+
+/** Gives the cards in `slots` the codes in `codes` (same length), in order. */
+function assign(slots: CardInstance[], codes: string[]) {
+  slots.forEach((card, i) => (card.cardCode = codes[i]));
+}
+
+/**
+ * A copy of the game where everything `side` can't see is re-dealt at
+ * random from the cards it could be, and the shuffler is reseeded.
+ */
+export function determinize(state: GameState, side: SideCode, random: Random, memory?: RunnerMemory): GameState {
+  const s = structuredClone({ ...state, log: state.log.slice(-3) });
+  s.rng = { seed: Math.floor(random() * 2 ** 32), state: Math.floor(random() * 2 ** 32) };
+
+  if (side === 'corp') {
+    // The Corp doesn't know the Grip or the order of either deck
+    const hidden = [...s.runner.grip, ...s.runner.stack];
+    assign(hidden, shuffle(hidden.map(c => c.cardCode), random));
+    assign(s.corp.rd, shuffle(s.corp.rd.map(c => c.cardCode), random));
+    return s;
+  }
+
+  // The Runner doesn't know HQ, R&D, face-down Archives or unrezzed cards it hasn't accessed
+  const installed = Object.values(s.corp.servers);
+  const iceSlots = installed.flatMap(sv => sv.ice).filter(c => !c.isRezzed);
+  const rootSlots = installed.flatMap(sv => sv.root).filter(c => !c.isRezzed && !memory?.has(c.instanceId));
+  const loose = [...s.corp.hq, ...s.corp.rd, ...s.corp.archives.faceDown];
+  const pool = shuffle([...iceSlots, ...rootSlots, ...loose].map(c => c.cardCode), random);
+
+  const take = (fits: (code: string) => boolean): string | undefined => {
+    const i = pool.findIndex(fits);
+    return i === -1 ? undefined : pool.splice(i, 1)[0];
+  };
+  const typeOf = (code: string) => getCardDefinition(code).type_code;
+  for (const card of iceSlots) card.cardCode = take(code => typeOf(code) === 'ice') ?? take(code => code === card.cardCode)!;
+  for (const card of rootSlots) {
+    const advanced = card.advancementCounters > 0;
+    card.cardCode =
+      take(code => {
+        const type = typeOf(code);
+        if (!['agenda', 'asset', 'upgrade'].includes(type)) return false;
+        return !advanced || isAdvanceable({ cardCode: code } as CardInstance);
+      }) ?? take(code => code === card.cardCode)!;
+  }
+  // Whatever is left goes back into HQ, R&D and Archives (counts stay the same)
+  assign(loose, pool);
+  return s;
+}
+
+function heuristicFor(side: SideCode, memory?: RunnerMemory): Agent {
+  if (side === 'corp') return new HeuristicCorpAI();
+  const runner = new HeuristicRunnerAI();
+  memory?.forEach((code, id) => runner.knownCards().set(id, code));
+  return runner;
+}
+
+/**
+ * Plays from `state` (already re-dealt) with the rule-based AI on both
+ * sides until the end of the opponent's next turn, and scores the result
+ * for `side`.
+ */
+function playout(state: GameState, side: SideCode, first: GameAction | 'pass-rez', memory?: RunnerMemory): number {
+  const runner = new GameRunner(state, { corp: heuristicFor('corp'), runner: heuristicFor('runner', memory) });
+  if (first === 'pass-rez') runner.passRezWindow();
+  else runner.apply(first);
+
+  // Stop once the turn has changed hands twice (our turn ends, then theirs)
+  let handovers = 0;
+  let lastActive = runner.state.activePlayer;
+  for (let i = 0; i < MAX_PLAYOUT_STEPS && handovers < 2; i++) {
+    if (!runner.step()) break;
+    if (runner.state.activePlayer !== lastActive) {
+      handovers++;
+      lastActive = runner.state.activePlayer;
+    }
+    if (runner.state.log.length > 40) runner.state = { ...runner.state, log: runner.state.log.slice(-5) };
+  }
+  return evaluate(runner.state, side);
+}
+
+export class SearchAI implements Agent {
+  readonly side: SideCode;
+  private base: HeuristicCorpAI | HeuristicRunnerAI;
+  private options: SearchOptions;
+  private random: Random;
+
+  constructor(side: SideCode, options: Partial<SearchOptions> = {}) {
+    this.side = side;
+    this.base = side === 'corp' ? new HeuristicCorpAI() : new HeuristicRunnerAI();
+    this.options = { ...DEFAULTS, ...options };
+    this.random = mulberry(this.options.seed ?? Math.floor(Math.random() * 2 ** 32));
+  }
+
+  private get memory(): RunnerMemory | undefined {
+    return this.base instanceof HeuristicRunnerAI ? this.base.knownCards() : undefined;
+  }
+
+  chooseAction(state: GameState): GameAction {
+    // Prompts and the steps of a run follow the rule-based AI's judgement
+    if (activePrompt(state) || state.activeRun) return this.base.chooseAction(state);
+    if (this.base instanceof HeuristicRunnerAI) this.base.observe(state);
+    const ranked = this.base.rankMainActions(state).filter(c => c.score > -Infinity);
+    if (ranked.length === 0) return this.base.chooseAction(state);
+    if (ranked[0].action.type === 'SCORE_AGENDA') return ranked[0].action;
+    const best = this.search(state, ranked.slice(0, this.options.candidates).map(c => ({ ...c, first: c.action })), this.options.timeMs);
+    this.base.notePlayed(best); // keeps the rule-based AI's loop guard in step
+    return best;
+  }
+
+  chooseRez(state: GameState, cards: CardInstance[]): GameAction | null {
+    if (!(this.base instanceof HeuristicCorpAI)) return null;
+    const suggested = this.base.chooseRez(state, cards);
+    const options: (ScoredAction & { first: GameAction | 'pass-rez' })[] = [
+      { action: { type: 'PASS_PRIORITY', player: 'corp' }, score: suggested ? 0 : 1, first: 'pass-rez' },
+      ...cards.map(card => {
+        const action: GameAction = { type: 'REZ_CARD', player: 'corp', cardInstanceId: card.instanceId };
+        return { action, score: suggested && 'cardInstanceId' in suggested && suggested.cardInstanceId === card.instanceId ? 1 : 0, first: action };
+      }),
+    ];
+    const best = this.search(state, options, this.options.timeMs / 2);
+    return best.type === 'PASS_PRIORITY' ? null : best;
+  }
+
+  /** Compares candidates on the same guessed deals; ties go to the rule-based AI's favourite. */
+  private search(state: GameState, candidates: (ScoredAction & { first: GameAction | 'pass-rez' })[], timeMs: number): GameAction {
+    if (candidates.length === 1) return candidates[0].action;
+    const totals = candidates.map(() => 0);
+    const deadline = Date.now() + timeMs;
+    let samples = 0;
+    const wanted = this.options.samples;
+    while (wanted ? samples < wanted : samples < 2 || Date.now() < deadline) {
+      const seed = Math.floor(this.random() * 2 ** 32);
+      candidates.forEach((candidate, i) => {
+        // The same guessed deal for every candidate, so they're compared fairly
+        const world = determinize(state, this.side, mulberry(seed), this.memory);
+        totals[i] += playout(world, this.side, candidate.first, this.memory);
+      });
+      samples++;
+      if (samples >= 200) break;
+    }
+    let bestIndex = 0;
+    let bestValue = -Infinity;
+    candidates.forEach((candidate, i) => {
+      const value = totals[i] / samples + 0.05 * Math.max(-20, Math.min(20, candidate.score));
+      if (value > bestValue) {
+        bestValue = value;
+        bestIndex = i;
+      }
+    });
+    return candidates[bestIndex].action;
+  }
+}

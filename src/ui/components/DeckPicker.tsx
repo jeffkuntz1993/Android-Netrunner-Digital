@@ -4,16 +4,31 @@ import { DECKS, DeckList, deckCodes } from '../../data/decks';
 import { SYSTEM_GATEWAY_CARDS, getCardImageUrl } from '../../data/cards';
 import { loadCustomDecks, newCustomDeckId, saveCustomDecks } from '../../data/customDecks';
 import { DeckBuilder } from './DeckBuilder';
+import type { Difficulty } from '../../ai';
 import { CheckCircle2, AlertTriangle, Play, Plus, Pencil, Copy, Trash2 } from 'lucide-react';
 
 interface DeckPickerProps {
   initialCorpDeckId: string;
   initialRunnerDeckId: string;
-  onStart: (corpDeck: DeckList, runnerDeck: DeckList, ai: SideCode | null) => void;
+  onStart: (corpDeck: DeckList, runnerDeck: DeckList, ai: SideCode | null, difficulty: Difficulty) => void;
 }
 
 type Opponent = 'people' | 'ai-corp' | 'ai-runner';
 const OPPONENT_KEY = 'netrunner.opponent';
+const DIFFICULTY_KEY = 'netrunner.difficulty';
+
+function savedDifficulty(): Difficulty {
+  try {
+    return window.localStorage.getItem(DIFFICULTY_KEY) === 'hard' ? 'hard' : 'normal';
+  } catch {
+    return 'normal';
+  }
+}
+
+const DIFFICULTIES: { id: Difficulty; label: string; hint: string }[] = [
+  { id: 'normal', label: 'Normal', hint: 'Rule-based: plays a solid, readable game and moves quickly' },
+  { id: 'hard', label: 'Hard', hint: 'Looks ahead by playing out its best options many times before each move (thinks for a second or two)' },
+];
 
 function savedOpponent(): Opponent {
   try {
@@ -70,6 +85,15 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
   const [corpId, setCorpId] = useState(initialCorpDeckId);
   const [runnerId, setRunnerId] = useState(initialRunnerDeckId);
   const [opponent, setOpponent] = useState<Opponent>(savedOpponent);
+  const [difficulty, setDifficulty] = useState<Difficulty>(savedDifficulty);
+  const chooseDifficulty = (id: Difficulty) => {
+    setDifficulty(id);
+    try {
+      window.localStorage.setItem(DIFFICULTY_KEY, id);
+    } catch {
+      // Not saved; the choice still applies now
+    }
+  };
   const chooseOpponent = (id: Opponent) => {
     setOpponent(id);
     try {
@@ -251,6 +275,33 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
           ))}
         </div>
         <span className="text-[11px] text-slate-500">{OPPONENTS.find(o => o.id === opponent)!.hint}</span>
+        {opponent !== 'people' && (
+          <>
+            <span className="mt-3 text-[11px] uppercase tracking-wider text-slate-500 font-bold">Difficulty</span>
+            <div className="flex flex-wrap justify-center gap-2" role="radiogroup" aria-label="Difficulty">
+              {DIFFICULTIES.map(d => (
+                <button
+                  key={d.id}
+                  role="radio"
+                  aria-checked={difficulty === d.id}
+                  onClick={() => chooseDifficulty(d.id)}
+                  title={d.hint}
+                  data-testid={`difficulty-${d.id}`}
+                  className={`px-4 py-2 rounded-xl border text-xs font-bold transition-colors ${
+                    difficulty === d.id
+                      ? d.id === 'hard'
+                        ? 'bg-red-700 border-red-400 text-white'
+                        : 'bg-indigo-600 border-indigo-400 text-white'
+                      : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+            <span className="text-[11px] text-slate-500 text-center max-w-md">{DIFFICULTIES.find(d => d.id === difficulty)!.hint}</span>
+          </>
+        )}
       </div>
       {selectedProblems.length > 0 && (
         <p className="mt-6 text-xs text-amber-400">A selected deck is not legal yet. Fix it in the deckbuilder to play it.</p>
@@ -258,7 +309,7 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
       <button
         onClick={() => {
           const deck = (id: string) => summaries.find(s => s.deck.id === id)!.deck;
-          onStart(deck(corpId), deck(runnerId), opponent === 'ai-corp' ? 'corp' : opponent === 'ai-runner' ? 'runner' : null);
+          onStart(deck(corpId), deck(runnerId), opponent === 'ai-corp' ? 'corp' : opponent === 'ai-runner' ? 'runner' : null, difficulty);
         }}
         disabled={selectedProblems.length > 0}
         data-testid="start-game"
