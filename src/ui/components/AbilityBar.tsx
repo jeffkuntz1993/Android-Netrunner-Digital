@@ -1,6 +1,7 @@
 import React from 'react';
 import { GameAction, GameState, SideCode, cardDef, findCardAnywhere, getCardScript, getLegalActions } from '../../core';
 import { Sparkles } from 'lucide-react';
+import { Credits } from './CreditIcon';
 
 interface AbilityBarProps {
   state: GameState;
@@ -27,9 +28,14 @@ export const AbilityBar: React.FC<AbilityBarProps> = ({ state, side, onAction })
         const card = findCardAnywhere(state, action.cardInstanceId);
         const ability = card && getCardScript(card.cardCode)?.abilities?.[action.abilityIndex];
         if (!card || !ability) return null;
-        const cost = [ability.clicks ? `${ability.clicks}[click]` : '', ability.credits ? `${ability.credits}c` : '']
-          .filter(Boolean)
-          .join(' + ');
+        const clickCost = ability.clicks ? `${ability.clicks}[click]` : '';
+        const cost = clickCost || ability.credits ? (
+          <>
+            {clickCost}
+            {clickCost && ability.credits ? ' + ' : ''}
+            {ability.credits ? <Credits amount={ability.credits} /> : null}
+          </>
+        ) : null;
         return (
           <button
             key={`${action.cardInstanceId}-${action.abilityIndex}`}

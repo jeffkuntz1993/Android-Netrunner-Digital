@@ -26,7 +26,6 @@ import { HandoffScreen } from './ui/components/HandoffScreen';
 import { ViewMode, Viewer, actingSide, canActAs, canSeeCorpSecrets, canSeeRunnerSecrets, corpRezWindow } from './ui/viewer';
 import { playForLog, setSoundEnabled, soundEnabled } from './ui/sound';
 import {
-  Coins,
   Clock,
   RotateCcw,
   Plus,
@@ -44,6 +43,7 @@ import {
   VolumeX,
   Ban,
 } from 'lucide-react';
+import { CreditIcon } from './ui/components/CreditIcon';
 
 const VIEW_MODE_KEY = 'netrunner.viewMode';
 
@@ -391,7 +391,7 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
             {/* Corp Stats */}
             <div className="flex items-center gap-3 text-xs font-mono flex-wrap">
               <div className="flex items-center gap-1.5 bg-cyan-950/80 border border-cyan-800 px-3 py-1.5 rounded-xl text-cyan-300 shadow">
-                <Coins className="w-4 h-4 text-amber-400" />
+                <CreditIcon className="w-4 h-4 text-amber-400" />
                 <span className="font-bold">{corp.credits}</span> Credits
               </div>
               <div className="flex items-center gap-1.5 bg-cyan-950/80 border border-cyan-800 px-3 py-1.5 rounded-xl text-cyan-300 shadow">
@@ -462,7 +462,7 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
                   disabled={corp.clicks < 1}
                   className="px-3.5 py-1.5 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700 text-cyan-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
                 >
-                  <Coins className="w-3.5 h-3.5 text-amber-400" /> +1 Credit
+                  <CreditIcon className="w-3.5 h-3.5 text-amber-400" /> +1 Credit
                 </button>
                 <button
                   onClick={() => handleAction({ type: 'DRAW_CARD', player: 'corp' })}
@@ -566,7 +566,7 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
             {/* Runner Stats */}
             <div className="flex items-center gap-3 text-xs font-mono flex-wrap">
               <div className="flex items-center gap-1.5 bg-pink-950/80 border border-pink-800 px-3 py-1.5 rounded-xl text-pink-300 shadow">
-                <Coins className="w-4 h-4 text-amber-400" />
+                <CreditIcon className="w-4 h-4 text-amber-400" />
                 <span className="font-bold">{runner.credits}</span> Credits
               </div>
               <div className="flex items-center gap-1.5 bg-pink-950/80 border border-pink-800 px-3 py-1.5 rounded-xl text-pink-300 shadow">
@@ -621,7 +621,7 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
                   disabled={runner.clicks < 1}
                   className="px-3.5 py-1.5 bg-pink-950 hover:bg-pink-900 border border-pink-700 text-pink-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
                 >
-                  <Coins className="w-3.5 h-3.5 text-amber-400" /> +1 Credit
+                  <CreditIcon className="w-3.5 h-3.5 text-amber-400" /> +1 Credit
                 </button>
                 <button
                   onClick={() => handleAction({ type: 'DRAW_CARD', player: 'runner' })}

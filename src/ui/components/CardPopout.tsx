@@ -2,7 +2,8 @@ import React, { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CardInstance } from '../../core/types/card';
 import { cardDef, getCardImageUrl } from '../../data/cards';
-import { Shield, Zap, Award, Trash2, Coins, Clock, AlertCircle, Lock } from 'lucide-react';
+import { Shield, Zap, Award, Trash2, Clock, AlertCircle, Lock } from 'lucide-react';
+import { CreditIcon, Credits, CREDIT_ICON_HTML, RECURRING_CREDIT_ICON_HTML } from './CreditIcon';
 
 interface CardPopoutProps {
   card: CardInstance;
@@ -149,9 +150,9 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
           <div className="grid grid-cols-2 gap-1.5 mb-3 text-xs">
             {def.cost !== null && def.cost !== undefined && (
               <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-lg">
-                <Coins className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <CreditIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span className="text-slate-400">Cost:</span>
-                <span className="font-bold text-amber-300">{def.cost}c</span>
+                <span className="font-bold text-amber-300"><Credits amount={def.cost} /></span>
               </div>
             )}
 
@@ -185,7 +186,7 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
               <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-lg">
                 <Trash2 className="w-3.5 h-3.5 text-red-400 shrink-0" />
                 <span className="text-slate-400">Trash:</span>
-                <span className="font-bold text-red-300">{def.trash_cost}c</span>
+                <span className="font-bold text-red-300"><Credits amount={def.trash_cost} /></span>
               </div>
             )}
           </div>
@@ -197,11 +198,11 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
                 className="card-rules-text font-mono space-y-1"
                 dangerouslySetInnerHTML={{
                   __html: def.text
-                    .replace(/\[credit\]/g, '<span class="text-amber-400 font-bold inline-flex items-center">🪙</span>')
+                    .replace(/\[credit\]/g, `<span class="text-amber-400 font-bold inline-flex items-center">${CREDIT_ICON_HTML}</span>`)
                     .replace(/\[click\]/g, '<span class="text-red-400 font-bold inline-flex items-center">⏱️</span>')
                     .replace(/\[subroutine\]/g, '<span class="text-cyan-400 font-bold block mt-1">↳ <strong class="text-white">Subroutine:</strong></span>')
                     .replace(/\[trash\]/g, '<span class="text-red-400 font-bold inline-flex items-center">🗑️</span>')
-                    .replace(/\[recurring-credit\]/g, '<span class="text-amber-300 font-bold inline-flex items-center">🔄🪙</span>')
+                    .replace(/\[recurring-credit\]/g, `<span class="text-amber-300 font-bold inline-flex items-center">${RECURRING_CREDIT_ICON_HTML}</span>`)
                     .replace(/\[link\]/g, '<span class="text-emerald-400 font-bold inline-flex items-center">🔗</span>')
                     .replace(/\n/g, '<br />'),
                 }}

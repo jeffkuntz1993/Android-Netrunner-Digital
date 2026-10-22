@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CardInstance, GameState, PromptChoice, activePrompt, cardDef, findCardAnywhere, locateCorpCard } from '../../core';
 import { CardView } from './CardView';
 import { Check, RefreshCw, Trash2, X } from 'lucide-react';
+import { Credits } from './CreditIcon';
 
 interface PromptPanelProps {
   state: GameState;
@@ -152,10 +153,10 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
                   {card && <div className="font-bold text-slate-100 mb-1">{cardDef(card).title}</div>}
                   {prompt.trashCost !== null && (
                     <>
-                      Trash cost: <span className="text-red-300 font-bold">{prompt.trashCost}c</span> ·{' '}
+                      Trash cost: <span className="text-red-300 font-bold"><Credits amount={prompt.trashCost} /></span> ·{' '}
                     </>
                   )}
-                  You have <span className="text-amber-300 font-bold">{state.runner.credits}c</span>
+                  You have <span className="text-amber-300 font-bold"><Credits amount={state.runner.credits} /></span>
                 </div>
               </div>
               <div className="flex gap-2 justify-end flex-wrap">
@@ -173,7 +174,7 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
                 ))}
                 {prompt.trashCost !== null && (
                   <button className={`${button} bg-red-700 hover:bg-red-600 border-red-500 text-white`} onClick={() => answer({ kind: 'access_trash', trash: true })}>
-                    <Trash2 className="w-3.5 h-3.5" /> Trash ({prompt.trashCost}c)
+                    <Trash2 className="w-3.5 h-3.5" /> Trash (<Credits amount={prompt.trashCost ?? 0} />)
                   </button>
                 )}
               </div>

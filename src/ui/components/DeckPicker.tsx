@@ -215,6 +215,17 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
       >
         <Play className="w-4 h-4" /> Start game
       </button>
+      <p className="mt-10 text-[10px] text-slate-500">
+        Game symbols by Null Signal Games,{' '}
+        <a
+          href="https://creativecommons.org/licenses/by-nd/4.0/"
+          target="_blank"
+          rel="noreferrer"
+          className="underline hover:text-slate-300"
+        >
+          CC BY-ND 4.0
+        </a>
+      </p>
     </div>
   );
 };

@@ -2,7 +2,8 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { CardInstance } from '../../core/types/card';
 import { cardDef, getCardImageUrl } from '../../data/cards';
-import { X, Shield, Zap, Award, Trash2, Coins, AlertCircle } from 'lucide-react';
+import { X, Shield, Zap, Award, Trash2, AlertCircle } from 'lucide-react';
+import { CreditIcon, CREDIT_ICON_HTML, RECURRING_CREDIT_ICON_HTML } from './CreditIcon';
 
 interface CardZoomModalProps {
   card: CardInstance | null;
@@ -83,7 +84,7 @@ export const CardZoomModal: React.FC<CardZoomModalProps> = ({
             <div className="flex flex-wrap gap-2 mb-4 text-xs">
               {def.cost !== null && def.cost !== undefined && (
                 <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
-                  <Coins className="w-4 h-4 text-amber-400" />
+                  <CreditIcon className="w-4 h-4 text-amber-400" />
                   <span className="text-slate-400">Cost:</span>
                   <span className="font-bold text-amber-300">{def.cost} Credits</span>
                 </div>
@@ -126,11 +127,11 @@ export const CardZoomModal: React.FC<CardZoomModalProps> = ({
                 <div
                   dangerouslySetInnerHTML={{
                     __html: def.text
-                      .replace(/\[credit\]/g, ' 🪙 ')
+                      .replace(/\[credit\]/g, ` <span class="text-amber-400">${CREDIT_ICON_HTML}</span> `)
                       .replace(/\[click\]/g, ' ⏱️ ')
                       .replace(/\[subroutine\]/g, '<span class="text-cyan-400 font-bold block mt-1">↳ Subroutine: </span>')
                       .replace(/\[trash\]/g, ' 🗑️ ')
-                      .replace(/\[recurring-credit\]/g, ' 🔄🪙 ')
+                      .replace(/\[recurring-credit\]/g, ` <span class="text-amber-300">${RECURRING_CREDIT_ICON_HTML}</span> `)
                       .replace(/\[link\]/g, ' 🔗 ')
                       .replace(/\n/g, '<br />'),
                   }}

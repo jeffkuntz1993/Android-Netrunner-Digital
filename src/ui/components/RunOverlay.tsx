@@ -6,6 +6,7 @@ import { cardDef } from '../../data/cards';
 import { GameAction, iceStrength, isLegalAction } from '../../core';
 import { EncounterPanel } from './EncounterPanel';
 import { ArrowRight, LogOut, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Credits } from './CreditIcon';
 
 interface RunOverlayProps {
   state: GameState;
@@ -122,7 +123,7 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
                   className="px-5 py-2 bg-cyan-700 hover:bg-cyan-600 text-white font-mono text-xs font-bold rounded-xl border border-cyan-400 flex items-center justify-center gap-1.5 transition-colors"
                   title="Corp rez window: rez this card before the Runner continues"
                 >
-                  <ShieldAlert className="w-4 h-4" /> Rez {cardDef(card).title} ({cardDef(card).cost || 0}c)
+                  <ShieldAlert className="w-4 h-4" /> Rez {cardDef(card).title} (<Credits amount={cardDef(card).cost || 0} />)
                 </button>
               ))}
             {onDoneRezzing && (

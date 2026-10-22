@@ -14,6 +14,7 @@ import {
   installedIcebreakers,
 } from '../../core';
 import { Scissors, TrendingUp, Clock, Sparkles } from 'lucide-react';
+import { Credits } from './CreditIcon';
 
 interface EncounterPanelProps {
   state: GameState;
@@ -90,7 +91,7 @@ export const EncounterPanel: React.FC<EncounterPanelProps> = ({ state, onAction,
                     className={`${btn} bg-cyan-950 border-cyan-700 text-cyan-200 hover:bg-cyan-900`}
                   >
                     <TrendingUp className="inline w-3 h-3 mr-1" />
-                    Boost ({script?.boostCost}c)
+                    Boost (<Credits amount={script?.boostCost ?? 0} />)
                   </button>
                 ) : a.type === 'BREAK_SUBROUTINE' ? (
                   <button
@@ -100,7 +101,7 @@ export const EncounterPanel: React.FC<EncounterPanelProps> = ({ state, onAction,
                     title={`Break with ${titleOf(a.breakerInstanceId)}`}
                   >
                     <Scissors className="inline w-3 h-3 mr-1" />
-                    Break {a.subroutineIndices.map(i => i + 1).join('+')} ({script?.breakCost(state, breaker)}c)
+                    Break {a.subroutineIndices.map(i => i + 1).join('+')} (<Credits amount={script?.breakCost(state, breaker) ?? 0} />)
                   </button>
                 ) : null,
               )}

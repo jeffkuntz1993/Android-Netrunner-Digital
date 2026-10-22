@@ -4,6 +4,7 @@ import { cardDef, getCardImageUrl, getCardBackUrl } from '../../data/cards';
 import { Layers, Lock, Eye, AlertCircle } from 'lucide-react';
 import { CardPopout } from './CardPopout';
 import { motion } from 'framer-motion';
+import { Credits } from './CreditIcon';
 
 export interface CardViewProps {
   card: CardInstance;
@@ -146,7 +147,7 @@ const CardFace: React.FC<CardViewProps> = ({
         <div className="w-full h-full flex flex-col justify-between p-2 bg-slate-900 font-mono text-center">
           <div className="text-[10px] font-bold text-cyan-400 line-clamp-2">{def.title}</div>
           <div className="text-[9px] text-slate-500">{def.type_code}</div>
-          <div className="text-[9px] text-amber-400">{def.cost !== null ? `${def.cost}c` : ''}</div>
+          <div className="text-[9px] text-amber-400">{def.cost != null && <Credits amount={def.cost} />}</div>
         </div>
       )}
 
@@ -170,7 +171,7 @@ const CardFace: React.FC<CardViewProps> = ({
         <div className="absolute bottom-1 right-1 flex flex-col items-end gap-0.5 z-20">
           {(card.tokens.credit ?? 0) > 0 && (
             <span className="bg-amber-500 text-black font-extrabold px-1.5 py-0.5 rounded-full text-[10px] shadow-lg border border-amber-200" title="Hosted credits">
-              {card.tokens.credit}c
+              <Credits amount={card.tokens.credit ?? 0} />
             </span>
           )}
           {(card.tokens.virus ?? 0) > 0 && (

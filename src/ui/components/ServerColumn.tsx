@@ -4,6 +4,7 @@ import { CardInstance } from '../../core/types/card';
 import { CardView } from './CardView';
 import { cardDef } from '../../data/cards';
 import { Database, Crosshair, Zap, ChevronsUp, Award } from 'lucide-react';
+import { Credits } from './CreditIcon';
 
 interface ServerColumnProps {
   server: ServerState;
@@ -108,7 +109,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
                   className="mt-1.5 w-full py-1 bg-cyan-950 hover:bg-cyan-800 text-cyan-300 hover:text-cyan-100 text-xs font-mono font-bold rounded-lg border border-cyan-600 shadow-md flex items-center justify-center gap-1 transition-all"
                   title={`Rez ${cardDef(iceCard).title} for ${cardDef(iceCard).cost || 0} credits`}
                 >
-                  <Zap className="w-3.5 h-3.5 text-amber-400" /> Rez ({cardDef(iceCard).cost || 0}c)
+                  <Zap className="w-3.5 h-3.5 text-amber-400" /> Rez (<Credits amount={cardDef(iceCard).cost || 0} />)
                 </button>
               )}
               {canAdvance(iceCard) && onAdvanceCard && (
@@ -153,7 +154,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
                     }}
                     className={smallButton}
                   >
-                    <Zap className="w-3 h-3 text-amber-400" /> Rez ({cardDef(card).cost || 0}c)
+                    <Zap className="w-3 h-3 text-amber-400" /> Rez (<Credits amount={cardDef(card).cost || 0} />)
                   </button>
                 )}
                 {canAdvance(card) && onAdvanceCard && (

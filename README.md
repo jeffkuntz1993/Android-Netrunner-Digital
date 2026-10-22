@@ -20,3 +20,7 @@ npm run dev
 # 3. Run automated rules engine test suite
 npm test
 ```
+
+## Credits
+
+Game symbols (such as the credit icon) by [Null Signal Games](https://nullsignal.games/), from the NSG Visual Assets pack v1.5, licensed [CC BY-ND 4.0](https://creativecommons.org/licenses/by-nd/4.0/). They are used unmodified apart from colour.
