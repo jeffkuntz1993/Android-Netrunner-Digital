@@ -148,14 +148,16 @@ Netrunner/
 - [x] Tagging system. (Roadmap M4; no Gateway card uses Bad Publicity)
 
 ### Phase 3: Solo AI Opponent
-- [ ] Define `Agent` interface (`getAction(gameState, legalActions): Promise<GameAction>`).
-- [ ] Build `HeuristicCorpAI`:
+- [x] Define `Agent` interface (`src/ai/agent.ts`: `chooseAction(state)`, plus `chooseRez(state, cards)` for the Corp's rez windows). (Roadmap M8)
+- [x] Build `HeuristicCorpAI`:
   - Evaluate remote scoring opportunities.
   - Prioritize ice installation and rez decisions based on runner threats.
-- [ ] Build `HeuristicRunnerAI`:
+- [x] Build `HeuristicRunnerAI`:
   - Calculate run safety and break costs.
   - Prioritize icebreaker installations and vulnerable server breaches.
-- [ ] Web Worker execution so AI calculation doesn't block the UI thread.
+- [x] "Opponent" choice on the deck picker: two players, or the computer plays the Corp or the Runner.
+- [ ] Web Worker execution so AI calculation doesn't block the UI thread (not needed yet: a move takes well under a second).
+- [ ] Stronger AI (search, e.g. MCTS over determinized hidden information) if the rule-based one gets too easy.
 
 ### Phase 4: UI Polish & Animation Juice
 - [ ] Framer Motion card sliding from Hand $\rightarrow$ Rig / Server.
@@ -196,6 +198,7 @@ Netrunner/
 | **2026-10-21** | Claude | Engine refactor (no rules changes): seeded mulberry32 RNG stored in `GameState.rng`, deterministic instance ids, removed `Date.now`/`Math.random` from core; card instances now store only `cardCode` (definitions via `cardDef()`); split `executeAction` into a typed per-action handler table under `engine/actions/` with `IllegalActionError`/`NotImplementedError`; added `getLegalActions`/`isLegalAction` and a `src/core/index.ts` barrel; UI shows the seed and accepts `?seed=`; added determinism, legal-action and engine-purity tests; `tests/` now typechecked. |
 | **2026-10-21** | Claude | Rules-bug fixes: turn/run enforcement on every action; install restrictions + MU limit; agendas unrezzable; ice rez only while approached (Corp rez button in `RunOverlay`); new `SCORE_AGENDA` action replaces auto-score, advance limited to agendas and "You can advance this" cards; breach collects candidates first (fixes skipped cards) and accesses HQ/R&D/Archives; Runner can't draw from an empty Stack; Corp mandatory draw on turn 1; Advance/Score/Rez buttons in `ServerColumn` driven by `isLegalAction`; 18 regression tests in `tests/rulesFixes.test.ts`. |
 | **2026-10-21** | Claude | Player-choice prompts: `GameState.pendingPrompts` queue + `RESOLVE_PROMPT` action (only legal action while a prompt is pending); mulligan at setup (Corp first turn and its mandatory draw start after both decide; clicks start at 0); END_TURN requires all clicks spent and prompts a discard when over hand size; breach is now a resumable `accessQueue` with a pay-to-trash prompt for cards with a trash cost (not in Archives); `getLegalActions` enumerates prompt answers; new `PromptPanel` UI and disabled End Turn buttons; `tests/prompts.test.ts` (66 tests total). |
+| **2026-10-22** | Claude | Roadmap M8 (basic AI): `src/ai/` with a shared `Agent` interface, `HeuristicCorpAI` and `HeuristicRunnerAI`. Both score every legal action: board evaluation after simulating the action (`evaluate.ts`: credits, clicks, hand, installed cards, icebreaker coverage, score), plus rules for runs (`runs.ts`: server value from public information, ice cost from break plans or subroutine costs, jack out when ice is too expensive), Corp installs (ice where it's needed, agendas only behind ice, econ assets in their own remote), advancing and rez windows. The Runner remembers cards it has accessed and avoids known traps. Prompts are answered by simulating each answer (`prompts.ts`). `playAIGame` runs AI vs AI with the same Corp rez windows as pass and play. Deck picker Opponent choice (stored in localStorage `netrunner.opponent`), `?ai=corp|runner` URL parameter, AI moves on its own after a short pause, header badge, view choice of My view / Open table. Tests: `tests/ai.test.ts` (each Corp deck plays a full AI vs AI game to a winner). In 16 tuning games the Runner won 10 and the Corp 6. |
 | **2026-10-22** | Claude | Widescreen layout: the log moved to a side bar (xl and up), and the two boards face each other in the middle. The Corp shows stats, actions, then servers with the HQ hand beside them; the Runner shows rig with the Grip beside it, then actions and stats. Hands fan with overlapping cards on wide screens; the rig puts Hardware and Resources side by side under Programs. Normal size uses smaller hand cards, so a game fits on a 1920x1080 screen. |
 | **2026-10-22** | Claude | Table-like board: server roots lay assets/agendas and upgrades side by side (servers in a wrapping row that grows to fit); centrals show their own card first (HQ: Corp identity, R&D: deck with count, Archives: discard pile, click to browse) via `Pile.tsx`; the rig is three rows (programs, hardware, resources) with the Runner identity, Stack and Heap (click to browse) beside it. |
 | **2026-10-22** | Claude | "Accessed this run" panel (`AccessedPanel` in App) shows every card the Runner accessed in the latest run; access log entries now carry the card code. Prompted by a Jailbreak run on HQ that accessed two ice with nothing to decide, which only showed in the log. |

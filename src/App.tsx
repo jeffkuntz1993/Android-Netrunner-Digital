@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   CardInstance,
   GameAction,
@@ -9,7 +9,9 @@ import {
   getCardScript,
   getLegalActions,
   isLegalAction,
+  SideCode,
 } from './core';
+import { Agent, createAgent } from './ai';
 import { DECKS, DEFAULT_CORP_DECK, DEFAULT_RUNNER_DECK, DeckList, deckGameSetup } from './data/decks';
 import { loadCustomDecks } from './data/customDecks';
 import { DeckPicker } from './ui/components/DeckPicker';
@@ -47,6 +49,7 @@ import {
 import { CreditIcon } from './ui/components/CreditIcon';
 
 const VIEW_MODE_KEY = 'netrunner.viewMode';
+const AI_DELAY_MS = 650;
 
 function savedViewMode(): ViewMode {
   try {
@@ -66,11 +69,14 @@ interface GameConfig {
   seed: number;
   corpDeck: DeckList;
   runnerDeck: DeckList;
+  /** The side the computer plays, or null for two people. */
+  ai: SideCode | null;
 }
 
 /**
  * `?seed=123&corp=<deck id>&runner=<deck id>` starts that exact game (to
- * replay a deal); without a seed the app opens on the deck picker.
+ * replay a deal), and `&ai=corp` or `&ai=runner` hands one side to the
+ * computer; without a seed the app opens on the deck picker.
  */
 function configFromUrl(): GameConfig | null {
   const params = new URLSearchParams(window.location.search);
@@ -83,6 +89,7 @@ function configFromUrl(): GameConfig | null {
     seed,
     corpDeck: find(params.get('corp'), 'corp', DEFAULT_CORP_DECK),
     runnerDeck: find(params.get('runner'), 'runner', DEFAULT_RUNNER_DECK),
+    ai: params.get('ai') === 'corp' || params.get('ai') === 'runner' ? (params.get('ai') as SideCode) : null,
   };
 }
 
@@ -95,9 +102,9 @@ export default function App() {
       <DeckPicker
         initialCorpDeckId={lastDecks.corp}
         initialRunnerDeckId={lastDecks.runner}
-        onStart={(corpDeck, runnerDeck) => {
+        onStart={(corpDeck, runnerDeck, ai) => {
           setLastDecks({ corp: corpDeck.id, runner: runnerDeck.id });
-          setConfig({ seed: randomSeed(), corpDeck, runnerDeck });
+          setConfig({ seed: randomSeed(), corpDeck, runnerDeck, ai });
         }}
       />
     );
@@ -126,22 +133,41 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
   // Cards the Runner accessed in the latest run, shown until dismissed or the next run
   const [accessed, setAccessed] = useState<string[]>([]);
 
+  // Against the computer: the AI plays one side and the person sees their own
+  // side (or everything, with Open table).
+  const aiSide = config.ai;
+  const humanSide: SideCode | null = aiSide === 'corp' ? 'runner' : aiSide === 'runner' ? 'corp' : null;
+  const agentRef = useRef<Agent | null>(aiSide ? createAgent(aiSide) : null);
+
+  // The Corp gets rez windows during runs in pass and play, and whenever the computer plays a side
+  const rezWindowsOn = viewMode === 'hotseat' || aiSide !== null;
   const rezWindow = corpRezWindow(gameState, runSerial);
-  const rezWindowOpen = viewMode === 'hotseat' && rezWindow !== null && !passedRezWindows.includes(rezWindow.key);
+  const rezWindowOpen = rezWindowsOn && rezWindow !== null && !passedRezWindows.includes(rezWindow.key);
   const acting = actingSide(gameState, rezWindowOpen);
-  const viewer: Viewer =
-    viewMode === 'open' ? 'both' : viewMode === 'hotseat' ? (gameState.winner ? 'both' : hotseatSide) : viewMode;
-  const handoffTo = viewMode === 'hotseat' && acting && acting !== hotseatSide ? acting : null;
-  const corpCanAct = canActAs(viewer, 'corp');
-  const runnerCanAct = canActAs(viewer, 'runner') && !rezWindowOpen;
+  const viewer: Viewer = humanSide
+    ? viewMode === 'open' || gameState.winner
+      ? 'both'
+      : humanSide
+    : viewMode === 'open'
+      ? 'both'
+      : viewMode === 'hotseat'
+        ? gameState.winner
+          ? 'both'
+          : hotseatSide
+        : viewMode;
+  const handoffTo = !aiSide && viewMode === 'hotseat' && acting && acting !== hotseatSide ? acting : null;
+  const corpCanAct = canActAs(viewer, 'corp') && aiSide !== 'corp';
+  const runnerCanAct = canActAs(viewer, 'runner') && aiSide !== 'runner' && !rezWindowOpen;
+  const aiThinking = aiSide !== null && acting === aiSide;
 
   useEffect(() => {
+    if (aiSide) return; // the AI game's view choice doesn't replace the two-player default
     try {
       window.localStorage.setItem(VIEW_MODE_KEY, viewMode);
     } catch {
       // Not saved; the choice still applies to this game
     }
-  }, [viewMode]);
+  }, [viewMode, aiSide]);
 
   const handleAction = (action: GameAction) => {
     try {
@@ -160,6 +186,27 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
       alert(err.message || 'Illegal action');
     }
   };
+
+  // The computer moves on its own, after a short pause so its moves can be followed
+  useEffect(() => {
+    const agent = agentRef.current;
+    if (!agent || !aiSide || gameState.winner || acting !== aiSide) return;
+    const timer = window.setTimeout(() => {
+      try {
+        if (aiSide === 'corp' && rezWindowOpen && rezWindow) {
+          const rez = agent.chooseRez?.(gameState, rezWindow.cards) ?? null;
+          if (rez) handleAction(rez);
+          else setPassedRezWindows(keys => [...keys, rezWindow.key]);
+          return;
+        }
+        handleAction(agent.chooseAction(gameState));
+      } catch (err) {
+        console.error('AI failed to move', err);
+      }
+    }, AI_DELAY_MS);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState, acting, rezWindowOpen]);
 
   const zoneView: { title: string; groups: ZoneGroup[] } | null =
     zone === 'archives'
@@ -239,10 +286,21 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
             </span>
             <span
               className="text-[10px] text-slate-500 font-mono hidden md:inline"
-              title={`Open the app with ?seed=${gameState.rng.seed}&corp=${config.corpDeck.id}&runner=${config.runnerDeck.id} to replay this deal`}
+              title={`Open the app with ?seed=${gameState.rng.seed}&corp=${config.corpDeck.id}&runner=${config.runnerDeck.id}${aiSide ? `&ai=${aiSide}` : ''} to replay this deal`}
             >
               SEED {gameState.rng.seed}
             </span>
+            {aiSide && (
+              <span
+                data-testid="ai-status"
+                className={`text-[10px] px-2 py-0.5 rounded border font-bold ${
+                  aiThinking ? 'border-amber-500 text-amber-300 animate-pulse' : 'border-slate-700 text-slate-500'
+                }`}
+                title={`The computer plays the ${aiSide === 'corp' ? 'Corp' : 'Runner'}`}
+              >
+                {aiThinking ? 'AI THINKING…' : `AI: ${aiSide.toUpperCase()}`}
+              </span>
+            )}
             {/* Quick Sticky End Turn Button */}
             <button
               onClick={() => handleAction({ type: 'END_TURN', player: activePlayer })}
@@ -318,19 +376,33 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
             </button>
           </div>
 
-          <select
-            value={viewMode}
-            onChange={(e) => setViewMode(e.target.value as ViewMode)}
-            aria-label="View"
-            data-testid="view-mode"
-            className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-300"
-            title="Who is looking at the screen"
-          >
-            <option value="open">Open table</option>
-            <option value="hotseat">Pass and play</option>
-            <option value="corp">Corp view</option>
-            <option value="runner">Runner view</option>
-          </select>
+          {humanSide ? (
+            <select
+              value={viewMode === 'open' ? 'open' : humanSide}
+              onChange={(e) => setViewMode(e.target.value as ViewMode)}
+              aria-label="View"
+              data-testid="view-mode"
+              className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-300"
+              title="Open table also shows the computer's hand"
+            >
+              <option value={humanSide}>My view ({humanSide === 'corp' ? 'Corp' : 'Runner'})</option>
+              <option value="open">Open table</option>
+            </select>
+          ) : (
+            <select
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value as ViewMode)}
+              aria-label="View"
+              data-testid="view-mode"
+              className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-300"
+              title="Who is looking at the screen"
+            >
+              <option value="open">Open table</option>
+              <option value="hotseat">Pass and play</option>
+              <option value="corp">Corp view</option>
+              <option value="runner">Runner view</option>
+            </select>
+          )}
           <button
             onClick={() => {
               setSoundEnabled(!sound);
@@ -782,7 +854,7 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
         onContinueRun={() => handleAction({ type: 'CONTINUE_RUN', player: 'runner' })}
         onJackOut={() => handleAction({ type: 'JACK_OUT', player: 'runner' })}
         rezCards={
-          viewMode === 'hotseat'
+          rezWindowsOn
             ? rezWindowOpen
               ? rezWindow!.cards
               : []
@@ -806,7 +878,10 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
           if (prompt) handleAction({ type: 'RESOLVE_PROMPT', player: prompt.side, promptId: prompt.id, choice });
         }}
         onInspectCard={setInspectedCard}
-        canAnswer={!gameState.pendingPrompts[0] || canActAs(viewer, gameState.pendingPrompts[0].side)}
+        canAnswer={
+          !gameState.pendingPrompts[0] ||
+          (canActAs(viewer, gameState.pendingPrompts[0].side) && gameState.pendingPrompts[0].side !== aiSide)
+        }
       />
 
       {accessed.length > 0 && !handoffTo && (

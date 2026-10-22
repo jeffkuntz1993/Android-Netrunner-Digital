@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { getCardDefinition, influenceCost, validateDeck } from '../../core';
+import { SideCode, getCardDefinition, influenceCost, validateDeck } from '../../core';
 import { DECKS, DeckList, deckCodes } from '../../data/decks';
 import { SYSTEM_GATEWAY_CARDS, getCardImageUrl } from '../../data/cards';
 import { loadCustomDecks, newCustomDeckId, saveCustomDecks } from '../../data/customDecks';
@@ -9,8 +9,27 @@ import { CheckCircle2, AlertTriangle, Play, Plus, Pencil, Copy, Trash2 } from 'l
 interface DeckPickerProps {
   initialCorpDeckId: string;
   initialRunnerDeckId: string;
-  onStart: (corpDeck: DeckList, runnerDeck: DeckList) => void;
+  onStart: (corpDeck: DeckList, runnerDeck: DeckList, ai: SideCode | null) => void;
 }
+
+type Opponent = 'people' | 'ai-corp' | 'ai-runner';
+const OPPONENT_KEY = 'netrunner.opponent';
+
+function savedOpponent(): Opponent {
+  try {
+    const v = window.localStorage.getItem(OPPONENT_KEY);
+    if (v === 'people' || v === 'ai-corp' || v === 'ai-runner') return v;
+  } catch {
+    // Storage blocked: use the default
+  }
+  return 'people';
+}
+
+const OPPONENTS: { id: Opponent; label: string; hint: string }[] = [
+  { id: 'people', label: 'Two players', hint: 'Pass and play, or one person playing both sides' },
+  { id: 'ai-corp', label: 'I play Runner', hint: 'The computer plays the Corp' },
+  { id: 'ai-runner', label: 'I play Corp', hint: 'The computer plays the Runner' },
+];
 
 interface DeckSummary {
   deck: DeckList;
@@ -50,6 +69,15 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
   const summaries = useMemo(() => [...DECKS, ...customDecks].map(summarize), [customDecks]);
   const [corpId, setCorpId] = useState(initialCorpDeckId);
   const [runnerId, setRunnerId] = useState(initialRunnerDeckId);
+  const [opponent, setOpponent] = useState<Opponent>(savedOpponent);
+  const chooseOpponent = (id: Opponent) => {
+    setOpponent(id);
+    try {
+      window.localStorage.setItem(OPPONENT_KEY, id);
+    } catch {
+      // Not saved; the choice still applies now
+    }
+  };
 
   const storeDecks = (decks: DeckList[]) => {
     setCustomDecks(decks);
@@ -201,17 +229,40 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
         {column('corp', corpId, setCorpId)}
         {column('runner', runnerId, setRunnerId)}
       </div>
+      <div className="mt-8 flex flex-col items-center gap-2">
+        <span className="text-[11px] uppercase tracking-wider text-slate-500 font-bold">Opponent</span>
+        <div className="flex flex-wrap justify-center gap-2" role="radiogroup" aria-label="Opponent">
+          {OPPONENTS.map(o => (
+            <button
+              key={o.id}
+              role="radio"
+              aria-checked={opponent === o.id}
+              onClick={() => chooseOpponent(o.id)}
+              title={o.hint}
+              data-testid={`opponent-${o.id}`}
+              className={`px-4 py-2 rounded-xl border text-xs font-bold transition-colors ${
+                opponent === o.id
+                  ? 'bg-indigo-600 border-indigo-400 text-white'
+                  : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500'
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <span className="text-[11px] text-slate-500">{OPPONENTS.find(o => o.id === opponent)!.hint}</span>
+      </div>
       {selectedProblems.length > 0 && (
         <p className="mt-6 text-xs text-amber-400">A selected deck is not legal yet. Fix it in the deckbuilder to play it.</p>
       )}
       <button
         onClick={() => {
           const deck = (id: string) => summaries.find(s => s.deck.id === id)!.deck;
-          onStart(deck(corpId), deck(runnerId));
+          onStart(deck(corpId), deck(runnerId), opponent === 'ai-corp' ? 'corp' : opponent === 'ai-runner' ? 'runner' : null);
         }}
         disabled={selectedProblems.length > 0}
         data-testid="start-game"
-        className="disabled:opacity-40 disabled:cursor-not-allowed mt-8 px-8 py-3 bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold rounded-2xl shadow-lg flex items-center gap-2"
+        className="disabled:opacity-40 disabled:cursor-not-allowed mt-6 px-8 py-3 bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold rounded-2xl shadow-lg flex items-center gap-2"
       >
         <Play className="w-4 h-4" /> Start game
       </button>
