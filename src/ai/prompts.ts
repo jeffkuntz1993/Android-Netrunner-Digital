@@ -56,6 +56,10 @@ export function runEventOptions(cardCode: string): RunOptions {
       return { bonusCredits: 5 };
     case '30012': // Tread Lightly
       return { rezTax: true };
+    case '35014': // Clean Getaway
+      return { successBonus: 6 };
+    case '35005': // Shred
+      return { shred: true };
     default:
       return {};
   }

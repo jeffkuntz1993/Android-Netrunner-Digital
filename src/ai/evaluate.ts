@@ -38,6 +38,11 @@ const RUNNER_CARD_VALUE: Record<string, number> = {
   '30031': 2, // T400 Memory Diamond
   '30033': 2.5, // Smartware Distributor
   '30034': 3.5, // Verbal Plasticity
+  '35010': 4, // Cacophony
+  '35006': 3.5, // Bling
+  '35018': 3.5, // Detente
+  '35022': 2.5, // Open Market
+  '35034': 2.5, // Side Hustle
 };
 
 /** Icebreaker coverage: each ice subtype the rig can break is worth a lot. */

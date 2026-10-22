@@ -171,6 +171,10 @@ export interface RunOptions {
   extraAccesses?: number;
   /** Tread Lightly: unrezzed ice costs 3 more to rez, so it's less likely to be rezzed. */
   rezTax?: boolean;
+  /** Credits gained if the run is successful (Clean Getaway). */
+  successBonus?: number;
+  /** Shred: the first "end the run" is prevented unless the Corp trashes cards from HQ. */
+  shred?: boolean;
   memory?: RunnerMemory;
 }
 
@@ -181,13 +185,19 @@ export interface RunOptions {
 export function runScore(state: GameState, serverId: string, options: RunOptions = {}): number {
   const server = state.corp.servers[serverId];
   if (!server) return -Infinity;
-  let value = serverValue(state, serverId, options.extraAccesses ?? 0, options.memory);
+  let value = serverValue(state, serverId, options.extraAccesses ?? 0, options.memory) + 0.8 * (options.successBonus ?? 0);
   if (state.runner.grip.length <= 1) value -= 2; // one net damage from flatlining
   if (value <= 0) return -Infinity;
   let known = 0;
   let expected = 0;
+  let shredLeft = !!options.shred && server.root.length > 0;
   for (const ice of server.ice) {
-    const cost = iceCost(state, ice);
+    let cost = iceCost(state, ice);
+    if (cost === BLOCK && shredLeft) {
+      // The Corp either lets the run go on or trashes HQ cards: worth it either way
+      shredLeft = false;
+      cost = 1;
+    }
     if (cost === BLOCK) return -Infinity;
     if (ice.isRezzed) known += cost;
     expected += !ice.isRezzed && options.rezTax ? cost * 0.3 : cost;

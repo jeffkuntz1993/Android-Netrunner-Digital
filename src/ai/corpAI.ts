@@ -134,7 +134,29 @@ export class HeuristicCorpAI implements Agent {
         if (!card) return -Infinity; // ice waits for a run
         if (ECON_ASSETS[card.cardCode]) return ECON_ASSETS[card.cardCode] + 1;
         if (card.cardCode === '30061') return 1; // Clearinghouse must be rezzed to fire
+        // Elevation cards whose effects need them rezzed
+        switch (card.cardCode) {
+          case '35051': // Phật Gioan Baotixita: gathers power counters
+            return 1.5;
+          case '35061': // Idiosyncresis: pays out when the turn begins
+            return card.advancementCounters >= 2 ? 2 : -Infinity;
+          case '35073': // Plutus: replays transactions from Archives
+            return corp.archives.faceUp.concat(corp.archives.faceDown).some(c => /transaction/i.test(cardDef(c).keywords ?? '')) ? 1.2 : -Infinity;
+          case '35082': // Mahkota Langit Grid: recurring credits
+            return 1.5;
+          case '35045': // Mercia B4LL4RD
+          case '35056': // Mitra Aman
+            return 1;
+        }
         return -Infinity;
+      }
+    }
+    if (action.type === 'PLAY_OPERATION_OR_EVENT') {
+      const code = corp.hq.find(c => c.instanceId === action.cardInstanceId)?.cardCode;
+      const bonus = code ? this.operationBonus(state, code) : 0;
+      if (bonus !== 0) {
+        const after = simulate(state, action);
+        return after ? bonus : -Infinity;
       }
     }
     const after = simulate(state, action);
@@ -151,6 +173,37 @@ export class HeuristicCorpAI implements Agent {
     const score = evaluate(resolved, 'corp') - before;
     if (!spendsClick && score <= 0.3) return -Infinity;
     return score;
+  }
+
+  /**
+   * Operations whose worth the one-step evaluation misses: extra clicks or
+   * advancements that let an agenda be scored this turn. 0: no opinion.
+   */
+  private operationBonus(state: GameState, code: string): number {
+    const corp = state.corp;
+    const agendas = Object.values(corp.servers).flatMap(s => s.root).filter(c => type(c) === 'agenda');
+    const need = (c: CardInstance) => (cardDef(c).advancement_cost ?? 0) - c.advancementCounters;
+    switch (code) {
+      case '35043': {
+        // Nanomanagement (4 credits): +2 clicks, worth it if they finish an agenda
+        const clicksAfter = corp.clicks - 1 + 2;
+        const finish = agendas.some(a => need(a) > corp.clicks && need(a) <= clicksAfter && corp.credits - 4 >= need(a));
+        return finish ? 42 : -Infinity;
+      }
+      case '35067': {
+        // Touch-ups (2 clicks, 2 credits): 2 advancements, best when they finish an agenda
+        const clicksAfter = corp.clicks - 2;
+        if (clicksAfter < 0 || corp.credits < 2) return -Infinity;
+        const finish = agendas.some(a => need(a) <= 2 + Math.min(clicksAfter, corp.credits - 2) && need(a) > 0);
+        return finish ? 41 : 0;
+      }
+      case '35044': {
+        // Top-Down Solutions: 2 cards and up to 2 installs for 1 click
+        const installable = corp.hq.filter(c => ['ice', 'asset', 'upgrade', 'agenda'].includes(type(c))).length;
+        return corp.credits >= 3 && installable >= 1 && corp.hq.length <= corp.handSizeLimit ? 1.3 : 0;
+      }
+    }
+    return 0;
   }
 
   private advanceScore(state: GameState, cardId: string, serverId: string): number {

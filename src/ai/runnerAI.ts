@@ -168,7 +168,14 @@ export class HeuristicRunnerAI implements Agent {
       return runScore(state, after.activeRun.server, { ...runEventOptions(cardCode ?? ''), memory: this.memory }) - paid * 0.6 + 0.3;
     }
 
-    let score = evaluate(after, 'runner') - before;
+    // Follow our own prompts (Lie Low, Scrounge, Madani) a few steps
+    let resolved = after;
+    for (let i = 0; i < 3 && activePrompt(resolved)?.side === 'runner'; i++) {
+      const next = simulate(resolved, answerPrompt(resolved, 'runner', this.memory));
+      if (!next) break;
+      resolved = next;
+    }
+    let score = evaluate(resolved, 'runner') - before;
     if (action.type === 'DRAW_CARD' && needsBiggerHand(state, this.memory)) score += 1.5;
     if (action.type === 'DRAW_CARD' && this.digForBreakers && state.runner.stack.length > 5) score += 1.2;
     if (action.type === 'INSTALL_CARD' && action.hostInstanceId && cardCode && TROJANS.includes(cardCode)) {
