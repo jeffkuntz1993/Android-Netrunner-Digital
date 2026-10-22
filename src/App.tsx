@@ -364,7 +364,7 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
         )}
 
         {/* CORP SECTOR (TOP HALF) */}
-        <section className="bg-slate-950/60 border border-cyan-950/80 rounded-3xl p-4 sm:p-6 shadow-xl relative backdrop-blur-sm w-full min-w-0">
+        <section id="corp-board" className="bg-slate-950/60 border border-cyan-950/80 rounded-3xl p-4 sm:p-6 shadow-xl relative backdrop-blur-sm w-full min-w-0">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5 pb-3 border-b border-cyan-950">
             {/* Identity & Header */}
             <div className="flex items-center gap-3">
@@ -539,7 +539,7 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
         </section>
 
         {/* RUNNER SECTOR (BOTTOM HALF) */}
-        <section className="bg-slate-950/60 border border-pink-950/80 rounded-3xl p-4 sm:p-6 shadow-xl relative backdrop-blur-sm w-full min-w-0">
+        <section id="runner-board" className="bg-slate-950/60 border border-pink-950/80 rounded-3xl p-4 sm:p-6 shadow-xl relative backdrop-blur-sm w-full min-w-0">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5 pb-3 border-b border-pink-950">
             {/* Identity & Header */}
             <div className="flex items-center gap-3">
@@ -772,7 +772,15 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
                 ? 'rez'
                 : 'turn'
           }
-          onReady={() => setHotseatSide(handoffTo)}
+          onReady={() => {
+            setHotseatSide(handoffTo);
+            // Show the incoming player their own board and hand
+            // (window.scrollTo, not scrollIntoView, which would also scroll the overflow-hidden <main>)
+            requestAnimationFrame(() => {
+              const board = document.getElementById(`${handoffTo}-board`);
+              if (board) window.scrollTo({ top: board.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+            });
+          }}
         />
       )}
 
