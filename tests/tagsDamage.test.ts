@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { executeAction, findCardAnywhere, GameState, isLegalAction } from '../src/core';
+import { executeAction, findCardAnywhere, GameState, getLegalActions, isLegalAction } from '../src/core';
 import { dealCoreDamage, dealMeatDamage } from '../src/core/engine/damage';
 import {
   answer,
@@ -45,6 +45,23 @@ describe('Tags', () => {
     s = executeAction(s, { type: 'TRASH_RESOURCE', player: 'corp', cardInstanceId: res });
     expect(s.runner.heap.map(c => c.instanceId)).toContain(res);
     expect(s.corp.credits).toBe(0);
+  });
+
+  it('the 2-credit tag actions are neither offered nor allowed with only 1 credit', () => {
+    let [s, res] = runnerInstall(newGame(), C.telework);
+    s = passTurn(s);
+    s.runner.tags = 1;
+    s.corp.credits = 1;
+    const trash = { type: 'TRASH_RESOURCE', player: 'corp', cardInstanceId: res } as const;
+    expect(getLegalActions(s, 'corp').some(a => a.type === 'TRASH_RESOURCE')).toBe(false);
+    expect(() => executeAction(s, trash)).toThrow(/2 credits/);
+
+    const r = newGame();
+    startRunnerTurn(r);
+    r.runner.tags = 1;
+    r.runner.credits = 1;
+    expect(getLegalActions(r, 'runner').some(a => a.type === 'REMOVE_TAG')).toBe(false);
+    expect(() => executeAction(r, { type: 'REMOVE_TAG', player: 'runner' })).toThrow(/2 credits/);
   });
 });
 

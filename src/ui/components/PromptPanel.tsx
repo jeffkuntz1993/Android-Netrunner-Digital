@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CardInstance, GameState, PromptChoice, activePrompt, cardDef, findCardAnywhere, locateCorpCard } from '../../core';
+import { CardInstance, GameState, PromptChoice, activePrompt, availableCredits, cardDef, findCardAnywhere, isLegalAction, locateCorpCard } from '../../core';
 import { CardView } from './CardView';
 import { Check, RefreshCw, Trash2, X } from 'lucide-react';
 import { Credits } from './CreditIcon';
@@ -172,6 +172,14 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
 
         {prompt.kind === 'access_trash' && (() => {
           const card = locateCorpCard(state, prompt.cardInstanceId)?.card;
+          // Count every credit the Runner could pay the trash cost with, and only offer it when affordable
+          const canPay = card ? availableCredits(state, 'runner', { kind: 'trash', card }) : state.runner.credits;
+          const canTrash = isLegalAction(state, {
+            type: 'RESOLVE_PROMPT',
+            player: 'runner',
+            promptId: prompt.id,
+            choice: { kind: 'access_trash', trash: true },
+          });
           return (
             <>
               <div className="flex items-center gap-4 mb-4">
@@ -183,7 +191,10 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
                       Trash cost: <span className="text-red-300 font-bold"><Credits amount={prompt.trashCost} /></span> ·{' '}
                     </>
                   )}
-                  You have <span className="text-amber-300 font-bold"><Credits amount={state.runner.credits} /></span>
+                  You have <span className="text-amber-300 font-bold"><Credits amount={canPay} /></span>
+                  {canPay !== state.runner.credits && (
+                    <span className="text-slate-400"> ({state.runner.credits} in your pool, the rest from run or hosted credits)</span>
+                  )}
                 </div>
               </div>
               <div className="flex gap-2 justify-end flex-wrap">
@@ -200,7 +211,12 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
                   </button>
                 ))}
                 {prompt.trashCost !== null && (
-                  <button className={`${button} bg-red-700 hover:bg-red-600 border-red-500 text-white`} onClick={() => answer({ kind: 'access_trash', trash: true })}>
+                  <button
+                    className={`${button} bg-red-700 hover:bg-red-600 border-red-500 text-white`}
+                    disabled={!canTrash}
+                    title={canTrash ? undefined : 'Not enough credits to pay the trash cost'}
+                    onClick={() => answer({ kind: 'access_trash', trash: true })}
+                  >
                     <Trash2 className="w-3.5 h-3.5" /> Trash (<Credits amount={prompt.trashCost ?? 0} />)
                   </button>
                 )}
