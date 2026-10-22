@@ -33,8 +33,19 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
   const isCorp = prompt.side === 'corp';
   const hand = isCorp ? state.corp.hq : state.runner.grip;
   const accent = isCorp ? 'border-cyan-500 shadow-cyan-950/60' : 'border-pink-500 shadow-pink-950/60';
+  // Selection stops at the most cards the prompt takes; with a limit of one, a new pick replaces the old
+  const maxSelected = prompt.kind === 'discard' ? prompt.count : prompt.kind === 'effect_cards' ? prompt.max : Infinity;
   const toggle = (id: string) =>
-    setSelected(sel => (sel.includes(id) ? sel.filter(s => s !== id) : [...sel, id]));
+    setSelected(sel =>
+      sel.includes(id)
+        ? sel.filter(s => s !== id)
+        : sel.length < maxSelected
+          ? [...sel, id]
+          : maxSelected === 1
+            ? [id]
+            : sel,
+    );
+  const isFull = selected.length >= maxSelected && maxSelected !== 1;
   const answer = (choice: PromptChoice) => {
     setSelected([]);
     onAnswer(choice);
@@ -65,7 +76,7 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
           <>
             <div className="flex gap-2 overflow-x-auto py-2 mb-4">
               {hand.map(card => (
-                <CardView key={card.instanceId} card={card} size="sm" onInspect={onInspectCard} />
+                <CardView key={card.instanceId} card={card} size="sm" notInstalled onInspect={onInspectCard} />
               ))}
             </div>
             <div className="flex gap-2 justify-end">
@@ -87,7 +98,8 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
                   key={card.instanceId}
                   card={card}
                   size="sm"
-                  isSelectable
+                  notInstalled
+                  isSelectable={!isFull || selected.includes(card.instanceId)}
                   isSelected={selected.includes(card.instanceId)}
                   onClick={() => toggle(card.instanceId)}
                   onInspect={onInspectCard}
@@ -97,6 +109,7 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400">
                 Selected {selected.length} / {prompt.count}
+                {isFull && <span className="text-amber-300"> · limit reached, deselect a card to change</span>}
               </span>
               <button
                 className={`${button} bg-red-700 hover:bg-red-600 border-red-500 text-white`}
@@ -133,7 +146,7 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
                     key={id}
                     card={card}
                     size="sm"
-                    isSelectable
+                    isSelectable={!isFull || selected.includes(id)}
                     isSelected={selected.includes(id)}
                     onClick={() => toggle(id)}
                     onInspect={onInspectCard}
@@ -144,6 +157,7 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400">
                 Selected {selected.length} ({prompt.min === prompt.max ? prompt.min : `${prompt.min}-${prompt.max}`})
+                {isFull && <span className="text-amber-300"> · limit reached, deselect a card to change</span>}
               </span>
               <button
                 className={`${button} bg-emerald-700 hover:bg-emerald-600 border-emerald-500 text-white`}

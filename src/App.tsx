@@ -27,6 +27,8 @@ import { AbilityBar } from './ui/components/AbilityBar';
 import { ZoneGroup, ZoneViewer } from './ui/components/ZoneViewer';
 import { Pile } from './ui/components/Pile';
 import { HandRow } from './ui/components/HandRow';
+import { CardFates, ShownFate } from './ui/components/CardFates';
+import { cardFates } from './ui/cardFates';
 import { HandoffScreen } from './ui/components/HandoffScreen';
 import { GameOverModal } from './ui/components/GameOverModal';
 import { ViewMode, Viewer, actingSide, canActAs, canSeeCorpSecrets, canSeeRunnerSecrets, corpRezWindow } from './ui/viewer';
@@ -55,6 +57,8 @@ import { labelKeyword } from './ui/glossary';
 
 const VIEW_MODE_KEY = 'netrunner.viewMode';
 const AI_DELAY_MS = 650;
+/** How long a stolen, scored or trashed card stays in the middle of the table. */
+const FATE_SHOW_MS = 1300;
 
 function savedViewMode(): ViewMode {
   try {
@@ -154,6 +158,9 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
   const [passedRezWindows, setPassedRezWindows] = useState<string[]>([]);
   // Cards the Runner accessed in the latest run, shown until dismissed or the next run
   const [accessed, setAccessed] = useState<string[]>([]);
+  // Cards just stolen, scored or trashed, shown briefly in the middle of the table
+  const [fates, setFates] = useState<ShownFate[]>([]);
+  const prevStateRef = useRef(gameState);
 
   // Against the computer: the AI plays one side and the person sees their own
   // side (or everything, with Open table).
@@ -190,6 +197,27 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
       // Not saved; the choice still applies to this game
     }
   }, [viewMode, aiSide]);
+
+  // Watch every state change (the person's moves and the computer's) for steals, scores and trashes
+  useEffect(() => {
+    const prev = prevStateRef.current;
+    prevStateRef.current = gameState;
+    if (prev === gameState) return;
+    const found = cardFates(prev, gameState);
+    if (found.length === 0) return;
+    const stamp = Date.now();
+    const shown = found.map((f, i) => ({
+      ...f,
+      key: `${f.card.instanceId}-${stamp}-${i}`,
+      canSee: !f.corpSecret || canSeeCorpSecrets(viewer),
+    }));
+    setFates(cur => [...cur, ...shown]);
+    // Not cleared on the next change: each showing ends on its own timer
+    window.setTimeout(() => {
+      const keys = new Set(shown.map(f => f.key));
+      setFates(cur => cur.filter(f => !keys.has(f.key)));
+    }, FATE_SHOW_MS);
+  }, [gameState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAction = (action: GameAction) => {
     try {
@@ -930,6 +958,8 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
           (canActAs(viewer, gameState.pendingPrompts[0].side) && gameState.pendingPrompts[0].side !== aiSide)
         }
       />
+
+      {!handoffTo && <CardFates fates={fates} />}
 
       {accessed.length > 0 && !handoffTo && (
         <AccessedPanel codes={accessed} onInspect={setInspectedCard} onClose={() => setAccessed([])} />
