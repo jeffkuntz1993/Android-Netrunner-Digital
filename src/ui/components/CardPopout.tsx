@@ -2,6 +2,7 @@ import React, { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CardInstance } from '../../core/types/card';
 import { cardDef, getCardImageUrl } from '../../data/cards';
+import { FACTION_COLOR, FACTION_LABEL, typeLine } from '../cardLabels';
 import { Shield, Zap, Award, Trash2, Clock, AlertCircle, Lock } from 'lucide-react';
 import { CreditIcon, Credits, CREDIT_ICON_HTML, RECURRING_CREDIT_ICON_HTML } from './CreditIcon';
 
@@ -142,7 +143,7 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
               {def.title}
             </h3>
             <div className="text-[11px] text-slate-400 italic mt-0.5">
-              {def.keywords || def.faction_code.replace('-', ' ').toUpperCase()}
+              {typeLine(def)} · <span className={`not-italic ${FACTION_COLOR[def.faction_code]}`}>{FACTION_LABEL[def.faction_code]}</span>
             </div>
           </div>
 

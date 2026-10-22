@@ -4,6 +4,7 @@ import { CardDefinition, CardTypeCode, FactionCode, SideCode } from '../../core/
 import { DeckList, deckCodes } from '../../data/decks';
 import { SYSTEM_GATEWAY_CARDS, getCardImageUrl } from '../../data/cards';
 import { CardZoomModal } from './CardZoomModal';
+import { FACTION_COLOR, FACTION_LABEL } from '../cardLabels';
 import { AlertTriangle, ArrowLeft, CheckCircle2, Minus, Plus, Save, Search, ZoomIn } from 'lucide-react';
 
 interface DeckBuilderProps {
@@ -21,17 +22,6 @@ const TYPE_ORDER: Record<SideCode, CardTypeCode[]> = {
 const TYPE_LABEL: Partial<Record<CardTypeCode, string>> = {
   agenda: 'Agendas', asset: 'Assets', upgrade: 'Upgrades', operation: 'Operations', ice: 'Ice',
   event: 'Events', hardware: 'Hardware', resource: 'Resources', program: 'Programs',
-};
-
-const FACTION_LABEL: Record<FactionCode, string> = {
-  'haas-bioroid': 'Haas-Bioroid', jinteki: 'Jinteki', nbn: 'NBN', 'weyland-consortium': 'Weyland',
-  'neutral-corp': 'Neutral', anarch: 'Anarch', criminal: 'Criminal', shaper: 'Shaper', 'neutral-runner': 'Neutral',
-};
-
-const FACTION_COLOR: Record<FactionCode, string> = {
-  'haas-bioroid': 'text-violet-400', jinteki: 'text-red-400', nbn: 'text-amber-300', 'weyland-consortium': 'text-emerald-400',
-  'neutral-corp': 'text-slate-400', anarch: 'text-orange-400', criminal: 'text-blue-400', shaper: 'text-lime-400',
-  'neutral-runner': 'text-slate-400',
 };
 
 const byTitle = new Map(SYSTEM_GATEWAY_CARDS.map(c => [c.title, c]));

@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { CardInstance } from '../../core/types/card';
 import { cardDef, getCardImageUrl } from '../../data/cards';
+import { FACTION_COLOR, FACTION_LABEL, typeLine } from '../cardLabels';
 import { X, Shield, Zap, Award, Trash2, AlertCircle } from 'lucide-react';
 import { CreditIcon, CREDIT_ICON_HTML, RECURRING_CREDIT_ICON_HTML } from './CreditIcon';
 
@@ -77,7 +78,7 @@ export const CardZoomModal: React.FC<CardZoomModalProps> = ({
               {def.title}
             </h2>
             <p className="text-sm text-slate-400 italic mb-4">
-              {def.keywords || def.faction_code.replace('-', ' ').toUpperCase()}
+              {typeLine(def)} · <span className={`not-italic ${FACTION_COLOR[def.faction_code]}`}>{FACTION_LABEL[def.faction_code]}</span>
             </p>
 
             {/* Stats row */}
