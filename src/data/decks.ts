@@ -1,6 +1,6 @@
 import { GameSetup } from '../core/engine/gameState';
 import { SideCode } from '../core/types/card';
-import { SYSTEM_GATEWAY_CARDS } from './cards';
+import { ALL_CARDS } from './cards';
 import { validateDeck } from '../core/deckValidation';
 
 /**
@@ -148,7 +148,7 @@ export const DECKS: DeckList[] = [
   },
 ];
 
-const codeByTitle = new Map(SYSTEM_GATEWAY_CARDS.map(c => [c.title, c.code]));
+const codeByTitle = new Map(ALL_CARDS.map(c => [c.title, c.code]));
 
 function codeOf(title: string): string {
   const code = codeByTitle.get(title);

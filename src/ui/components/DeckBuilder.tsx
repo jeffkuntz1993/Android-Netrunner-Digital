@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { influenceCost, requiredAgendaPoints, validateDeck } from '../../core';
 import { CardDefinition, CardTypeCode, FactionCode, SideCode } from '../../core/types/card';
 import { DeckList, deckCodes } from '../../data/decks';
-import { SYSTEM_GATEWAY_CARDS, getCardImageUrl } from '../../data/cards';
+import { ALL_CARDS, CARD_SETS, getCardImageUrl } from '../../data/cards';
+import { getCardScript } from '../../core/scripts';
 import { CardZoomModal } from './CardZoomModal';
 import { FACTION_COLOR, FACTION_LABEL } from '../cardLabels';
 import { AlertTriangle, ArrowLeft, CheckCircle2, Minus, Plus, Save, Search, ZoomIn } from 'lucide-react';
@@ -24,7 +25,9 @@ const TYPE_LABEL: Partial<Record<CardTypeCode, string>> = {
   event: 'Events', hardware: 'Hardware', resource: 'Resources', program: 'Programs',
 };
 
-const byTitle = new Map(SYSTEM_GATEWAY_CARDS.map(c => [c.title, c]));
+const byTitle = new Map(ALL_CARDS.map(c => [c.title, c]));
+/** Elevation cards whose abilities aren't in the engine yet (every System Gateway card is). */
+const unscripted = (c: CardDefinition) => c.pack_code !== 'sg' && !!c.text && !getCardScript(c.code);
 const typeRank = (c: CardDefinition) => TYPE_ORDER[c.side_code].indexOf(c.type_code);
 const sortCards = (a: CardDefinition, b: CardDefinition) => typeRank(a) - typeRank(b) || a.title.localeCompare(b.title);
 
@@ -37,22 +40,23 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({ initial, onSave, onCan
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<CardTypeCode | 'all'>('all');
   const [factionFilter, setFactionFilter] = useState<'all' | 'playable' | FactionCode>('all');
+  const [setFilter, setSetFilter] = useState<string>('all');
   const [zoomCode, setZoomCode] = useState<string | null>(null);
 
   const identities = useMemo(
-    () => SYSTEM_GATEWAY_CARDS.filter(c => c.side_code === side && c.type_code === 'identity'),
+    () => ALL_CARDS.filter(c => c.side_code === side && c.type_code === 'identity'),
     [side]
   );
   const identity = byTitle.get(identityTitle) ?? identities[0];
   const pool = useMemo(
-    () => SYSTEM_GATEWAY_CARDS.filter(c => c.side_code === side && c.type_code !== 'identity').sort(sortCards),
+    () => ALL_CARDS.filter(c => c.side_code === side && c.type_code !== 'identity').sort(sortCards),
     [side]
   );
   const factions = [...new Set(pool.map(c => c.faction_code))];
 
   const draft: DeckList = { ...initial, name: name.trim() || 'Untitled deck', identity: identity.title, cards, source: 'custom' };
   const codes = deckCodes(draft);
-  const defs = codes.cards.map(code => SYSTEM_GATEWAY_CARDS.find(c => c.code === code)!);
+  const defs = codes.cards.map(code => ALL_CARDS.find(c => c.code === code)!);
   const problems = validateDeck(codes);
   const size = defs.length;
   const influence = defs.reduce((n, d) => n + influenceCost(identity, d), 0);
@@ -73,6 +77,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({ initial, onSave, onCan
   const q = query.trim().toLowerCase();
   const shown = pool.filter(c => {
     if (typeFilter !== 'all' && c.type_code !== typeFilter) return false;
+    if (setFilter !== 'all' && c.pack_code !== setFilter) return false;
     if (factionFilter === 'playable') {
       // Hide out-of-faction agendas and cards whose influence would not fit at all
       const cost = influenceCost(identity, c);
@@ -158,6 +163,18 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({ initial, onSave, onCan
                   <option key={f} value={f}>{FACTION_LABEL[f]}</option>
                 ))}
               </select>
+              <select
+                value={setFilter}
+                onChange={e => setSetFilter(e.target.value)}
+                aria-label="Set filter"
+                data-testid="set-filter"
+                className="bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-sm"
+              >
+                <option value="all">All sets</option>
+                {CARD_SETS.map(set => (
+                  <option key={set.code} value={set.code}>{set.name}</option>
+                ))}
+              </select>
             </div>
             <div className="flex flex-wrap gap-1.5 mb-4">
               {(['all', ...TYPE_ORDER[side]] as const).map(t => (
@@ -191,6 +208,14 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({ initial, onSave, onCan
                         loading="lazy"
                         className="w-full aspect-[63/88] object-cover rounded-md"
                       />
+                      {unscripted(c) && (
+                        <span
+                          className="absolute bottom-1 left-1 right-1 rounded bg-amber-900/90 text-amber-200 text-[9px] font-bold text-center py-0.5"
+                          title="This card's abilities are not implemented yet"
+                        >
+                          NOT SCRIPTED YET
+                        </span>
+                      )}
                       {n > 0 && (
                         <span className="absolute top-1 right-1 min-w-[1.5rem] h-6 px-1 rounded-full bg-black/85 border border-slate-500 text-xs font-bold flex items-center justify-center">
                           {n}

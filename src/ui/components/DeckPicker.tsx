@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { SideCode, getCardDefinition, influenceCost, validateDeck } from '../../core';
 import { DECKS, DeckList, deckCodes, pickRandomDeck, randomDeckPool } from '../../data/decks';
-import { SYSTEM_GATEWAY_CARDS, getCardImageUrl } from '../../data/cards';
+import { ALL_CARDS, getCardImageUrl } from '../../data/cards';
 import { loadCustomDecks, newCustomDeckId, saveCustomDecks } from '../../data/customDecks';
 import { DeckBuilder } from './DeckBuilder';
 import type { Difficulty } from '../../ai';
@@ -72,7 +72,7 @@ function summarize(deck: DeckList): DeckSummary {
 }
 
 function emptyDeck(side: 'corp' | 'runner'): DeckList {
-  const identity = SYSTEM_GATEWAY_CARDS.find(c => c.side_code === side && c.type_code === 'identity')!;
+  const identity = ALL_CARDS.find(c => c.side_code === side && c.type_code === 'identity')!;
   return { id: newCustomDeckId(), name: 'New deck', side, identity: identity.title, cards: {}, source: 'custom' };
 }
 
