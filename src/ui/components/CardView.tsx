@@ -153,7 +153,12 @@ const CardFace: React.FC<CardViewProps> = ({
       )}
 
       {/* Unrezzed Blueprint Indicator for Corp */}
-      {isUnrezzed && (
+      {isUnrezzed && card.faceUp && (
+        <div className="absolute top-1 left-1 bg-amber-950/90 text-amber-300 border border-amber-700/80 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase shadow z-10 backdrop-blur-sm">
+          Faceup
+        </div>
+      )}
+      {isUnrezzed && !card.faceUp && (
         <div className="absolute top-1 left-1 bg-cyan-950/90 text-cyan-300 border border-cyan-700/80 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase shadow z-10 flex items-center gap-1 backdrop-blur-sm">
           <Eye className="w-2.5 h-2.5 text-cyan-400" />
           <Keyword id="unrezzed">Unrezzed</Keyword>
@@ -167,8 +172,15 @@ const CardFace: React.FC<CardViewProps> = ({
         </div>
       )}
 
-      {/* Hosted credit and virus counters */}
-      {((card.tokens.credit ?? 0) > 0 || (card.tokens.virus ?? 0) > 0) && (
+      {/* A flipped identity (Nebula Talent Management) */}
+      {card.flipped && (
+        <div className="absolute bottom-1 left-1 bg-violet-950/90 text-violet-200 border border-violet-600 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase shadow z-10">
+          Flipped
+        </div>
+      )}
+
+      {/* Hosted credit, virus, power and agenda counters */}
+      {((card.tokens.credit ?? 0) > 0 || (card.tokens.virus ?? 0) > 0 || (card.tokens.power ?? 0) > 0 || (card.tokens.agenda ?? 0) > 0) && (
         <div className="absolute bottom-1 right-1 flex flex-col items-end gap-0.5 z-20">
           {(card.tokens.credit ?? 0) > 0 && (
             <span className="bg-amber-500 text-black font-extrabold px-1.5 py-0.5 rounded-full text-[10px] shadow-lg border border-amber-200" data-kw="credit">
@@ -178,6 +190,16 @@ const CardFace: React.FC<CardViewProps> = ({
           {(card.tokens.virus ?? 0) > 0 && (
             <span className="bg-lime-500 text-black font-extrabold px-1.5 py-0.5 rounded-full text-[10px] shadow-lg border border-lime-200" data-kw="virus-counter">
               ☣ {card.tokens.virus}
+            </span>
+          )}
+          {(card.tokens.power ?? 0) > 0 && (
+            <span className="bg-violet-500 text-white font-extrabold px-1.5 py-0.5 rounded-full text-[10px] shadow-lg border border-violet-200" title="Power counters">
+              ⚡ {card.tokens.power}
+            </span>
+          )}
+          {(card.tokens.agenda ?? 0) > 0 && (
+            <span className="bg-teal-400 text-black font-extrabold px-1.5 py-0.5 rounded-full text-[10px] shadow-lg border border-teal-100" title="Agenda counters">
+              ◆ {card.tokens.agenda}
             </span>
           )}
         </div>

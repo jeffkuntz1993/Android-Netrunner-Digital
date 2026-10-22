@@ -73,6 +73,7 @@ export class HeuristicRunnerAI implements Agent {
       if (!plan || plan.credits > credits) return undefined;
       const breakerId = plan.breaker.instanceId;
       if (plan.boostsNeeded > 0) {
+        if (plan.boostByAbility) return legal.find(a => a.type === 'USE_ABILITY' && a.cardInstanceId === breakerId);
         return legal.find(a => a.type === 'BOOST_BREAKER' && a.breakerInstanceId === breakerId);
       }
       const wanted = new Set(targets.map(t => t.i));
@@ -94,7 +95,8 @@ export class HeuristicRunnerAI implements Agent {
     if (blocking.length > 0) {
       const action = tryBreaking(blocking);
       if (action) return action;
-      if (isBioroid(ice)) {
+      if (isBioroid(ice) || iceScript(ice)?.runnerBreakCost !== undefined) {
+        // Bioroids: spend a click; N-Pot: pay credits
         const bioroid = legal.find(a => a.type === 'BIOROID_BREAK' && a.subroutineIndex === blocking[0].i);
         if (bioroid) return bioroid;
       }

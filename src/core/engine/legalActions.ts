@@ -169,10 +169,13 @@ function promptAnswers(state: GameState): GameAction[] {
     case 'effect_choice':
       return prompt.options.map(o => ({ ...base, choice: { kind: 'effect_choice' as const, optionId: o.id } }));
     case 'effect_cards': {
+      // "Any number of cards" prompts (Next Big Thing) have too many answers to
+      // list them all; every answer is still legal, only the listing stops.
       const answers: GameAction[] = [];
-      for (let k = prompt.min; k <= prompt.max; k++) {
-        for (const cardInstanceIds of combinations(prompt.candidateIds, k)) {
+      outer: for (let k = prompt.min; k <= prompt.max; k++) {
+        for (const cardInstanceIds of combinationsOf(prompt.candidateIds, k)) {
           answers.push({ ...base, choice: { kind: 'effect_cards' as const, cardInstanceIds } });
+          if (answers.length >= MAX_LISTED_ANSWERS) break outer;
         }
       }
       return answers;
@@ -184,6 +187,19 @@ function promptAnswers(state: GameState): GameAction[] {
         choice: { kind: 'discard' as const, cardInstanceIds },
       }));
     }
+  }
+}
+
+const MAX_LISTED_ANSWERS = 256;
+
+/** The k-card combinations of `items`, generated lazily. */
+function* combinationsOf<T>(items: T[], k: number, start = 0): Generator<T[]> {
+  if (k === 0) {
+    yield [];
+    return;
+  }
+  for (let i = start; i <= items.length - k; i++) {
+    for (const rest of combinationsOf(items, k - 1, i + 1)) yield [items[i], ...rest];
   }
 }
 

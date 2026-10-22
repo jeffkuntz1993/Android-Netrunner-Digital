@@ -1,6 +1,6 @@
-import { CardInstance, GameAction, GameState, ServerState, activePrompt, cardDef, getLegalActions } from '../core';
+import { CardInstance, GameAction, GameState, ServerState, activePrompt, cardDef, findCardAnywhere, getLegalActions, isLegalAction } from '../core';
 import { iceScript } from '../core/engine/ice';
-import { counters } from '../core/engine/cardEffects';
+import { counters, rezCost } from '../core/engine/cardEffects';
 import { Agent, ScoredAction } from './agent';
 import { evaluate } from './evaluate';
 import { answerPrompt, simulate } from './prompts';
@@ -12,6 +12,10 @@ const ECON_ASSETS: Record<string, number> = {
   '30071': 4, // Regolith Mining License
   '30037': 3.5, // Nico Campaign
   '30053': 1.5, // Spin Doctor
+  '35072': 4, // Anthill Excavation Contract
+  '35040': 3.5, // Otto Campaign
+  '35062': 2.5, // Public Access Plaza
+  '35039': 2, // Humanoid Resources
 };
 // Upgrades: [value in a scoring remote, value on HQ or R&D]
 const UPGRADES: Record<string, [number, number]> = {
@@ -19,6 +23,9 @@ const UPGRADES: Record<string, [number, number]> = {
   '30050': [1.5, 0.8], // Anoetic Void
   '30058': [1.5, 0], // AMAZE Amusements
   '30066': [1.5, 0], // Malapert Data Vault
+  '35082': [2, 0.5], // Mahkota Langit Grid
+  '35056': [1.5, 1.2], // Mitra Aman
+  '35045': [1, 1], // Mercia B4LL4RD
 };
 
 const type = (card: CardInstance) => cardDef(card).type_code;
@@ -67,8 +74,8 @@ export class HeuristicCorpAI implements Agent {
     let best: { card: CardInstance; score: number } | null = null;
     for (const card of cards) {
       const def = cardDef(card);
-      const cost = (def.cost ?? 0) + (def.type_code === 'ice' ? run.iceRezCostIncrease : 0);
-      if (cost > state.corp.credits) continue;
+      const cost = rezCost(state, card);
+      if (!isLegalAction(state, { type: 'REZ_CARD', player: 'corp', cardInstanceId: card.instanceId })) continue;
       let score: number;
       if (def.type_code === 'ice') {
         // Ping tags the Runner when rezzed during a run; ice that ends the run protects best
@@ -81,7 +88,21 @@ export class HeuristicCorpAI implements Agent {
       }
       if (score >= 2 && (!best || score > best.score)) best = { card, score };
     }
-    return best ? { type: 'REZ_CARD', player: 'corp', cardInstanceId: best.card.instanceId } : null;
+    if (best) return { type: 'REZ_CARD', player: 'corp', cardInstanceId: best.card.instanceId };
+    return run.phase === 'approach_server' ? this.runStopper(state, importance) : null;
+  }
+
+  /** LEO Construction or Proprionegation, when the Runner is about to get into something that matters. */
+  private runStopper(state: GameState, importance: number): GameAction | null {
+    if (importance < 6) return null;
+    const archivesAgenda = state.corp.archives.faceDown.some(c => type(c) === 'agenda');
+    for (const action of getLegalActions(state, 'corp')) {
+      if (action.type !== 'USE_ABILITY') continue;
+      const code = findCardAnywhere(state, action.cardInstanceId)?.cardCode;
+      if (code === '35035') return action; // LEO: trash a bioroid, end the run
+      if (code === '35048' && !archivesAgenda && state.activeRun?.server !== 'archives') return action; // Proprionegation
+    }
+    return null;
   }
 
   private score(state: GameState, action: GameAction, before: number): number {
@@ -104,7 +125,8 @@ export class HeuristicCorpAI implements Agent {
         const card = corp.hq.find(c => c.instanceId === action.cardInstanceId);
         if (!card) return -Infinity;
         const server = action.asNewRemote ? null : corp.servers[action.targetServerId ?? ''] ?? null;
-        return this.installScore(state, card, server);
+        // BANGUN's faceup agendas hurt the Runner but tell them what is there
+        return this.installScore(state, card, server) - (action.faceUp ? 0.5 : 0);
       }
       case 'REZ_CARD': {
         if (state.activeRun) return -Infinity;
@@ -148,7 +170,8 @@ export class HeuristicCorpAI implements Agent {
       // Traps: advancing makes them look like agendas (Urtica Cipher, Clearinghouse)
       return corp.credits >= 4 && card.advancementCounters < 3 ? 1.2 : -Infinity;
     }
-    // Pharos: +5 strength at 3 counters
+    // Pharos: +5 strength at 3 counters; Syailendra: places counters when encountered at 3
+    if (card.cardCode === '35076' && card.advancementCounters < 3 && corp.credits >= 4) return 0.8;
     return card.cardCode === '30063' && card.advancementCounters < 3 && corp.credits >= 8 ? 1 : -Infinity;
   }
 

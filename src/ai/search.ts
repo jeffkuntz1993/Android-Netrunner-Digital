@@ -177,6 +177,7 @@ export class SearchAI implements Agent {
         return { action, score: suggested && 'cardInstanceId' in suggested && suggested.cardInstanceId === card.instanceId ? 1 : 0, first: action };
       }),
     ];
+    if (suggested?.type === 'USE_ABILITY') options.push({ action: suggested, score: 1, first: suggested });
     options.sort((a, b) => b.score - a.score); // the rule-based AI's choice first
     const best = this.search(state, options, this.options.timeMs / 2);
     return best.type === 'PASS_PRIORITY' ? null : best;

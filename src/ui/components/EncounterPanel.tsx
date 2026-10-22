@@ -133,7 +133,9 @@ export const EncounterPanel: React.FC<EncounterPanelProps> = ({ state, onAction,
 
       {bioroidActions.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-mono text-slate-400 w-40">Bioroid: spend a click</span>
+          <span className="text-[11px] font-mono text-slate-400 w-40">
+            {iceScript(ice)?.runnerBreakCost ? <>Pay <Credits amount={iceScript(ice)!.runnerBreakCost!} /> per subroutine</> : 'Bioroid: spend a click'}
+          </span>
           {bioroidActions.map((a, k) =>
             a.type === 'BIOROID_BREAK' ? (
               <button

@@ -3,9 +3,9 @@ import { GameState } from '../../core/types/state';
 import { CardInstance } from '../../core/types/card';
 import { CardView } from './CardView';
 import { cardDef } from '../../data/cards';
-import { GameAction, iceStrength, isLegalAction } from '../../core';
+import { GameAction, findCardAnywhere, getCardScript, iceStrength, isLegalAction, rezCostOf } from '../../core';
 import { EncounterPanel } from './EncounterPanel';
-import { ArrowRight, LogOut, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { ArrowRight, LogOut, CheckCircle2, ShieldAlert, Sparkles } from 'lucide-react';
 import { Credits } from './CreditIcon';
 import { FloatingPanel } from './FloatingPanel';
 import { Keyword } from './Keyword';
@@ -22,6 +22,8 @@ interface RunOverlayProps {
   /** Cards the Corp may rez right now (the approached ice, or the server's root), when the viewer is the Corp. */
   rezCards?: CardInstance[];
   onRez?: (card: CardInstance) => void;
+  /** Corp abilities offered in the rez window (LEO Construction, Proprionegation). */
+  rezAbilities?: Extract<GameAction, { type: 'USE_ABILITY' }>[];
   /** Pass and play: the Corp is done rezzing and hands the screen back. */
   onDoneRezzing?: () => void;
   /** Show Continue, Jack Out and the break buttons (the viewer is the Runner and it is their move). */
@@ -39,6 +41,7 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
   onJackOut,
   rezCards = [],
   onRez,
+  rezAbilities = [],
   onDoneRezzing,
   runnerControls,
   canPeekCorp,
@@ -140,16 +143,33 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
                   className="px-5 py-2 bg-cyan-700 hover:bg-cyan-600 text-white font-mono text-xs font-bold rounded-xl border border-cyan-400 flex items-center justify-center gap-1.5 transition-colors"
                   title="Corp rez window: rez this card before the Runner continues"
                 >
-                  <ShieldAlert className="w-4 h-4" /> Rez {cardDef(card).title} (<Credits amount={cardDef(card).cost || 0} />)
+                  <ShieldAlert className="w-4 h-4" /> Rez {cardDef(card).title} (<Credits amount={rezCostOf(state, card)} />)
                 </button>
               ))}
+            {onRez &&
+              rezAbilities.map(action => {
+                const source = findCardAnywhere(state, action.cardInstanceId);
+                const ability = source && getCardScript(source.cardCode)?.abilities?.[action.abilityIndex];
+                if (!source || !ability) return null;
+                return (
+                  <button
+                    key={`${action.cardInstanceId}-${action.abilityIndex}`}
+                    onClick={() => onAction(action)}
+                    data-testid={`run-ability-${action.cardInstanceId}`}
+                    className="px-5 py-2 bg-cyan-900 hover:bg-cyan-800 text-white font-mono text-xs font-bold rounded-xl border border-cyan-500 flex items-center justify-center gap-1.5 transition-colors max-w-[16rem]"
+                    title={ability.label}
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-300 shrink-0" /> {cardDef(source).title}
+                  </button>
+                );
+              })}
             {onDoneRezzing && (
               <button
                 onClick={onDoneRezzing}
                 data-testid="done-rezzing"
                 className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs font-bold rounded-xl border border-slate-600 flex items-center justify-center gap-1.5 transition-colors"
               >
-                {rezCards.length > 0 ? "Don't rez" : 'Done'} <ArrowRight className="w-4 h-4" />
+                {rezCards.length > 0 ? "Don't rez" : rezAbilities.length > 0 ? 'Let them in' : 'Done'} <ArrowRight className="w-4 h-4" />
               </button>
             )}
             {runnerControls && (

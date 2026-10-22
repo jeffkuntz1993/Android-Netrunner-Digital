@@ -124,7 +124,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
               <div key={card.instanceId} className="flex flex-col items-center">
                 <CardView
                   card={card}
-                  isFaceDown={!card.isRezzed}
+                  isFaceDown={!card.isRezzed && !card.faceUp}
                   canPeek={canCorpPeek}
                   size={cardSize}
                   onInspect={onInspectCard}

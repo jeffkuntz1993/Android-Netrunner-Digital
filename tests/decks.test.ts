@@ -16,9 +16,20 @@ describe('decklists', () => {
   });
 
   it('the NSG sample decks are 44 cards (Corp) and 40 cards (Runner)', () => {
-    const samples = DECKS.filter(d => d.source === 'official sample');
+    const samples = DECKS.filter(d => d.source === 'official sample' && !d.id.startsWith('core-'));
     expect(samples).toHaveLength(7);
     for (const deck of samples) expect(deckCodes(deck).cards).toHaveLength(deck.side === 'corp' ? 44 : 40);
+  });
+
+  it('includes the 21 credited System Gateway + Elevation sample decks', () => {
+    const core = DECKS.filter(d => d.id.startsWith('core-'));
+    expect(core).toHaveLength(21);
+    expect(core.filter(d => d.side === 'corp')).toHaveLength(12);
+    for (const deck of core) {
+      expect(deck.source).toBe('official sample');
+      expect(deck.credit).toMatch(/Phi aka Girometics/);
+    }
+    expect(deckCodes(core.find(d => d.id === 'core-quick-returns')!).cards).toHaveLength(48);
   });
 
   it('builds a game from two decklists', () => {

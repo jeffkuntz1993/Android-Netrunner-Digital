@@ -122,7 +122,7 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
     if ((deck.side === 'corp' ? corpId : runnerId) === deck.id) selectFor(deck.side)(fallback);
   };
   const copyDeck = (deck: DeckList) =>
-    setEditing({ ...deck, id: newCustomDeckId(), name: `${deck.name} (copy)`, cards: { ...deck.cards }, source: 'custom' });
+    setEditing({ ...deck, id: newCustomDeckId(), name: `${deck.name} (copy)`, cards: { ...deck.cards }, source: 'custom', credit: undefined });
 
   if (editing) {
     return <DeckBuilder key={editing.id} initial={editing} onSave={saveDeck} onCancel={() => setEditing(null)} />;
@@ -232,7 +232,10 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+                      <span
+                        className="text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300"
+                        title={s.deck.credit}
+                      >
                         {s.deck.source === 'official starter' ? 'Official starter' : s.deck.source === 'official sample' ? 'Official sample' : 'Custom'}
                       </span>
                       {s.problems.length === 0 ? (
@@ -245,6 +248,11 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
                         </span>
                       )}
                     </div>
+                    {s.deck.credit && (
+                      <div className="text-[10px] text-slate-500 mt-1 line-clamp-2" title={s.deck.credit} data-testid={`credit-${s.deck.id}`}>
+                        {s.deck.credit}
+                      </div>
+                    )}
                   </div>
                 </button>
               );

@@ -81,6 +81,11 @@ export function answerPrompt(state: GameState, side: SideCode, memory?: RunnerMe
     return { ...base, choice: { kind: 'effect_choice', optionId: scored[0].id } };
   }
 
+  // "Any number of cards": build the answer one card at a time
+  if (prompt.kind === 'effect_cards' && prompt.max - prompt.min > 2 && prompt.candidateIds.length > 4) {
+    return greedyCards(state, side, prompt, base, memory);
+  }
+
   // Everything else: try each answer and keep the best outcome.
   const options = answers(state, side);
   let best: GameAction = options[0];
@@ -95,4 +100,37 @@ export function answerPrompt(state: GameState, side: SideCode, memory?: RunnerMe
     }
   }
   return best;
+}
+
+/** Adds the card that helps most until no card helps (and at least `min` are chosen). */
+function greedyCards(
+  state: GameState,
+  side: SideCode,
+  prompt: Extract<Prompt, { kind: 'effect_cards' }>,
+  base: { type: 'RESOLVE_PROMPT'; player: SideCode; promptId: string },
+  memory?: RunnerMemory
+): GameAction {
+  const answer = (ids: string[]): GameAction => ({ ...base, choice: { kind: 'effect_cards', cardInstanceIds: ids } });
+  const value = (ids: string[]) => {
+    const after = simulate(state, answer(ids));
+    return after ? scoreOutcome(state, after, side, memory) : -Infinity;
+  };
+  let chosen: string[] = [];
+  let current = prompt.min === 0 ? value([]) : -Infinity;
+  while (chosen.length < prompt.max) {
+    let bestId: string | null = null;
+    let bestScore = -Infinity;
+    for (const id of prompt.candidateIds) {
+      if (chosen.includes(id)) continue;
+      const score = value([...chosen, id]);
+      if (score > bestScore) {
+        bestScore = score;
+        bestId = id;
+      }
+    }
+    if (!bestId || (chosen.length >= prompt.min && bestScore <= current)) break;
+    chosen = [...chosen, bestId];
+    current = bestScore;
+  }
+  return answer(chosen);
 }

@@ -62,6 +62,7 @@ function runnerRigValue(state: GameState): number {
     value += isIcebreaker(card) ? 2 : 2 * (RUNNER_CARD_VALUE[card.cardCode] ?? 2);
     value += counters(card, 'credit') * (card.cardCode === '30033' ? 0.25 : 0.6); // Smartware pays out 1 a turn
     value += counters(card, 'virus') * (card.cardCode === '30007' ? 1.5 : 0.7);
+    value += (card.hostedCards?.length ?? 0) * 0.8; // Bling, Madani: cards to play later
   }
   return value;
 }
@@ -75,6 +76,14 @@ const CORP_CARD_VALUE: Record<string, number> = {
   '30050': 3, // Anoetic Void
   '30058': 2, // AMAZE Amusements
   '30066': 2, // Malapert Data Vault
+  '35072': 5, // Anthill Excavation Contract
+  '35040': 4, // Otto Campaign
+  '35062': 3, // Public Access Plaza
+  '35039': 3, // Humanoid Resources
+  '35082': 3, // Mahkota Langit Grid
+  '35056': 2, // Mitra Aman
+  '35045': 2, // Mercia B4LL4RD
+  '35051': 2, // Phật Gioan Baotixita
 };
 
 /** Worth of an installed Corp root card (assets and upgrades). */
@@ -110,7 +119,10 @@ export function sideStrength(state: GameState, side: SideCode): number {
       handValue(corp.hq.length, corp.handSizeLimit) +
       8 * corp.score +
       corpBoardValue(state) +
-      1.5 * state.runner.tags
+      1.5 * state.runner.tags +
+      // Dividends and Next Big Thing counters, AU Co. power counters
+      1.5 * corp.scoreArea.reduce((n, a) => n + counters(a, 'agenda'), 0) +
+      0.8 * counters(corp.identity, 'power')
     );
   }
   const runner = state.runner;

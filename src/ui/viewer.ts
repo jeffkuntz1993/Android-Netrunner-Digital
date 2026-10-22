@@ -1,4 +1,4 @@
-import { CardInstance, GameState, SideCode, activePrompt, isLegalAction } from '../core';
+import { CardInstance, GameAction, GameState, SideCode, activePrompt, getLegalActions, isLegalAction } from '../core';
 
 /** Whose eyes are on the screen: one side, or both (open table, for testing). */
 export type Viewer = SideCode | 'both';
@@ -20,6 +20,8 @@ export interface RezWindow {
   /** Identifies this window so a "no rez" answer is remembered. */
   key: string;
   cards: CardInstance[];
+  /** Corp abilities usable now (LEO Construction, Proprionegation), offered with the rez buttons. */
+  abilities: Extract<GameAction, { type: 'USE_ABILITY' }>[];
 }
 
 export function corpRezWindow(state: GameState, runSerial: number): RezWindow | null {
@@ -37,8 +39,15 @@ export function corpRezWindow(state: GameState, runSerial: number): RezWindow | 
   } else if (run.phase === 'approach_server') {
     cards = server.root.filter(rezzable);
   }
-  if (cards.length === 0) return null;
-  return { key: `${state.turnNumber}|${runSerial}|${run.phase}|${run.icePosition}`, cards };
+  // Abilities alone open a window only as the Runner reaches the server, so
+  // pass and play doesn't hand the screen over at every piece of ice
+  const abilities =
+    cards.length > 0 || run.phase === 'approach_server'
+      ? getLegalActions(state, 'corp').filter((a): a is RezWindow['abilities'][number] => a.type === 'USE_ABILITY')
+      : [];
+  if (cards.length === 0 && abilities.length === 0) return null;
+  // The server is part of the key: Proprionegation moves the Runner to another server mid-run
+  return { key: `${state.turnNumber}|${runSerial}|${run.server}|${run.phase}|${run.icePosition}`, cards, abilities };
 }
 
 /** The side the game is waiting on, or null when the game is over. */

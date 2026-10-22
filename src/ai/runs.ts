@@ -3,13 +3,14 @@ import {
   boostCostOf,
   breakerScript,
   breakerStrength,
+  canBreakSubroutinesWith,
   iceScript,
   iceStrength,
   iceSubtypes,
   installedIcebreakers,
   isBioroid,
 } from '../core/engine/ice';
-import { availableCredits } from '../core/engine/cardEffects';
+import { availableCredits, counters } from '../core/engine/cardEffects';
 import { corpCardValue } from './evaluate';
 
 /**
@@ -20,11 +21,23 @@ import { corpCardValue } from './evaluate';
 
 const BLOCK = Infinity;
 const MAYFLY = '30032';
+const HANTU = '35008'; // boosts by spending hosted virus counters (+2 each), not credits
 
 /** Credits-equivalent cost of letting one subroutine resolve (Infinity: it ends the run). */
 export function subroutineCost(state: GameState, label: string): number {
   const runner = state.runner;
   if (/cannot steal or trash/i.test(label)) return BLOCK;
+  // Elevation conditions
+  const unless = label.match(/end the run unless the runner suffers (\d+) net damage/i);
+  if (unless) return Number(unless[1]) >= runner.grip.length ? BLOCK : 2 * Number(unless[1]);
+  const threat = label.match(/threat level is (\d+) or greater, end the run/i);
+  if (threat) return Math.max(state.corp.score, runner.score) >= Number(threat[1]) ? BLOCK : 0;
+  if (/end the run if the runner is tagged/i.test(label)) return runner.tags > 0 ? BLOCK : 1;
+  if (/if the runner has at least 2 tags/i.test(label)) return runner.tags >= 2 ? (2 >= runner.grip.length ? BLOCK : 4) : 0;
+  if (/core damage/i.test(label)) return 6;
+  if (/unless they pay 3 credits/i.test(label)) return 3;
+  const loses = label.match(/loses? (\d+) credits?/i);
+  if (loses) return Math.min(Number(loses[1]), runner.credits);
   if (/or end the run/i.test(label)) return runner.rig.programs.length > 0 ? 5 : BLOCK;
   if (/odd cost/i.test(label)) return runner.grip.length <= 1 ? BLOCK : 4; // Diviner: half the time it ends the run
   if (/6 credits or less/i.test(label)) return runner.credits - 3 <= 6 ? BLOCK : 0;
@@ -35,7 +48,6 @@ export function subroutineCost(state: GameState, label: string): number {
     return n >= runner.grip.length ? BLOCK : 2 * n;
   }
   if (/tag/i.test(label)) return 3;
-  if (/loses? 3 credits/i.test(label)) return 3;
   if (/trash 1 installed runner card/i.test(label)) return 4;
   if (/gain 1 credit/i.test(label)) return 0.3;
   if (/install/i.test(label)) return 1.5;
@@ -47,6 +59,8 @@ export interface BreakPlan {
   /** Credits to break every subroutine in `indices`, boosts included. */
   credits: number;
   boostsNeeded: number;
+  /** Boost with the breaker's card ability (Hantu's virus counters) instead of BOOST_BREAKER. */
+  boostByAbility?: boolean;
 }
 
 /**
@@ -61,7 +75,15 @@ export function bestBreakPlan(state: GameState, ice: CardInstance, subCount: num
   for (const breaker of installedIcebreakers(state)) {
     const script = breakerScript(breaker);
     if (!script || (script.breaks !== 'any' && !types.includes(script.breaks))) continue;
+    if (!canBreakSubroutinesWith(ice, breaker)) continue; // Semak-samun: fracters only
     const strength = breakerStrength(state, breaker);
+    if (breaker.cardCode === HANTU) {
+      const boosts = Math.max(0, Math.ceil((iceStr - strength) / 2));
+      if (boosts > counters(breaker, 'virus')) continue;
+      const credits = boosts * 1.5 + Math.ceil(subCount / script.breakMax) * script.breakCost(state, breaker);
+      if (!best || credits < best.credits) best = { breaker, credits, boostsNeeded: boosts, boostByAbility: true };
+      continue;
+    }
     const amount = script.boostAmount(state, breaker);
     if (strength < iceStr && amount <= 0) continue;
     const boostsNeeded = Math.max(0, Math.ceil((iceStr - strength) / Math.max(amount, 1)));
@@ -82,8 +104,14 @@ export function iceCost(state: GameState, ice: CardInstance): number {
   if (ice.cardCode === '30054') tank += 3; // Funhouse: take a tag or the run ends
   const plan = bestBreakPlan(state, ice, subs.length);
   const breakCost = plan ? plan.credits + (ice.cardCode === '30054' ? 3 : 0) : BLOCK;
-  const bioroid = isBioroid(ice) ? subs.length * 1.5 : BLOCK;
-  return Math.min(tank, breakCost, bioroid);
+  return Math.min(tank, breakCost, selfBreakCost(ice, subs.length));
+}
+
+/** Breaking the ice with its own ability: a click per subroutine (bioroids) or credits (N-Pot). */
+export function selfBreakCost(ice: CardInstance, subCount: number): number {
+  const credits = iceScript(ice)?.runnerBreakCost;
+  if (credits !== undefined) return subCount * credits;
+  return isBioroid(ice) ? subCount * 1.5 : BLOCK;
 }
 
 /** Cards the Runner has already accessed (instance id -> card code), so it doesn't keep checking them. */

@@ -838,6 +838,23 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
                     <Plus className="w-3.5 h-3.5" /> Install Card
                   </button>
                 )}
+                {hostedCardActions(gameState).map(a => {
+                  if (a.type !== 'INSTALL_CARD' && a.type !== 'PLAY_OPERATION_OR_EVENT') return null;
+                  const hosted = findCardAnywhere(gameState, a.cardInstanceId);
+                  if (!hosted) return null;
+                  return (
+                    <button
+                      key={`${a.type}-${a.cardInstanceId}-${a.type === 'INSTALL_CARD' ? a.hostInstanceId ?? '' : ''}`}
+                      onClick={() => handleAction(a)}
+                      data-testid={`hosted-${a.cardInstanceId}`}
+                      className="px-4 py-1.5 bg-pink-900 hover:bg-pink-800 border border-pink-500 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow"
+                      title="This card is hosted faceup on your hardware"
+                    >
+                      {a.type === 'INSTALL_CARD' ? <Plus className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
+                      {a.type === 'INSTALL_CARD' ? 'Install' : 'Play'} hosted {cardDef(hosted).title}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* End Turn Button - Prominently Anchored */}
@@ -938,6 +955,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
               : []
         }
         onRez={corpCanAct ? (card) => handleAction(rezAction(card)) : undefined}
+        rezAbilities={rezWindowOpen ? rezWindow!.abilities : []}
         onDoneRezzing={rezWindowOpen && corpCanAct ? () => setPassedRezWindows(keys => [...keys, rezWindow!.key]) : undefined}
         runnerControls={runnerCanAct}
         canPeekCorp={canSeeCorpSecrets(viewer)}
@@ -1020,6 +1038,14 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
   );
 }
 
+/** Runner play and install actions for cards hosted faceup on hardware (Bling, Madani), not in the grip. */
+function hostedCardActions(state: ReturnType<typeof createInitialGameState>): GameAction[] {
+  const grip = new Set(state.runner.grip.map(c => c.instanceId));
+  return getLegalActions(state, 'runner').filter(
+    a => (a.type === 'INSTALL_CARD' || a.type === 'PLAY_OPERATION_OR_EVENT') && !grip.has(a.cardInstanceId),
+  );
+}
+
 /**
  * Where the selected HQ card can go: a new remote, or any server the engine
  * allows (ice on any server, upgrades in centrals, a replacement in a remote).
@@ -1052,15 +1078,16 @@ function CorpInstallOptions({
             : undefined;
         return (
           <button
-            key={a.targetServerId ?? 'new'}
+            key={`${a.targetServerId ?? 'new'}${a.faceUp ? '-faceup' : ''}`}
             onClick={() => onAction(a)}
-            data-testid={`install-${a.targetServerId ?? 'new'}`}
+            data-testid={`install-${a.targetServerId ?? 'new'}${a.faceUp ? '-faceup' : ''}`}
             title={replaced ? `Trashes ${cardDef(replaced).title} to make room` : undefined}
             className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-xl transition-all flex items-center gap-1 shadow-lg"
           >
             <Plus className="w-3.5 h-3.5" /> {server ? server.name : 'New remote'}
             {iceCost > 0 && ` (${iceCost}c)`}
             {replaced && ' (replace)'}
+            {a.faceUp && ' (faceup)'}
           </button>
         );
       })}

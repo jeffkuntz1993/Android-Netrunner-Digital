@@ -12,6 +12,23 @@ interface RigViewProps {
   aside?: React.ReactNode;
 }
 
+/** An installed card, with any cards hosted faceup on it (Bling, Madani, Detente) beneath. */
+const RigCard: React.FC<{ card: CardInstance; size: 'sm' | 'md' | 'lg'; onInspect?: (card: CardInstance) => void }> = ({ card, size, onInspect }) => {
+  const hosted = card.hostedCards ?? [];
+  if (hosted.length === 0) return <CardView card={card} size={size} onInspect={onInspect} />;
+  return (
+    <div className="flex flex-col items-center gap-1 shrink-0" data-testid={`hosted-on-${card.instanceId}`}>
+      <CardView card={card} size={size} onInspect={onInspect} />
+      <div className="text-[9px] font-mono uppercase tracking-wider text-slate-400">Hosted ({hosted.length})</div>
+      <div className="flex gap-1">
+        {hosted.map(h => (
+          <CardView key={h.instanceId} card={h} size="sm" notInstalled onInspect={onInspect} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const RigView: React.FC<RigViewProps> = ({
   rig,
   cardSize = 'sm',
@@ -34,12 +51,7 @@ export const RigView: React.FC<RigViewProps> = ({
             <span className="text-xs text-slate-600 italic m-auto">No programs installed</span>
           ) : (
             rig.programs.map((card) => (
-              <CardView
-                key={card.instanceId}
-                card={card}
-                size={cardSize}
-                onInspect={onInspectCard}
-              />
+              <RigCard key={card.instanceId} card={card} size={cardSize} onInspect={onInspectCard} />
             ))
           )}
         </div>
@@ -56,12 +68,7 @@ export const RigView: React.FC<RigViewProps> = ({
             <span className="text-xs text-slate-600 italic m-auto">No hardware installed</span>
           ) : (
             rig.hardware.map((card) => (
-              <CardView
-                key={card.instanceId}
-                card={card}
-                size={cardSize}
-                onInspect={onInspectCard}
-              />
+              <RigCard key={card.instanceId} card={card} size={cardSize} onInspect={onInspectCard} />
             ))
           )}
         </div>
@@ -78,12 +85,7 @@ export const RigView: React.FC<RigViewProps> = ({
             <span className="text-xs text-slate-600 italic m-auto">No resources installed</span>
           ) : (
             rig.resources.map((card) => (
-              <CardView
-                key={card.instanceId}
-                card={card}
-                size={cardSize}
-                onInspect={onInspectCard}
-              />
+              <RigCard key={card.instanceId} card={card} size={cardSize} onInspect={onInspectCard} />
             ))
           )}
         </div>
