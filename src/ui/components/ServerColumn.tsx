@@ -22,6 +22,8 @@ interface ServerColumnProps {
   canAdvance?: (card: CardInstance) => boolean;
   canScore?: (card: CardInstance) => boolean;
   onInspectCard?: (card: CardInstance) => void;
+  /** A central server's own card, first in its root: HQ's identity, R&D's deck, the Archives pile. */
+  anchor?: React.ReactNode;
 }
 
 /** Ice is drawn one size down, turned sideways, in a box with the card's height as its width. */
@@ -46,6 +48,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
   canAdvance = () => false,
   canScore = () => false,
   onInspectCard,
+  anchor,
 }) => {
   const canCorpPeek = perspective !== 'runner';
 
@@ -78,13 +81,14 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
         )}
       </div>
 
-      {/* Server Root (Agendas, Assets, Upgrades), on the Corp's side */}
+      {/* Server Root on the Corp's side: the central's own card, then assets, agendas and upgrades side by side */}
       <div className="flex flex-col items-center gap-1.5 w-full pb-2.5 mb-2 border-b border-slate-800">
         <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider font-bold">
           Root ({server.root.length})
         </div>
-        <div className="flex gap-2 flex-wrap justify-center min-h-[70px] w-full py-1">
-          {server.root.length === 0 ? (
+        <div className="flex gap-2 flex-nowrap justify-center items-start min-h-[70px] w-full py-1">
+          {anchor}
+          {server.root.length === 0 && !anchor ? (
             <span className="text-xs text-slate-600 italic my-auto">Empty</span>
           ) : (
             server.root.map((card) => (

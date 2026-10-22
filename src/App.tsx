@@ -22,6 +22,7 @@ import { PromptPanel } from './ui/components/PromptPanel';
 import { CardZoomModal } from './ui/components/CardZoomModal';
 import { AbilityBar } from './ui/components/AbilityBar';
 import { ZoneGroup, ZoneViewer } from './ui/components/ZoneViewer';
+import { Pile } from './ui/components/Pile';
 import { HandoffScreen } from './ui/components/HandoffScreen';
 import { ViewMode, Viewer, actingSide, canActAs, canSeeCorpSecrets, canSeeRunnerSecrets, corpRezWindow } from './ui/viewer';
 import { playForLog, setSoundEnabled, soundEnabled } from './ui/sound';
@@ -423,7 +424,7 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
           </div>
 
           {/* Servers Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-5 overflow-x-auto pb-2 min-w-0">
+          <div className="flex flex-wrap items-stretch gap-4 mb-5 pb-2 min-w-0">
             {Object.values(corp.servers).map((server) => (
               <ServerColumn
                 key={server.id}
@@ -454,6 +455,28 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
                   corpCanAct && isLegalAction(gameState, { type: 'SCORE_AGENDA', player: 'corp', cardInstanceId: card.instanceId })
                 }
                 onInspectCard={(card) => setInspectedCard(card)}
+                anchor={
+                  server.id === 'hq' ? (
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                      <CardView card={corp.identity} size={boardCardSize} notInstalled onInspect={setInspectedCard} />
+                      <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                        Identity · {corp.hq.length} in HQ
+                      </span>
+                    </div>
+                  ) : server.id === 'rd' ? (
+                    <Pile label="R&D" count={corp.rd.length} side="corp" size={boardCardSize} testId="pile-rd" />
+                  ) : server.id === 'archives' ? (
+                    <Pile
+                      label="Archives"
+                      count={corp.archives.faceUp.length + corp.archives.faceDown.length}
+                      side="corp"
+                      topCard={corp.archives.faceUp[corp.archives.faceUp.length - 1]}
+                      size={boardCardSize}
+                      onClick={() => setZone('archives')}
+                      testId="pile-archives"
+                    />
+                  ) : undefined
+                }
               />
             ))}
           </div>
@@ -614,6 +637,24 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
               rig={runner.rig}
               cardSize={boardCardSize}
               onInspectCard={setInspectedCard}
+              aside={
+                <>
+                  <div className="flex flex-col items-center gap-1 shrink-0">
+                    <CardView card={runner.identity} size={boardCardSize} notInstalled onInspect={setInspectedCard} />
+                    <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Identity</span>
+                  </div>
+                  <Pile label="Stack" count={runner.stack.length} side="runner" size={boardCardSize} testId="pile-stack" />
+                  <Pile
+                    label="Heap"
+                    count={runner.heap.length}
+                    side="runner"
+                    topCard={runner.heap[runner.heap.length - 1]}
+                    size={boardCardSize}
+                    onClick={() => setZone('heap')}
+                    testId="pile-heap"
+                  />
+                </>
+              }
             />
           </div>
 
