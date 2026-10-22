@@ -15,13 +15,15 @@ describe('decklists', () => {
     expect(deckCodes(DECKS.find(d => d.id === 'syndicate-starter')!).cards).toHaveLength(34);
   });
 
-  it('custom faction decks are 40 cards', () => {
-    for (const deck of DECKS.filter(d => d.source === 'custom')) expect(deckCodes(deck).cards).toHaveLength(40);
+  it('the NSG sample decks are 44 cards (Corp) and 40 cards (Runner)', () => {
+    const samples = DECKS.filter(d => d.source === 'official sample');
+    expect(samples).toHaveLength(7);
+    for (const deck of samples) expect(deckCodes(deck).cards).toHaveLength(deck.side === 'corp' ? 44 : 40);
   });
 
   it('builds a game from two decklists', () => {
     const state = createInitialGameState(deckGameSetup(7, 'weyland-built-to-last', 'zahya-sadeghi'));
-    expect(state.corp.hq.length + state.corp.rd.length).toBe(40);
+    expect(state.corp.hq.length + state.corp.rd.length).toBe(44);
     expect(state.runner.identity.cardCode).toBe('30010');
   });
 });
@@ -43,7 +45,7 @@ describe('validateDeck', () => {
     const heavy = [...d.cards, ...Array(3).fill('30050'), ...Array(3).fill('30049')]; // Anoetic Void 4, Neurospike 3
     expect(validateDeck({ ...d, cards: heavy }).join('|')).toMatch(/influence/);
     const noAgendas = d.cards.filter(c => !['30060', '30067', '30069', '30068'].includes(c));
-    expect(validateDeck({ ...d, cards: [...noAgendas, ...Array(40 - noAgendas.length).fill('30075')] }).join('|')).toMatch(/agenda points/);
+    expect(validateDeck({ ...d, cards: [...noAgendas, ...Array(d.cards.length - noAgendas.length).fill('30075')] }).join('|')).toMatch(/agenda points/);
   });
 });
 

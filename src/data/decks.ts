@@ -6,10 +6,10 @@ import { SYSTEM_GATEWAY_CARDS } from './cards';
  * Playable System Gateway decks.
  *
  * The two starter decks are the official lists from the System Gateway box
- * (Null Signal Games product page). NSG did not publish lists for the seven
- * faction identities, so those are 40-card decks built from Gateway cards
- * only: legal for their identity (influence, agenda points, deck limits),
- * with every deck covering barrier, code gate and sentry.
+ * (Null Signal Games product page). The seven faction decks are the
+ * "System Gateway-only" lists from NSG's Getting Started sample decklists
+ * (https://nullsignal.games/players/getting-started-sample-decklists/,
+ * decks by Grey "CritHitD20" Tongue): 44-card Corp decks, 40-card Runner decks.
  */
 
 export interface DeckList {
@@ -20,8 +20,8 @@ export interface DeckList {
   identity: string;
   /** Card title -> copies. */
   cards: Record<string, number>;
-  /** Official list, or built for this app. */
-  source: 'official starter' | 'custom';
+  /** Where the list comes from: NSG starter, NSG sample, or built by the player. */
+  source: 'official starter' | 'official sample' | 'custom';
 }
 
 export const DECKS: DeckList[] = [
@@ -53,93 +53,96 @@ export const DECKS: DeckList[] = [
   },
   {
     id: 'hb-precision-design',
-    name: 'Haas-Bioroid: Precision Design',
+    name: 'Discretion Advised',
     side: 'corp',
     identity: 'Haas-Bioroid: Precision Design',
-    source: 'custom',
+    source: 'official sample',
     cards: {
-      'Luminal Transubstantiation': 1, 'Offworld Office': 3, 'Send a Message': 2, 'Superconducting Hub': 2, 'Orbital Superiority': 1,
-      'Ansel 1.0': 3, 'Brân 1.0': 3, 'Palisade': 3, 'Whitespace': 3, 'Tithe': 2,
-      'Nico Campaign': 3, 'Regolith Mining License': 2, 'Manegarm Skunkworks': 2,
-      'Seamless Launch': 2, 'Sprint': 2, 'Hedge Fund': 3, 'Government Subsidy': 2, 'Hansei Review': 1,
+      'Luminal Transubstantiation': 1, 'Offworld Office': 3, 'Send a Message': 3, 'Superconducting Hub': 1,
+      'Nico Campaign': 3, 'Urtica Cipher': 3,
+      'Government Subsidy': 3, 'Hedge Fund': 3, 'Predictive Planogram': 3, 'Seamless Launch': 2, 'Sprint': 2,
+      'Manegarm Skunkworks': 2,
+      'Brân 1.0': 2, 'Palisade': 3, 'Pharos': 1, 'Whitespace': 3, 'Ansel 1.0': 3, 'Tithe': 3,
     },
   },
   {
     id: 'jinteki-restoring-humanity',
-    name: 'Jinteki: Restoring Humanity',
+    name: 'Advanced Yomi',
     side: 'corp',
     identity: 'Jinteki: Restoring Humanity',
-    source: 'custom',
+    source: 'official sample',
     cards: {
-      'Longevity Serum': 1, 'Offworld Office': 3, 'Send a Message': 2, 'Orbital Superiority': 2,
-      'Diviner': 3, 'Karunā': 3, 'Palisade': 3, 'Tithe': 3, 'Whitespace': 2,
-      'Urtica Cipher': 3, 'Anoetic Void': 3, 'Regolith Mining License': 3,
-      'Hansei Review': 3, 'Neurospike': 3, 'Hedge Fund': 3,
+      'Longevity Serum': 1, 'Offworld Office': 3, 'Orbital Superiority': 2, 'Send a Message': 2,
+      'Clearinghouse': 3, 'Regolith Mining License': 3, 'Spin Doctor': 3, 'Urtica Cipher': 3,
+      'Hansei Review': 3, 'Hedge Fund': 3,
+      'Anoetic Void': 2,
+      'Palisade': 3, 'Diviner': 3, 'Whitespace': 3, 'Ansel 1.0': 1, 'Karunā': 3, 'Tithe': 3,
     },
   },
   {
     id: 'nbn-reality-plus',
-    name: 'NBN: Reality Plus',
+    name: 'Hyper Velocity',
     side: 'corp',
     identity: 'NBN: Reality Plus',
-    source: 'custom',
+    source: 'official sample',
     cards: {
-      'Tomorrowʼs Headline': 1, 'Offworld Office': 3, 'Orbital Superiority': 3, 'Send a Message': 1, 'Superconducting Hub': 1,
-      'Funhouse': 3, 'Ping': 3, 'Palisade': 3, 'Whitespace': 3, 'Tithe': 2,
-      'Spin Doctor': 3, 'AMAZE Amusements': 2, 'Regolith Mining License': 3,
-      'Predictive Planogram': 3, 'Public Trail': 3, 'Hedge Fund': 3,
+      'Orbital Superiority': 3, 'Send a Message': 3, 'Superconducting Hub': 1, 'Tomorrowʼs Headline': 1,
+      'Spin Doctor': 3,
+      'Hansei Review': 3, 'Hedge Fund': 3, 'Neurospike': 2, 'Predictive Planogram': 3, 'Public Trail': 3,
+      'AMAZE Amusements': 2, 'Manegarm Skunkworks': 2,
+      'Palisade': 3, 'Ping': 3, 'Funhouse': 3, 'Whitespace': 3, 'Tithe': 3,
     },
   },
   {
     id: 'weyland-built-to-last',
-    name: 'Weyland Consortium: Built to Last',
+    name: 'Quick and Dirty',
     side: 'corp',
     identity: 'Weyland Consortium: Built to Last',
-    source: 'custom',
+    source: 'official sample',
     cards: {
-      'Above the Law': 1, 'Offworld Office': 3, 'Send a Message': 2, 'Orbital Superiority': 2,
-      'Ballista': 3, 'Pharos': 3, 'Palisade': 3, 'Whitespace': 3, 'Tithe': 2,
-      'Clearinghouse': 3, 'Malapert Data Vault': 3, 'Regolith Mining License': 3,
-      'Government Subsidy': 3, 'Retribution': 2, 'Hedge Fund': 3, 'Seamless Launch': 1,
+      'Above the Law': 1, 'Offworld Office': 3, 'Orbital Superiority': 2, 'Send a Message': 2,
+      'Government Subsidy': 3, 'Hedge Fund': 3, 'Predictive Planogram': 3, 'Public Trail': 3, 'Retribution': 3, 'Sprint': 2,
+      'Malapert Data Vault': 2,
+      'Palisade': 3, 'Pharos': 3, 'Funhouse': 2, 'Whitespace': 3, 'Ballista': 3, 'Tithe': 3,
     },
   },
   {
     id: 'rene-arcemont',
-    name: 'René “Loup” Arcemont: Party Animal',
+    name: 'Party Hard',
     side: 'runner',
     identity: 'René “Loup” Arcemont: Party Animal',
-    source: 'custom',
+    source: 'official sample',
     cards: {
-      'Sure Gamble': 3, 'Jailbreak': 3, 'Wildcat Strike': 3, 'Overclock': 2,
-      'Carnivore': 3, 'T400 Memory Diamond': 3,
-      'Buzzsaw': 2, 'Cleaver': 2, 'Echelon': 2, 'Mayfly': 2, 'Botulus': 3, 'Fermenter': 2, 'Leech': 2,
-      'Cookbook': 2, 'Smartware Distributor': 3, 'Verbal Plasticity': 3,
+      'Overclock': 3, 'Sure Gamble': 3, 'Wildcat Strike': 3,
+      'Carnivore': 3, 'Docklands Pass': 2, 'DZMZ Optimizer': 3,
+      'Cookbook': 3, 'Smartware Distributor': 3, 'Verbal Plasticity': 3,
+      'Buzzsaw': 2, 'Carmen': 2, 'Cleaver': 2, 'Botulus': 3, 'Fermenter': 3, 'Leech': 2,
     },
   },
   {
     id: 'zahya-sadeghi',
-    name: 'Zahya Sadeghi: Versatile Smuggler',
+    name: 'Stolen Goods',
     side: 'runner',
     identity: 'Zahya Sadeghi: Versatile Smuggler',
-    source: 'custom',
+    source: 'official sample',
     cards: {
-      'Sure Gamble': 3, 'Jailbreak': 3, 'Mutual Favor': 2, 'Tread Lightly': 2, 'Overclock': 2, 'Creative Commission': 2,
-      'Docklands Pass': 2, 'Pennyshaver': 2, 'T400 Memory Diamond': 3,
-      'Carmen': 3, 'Marjanah': 3, 'Unity': 2, 'Mayfly': 2,
-      'Red Team': 3, 'Telework Contract': 2, 'Smartware Distributor': 2, 'Verbal Plasticity': 2,
+      'Jailbreak': 3, 'Mutual Favor': 2, 'Overclock': 3, 'Sure Gamble': 3, 'Tread Lightly': 3, 'VRcation': 3,
+      'Docklands Pass': 2, 'Pennyshaver': 3, 'T400 Memory Diamond': 1,
+      'Red Team': 3, 'Smartware Distributor': 3, 'Verbal Plasticity': 2,
+      'Buzzsaw': 2, 'Carmen': 2, 'Marjanah': 2, 'Conduit': 1, 'Leech': 2,
     },
   },
   {
     id: 'tao-salonga',
-    name: 'Tāo Salonga: Telepresence Magician',
+    name: 'Planning Ahead',
     side: 'runner',
     identity: 'Tāo Salonga: Telepresence Magician',
-    source: 'custom',
+    source: 'official sample',
     cards: {
-      'Sure Gamble': 3, 'Creative Commission': 3, 'VRcation': 2, 'Jailbreak': 2, 'Overclock': 2,
-      'Pantograph': 3, 'DZMZ Optimizer': 3, 'T400 Memory Diamond': 2,
-      'Echelon': 3, 'Unity': 3, 'Marjanah': 2, 'Mayfly': 2, 'Conduit': 2,
-      'Telework Contract': 3, 'Smartware Distributor': 2, 'Verbal Plasticity': 3,
+      'Creative Commission': 3, 'Jailbreak': 3, 'Sure Gamble': 3, 'Tread Lightly': 2, 'VRcation': 3,
+      'DZMZ Optimizer': 3, 'Pantograph': 2,
+      'Smartware Distributor': 3, 'Telework Contract': 3, 'Verbal Plasticity': 2,
+      'Cleaver': 2, 'Echelon': 2, 'Mayfly': 2, 'Unity': 2, 'Conduit': 2, 'Tranquilizer': 3,
     },
   },
 ];
@@ -152,8 +155,9 @@ function codeOf(title: string): string {
   return code;
 }
 
-export function getDeck(id: string): DeckList {
-  const deck = DECKS.find(d => d.id === id);
+/** A built-in deck, or one of `extra` (the player's custom decks). */
+export function getDeck(id: string, extra: DeckList[] = []): DeckList {
+  const deck = [...DECKS, ...extra].find(d => d.id === id);
   if (!deck) throw new Error(`Unknown deck ${id}`);
   return deck;
 }
@@ -169,9 +173,9 @@ export function deckCodes(deck: DeckList): { identity: string; cards: string[] }
 export const DEFAULT_CORP_DECK = 'syndicate-starter';
 export const DEFAULT_RUNNER_DECK = 'catalyst-starter';
 
-/** Game setup for two decklists. */
-export function deckGameSetup(seed: number, corpDeckId: string, runnerDeckId: string): GameSetup {
-  const corp = deckCodes(getDeck(corpDeckId));
-  const runner = deckCodes(getDeck(runnerDeckId));
+/** Game setup for two decklists (built-in deck ids, or the decks themselves). */
+export function deckGameSetup(seed: number, corpDeck: string | DeckList, runnerDeck: string | DeckList): GameSetup {
+  const corp = deckCodes(typeof corpDeck === 'string' ? getDeck(corpDeck) : corpDeck);
+  const runner = deckCodes(typeof runnerDeck === 'string' ? getDeck(runnerDeck) : runnerDeck);
   return { seed, corpIdentity: corp.identity, corpDeck: corp.cards, runnerIdentity: runner.identity, runnerDeck: runner.cards };
 }

@@ -10,7 +10,8 @@ import {
   getLegalActions,
   isLegalAction,
 } from './core';
-import { DECKS, DEFAULT_CORP_DECK, DEFAULT_RUNNER_DECK, deckGameSetup } from './data/decks';
+import { DECKS, DEFAULT_CORP_DECK, DEFAULT_RUNNER_DECK, DeckList, deckGameSetup } from './data/decks';
+import { loadCustomDecks } from './data/customDecks';
 import { DeckPicker } from './ui/components/DeckPicker';
 import { CardView } from './ui/components/CardView';
 import { ServerColumn } from './ui/components/ServerColumn';
@@ -42,8 +43,8 @@ function randomSeed(): number {
 
 interface GameConfig {
   seed: number;
-  corpDeckId: string;
-  runnerDeckId: string;
+  corpDeck: DeckList;
+  runnerDeck: DeckList;
 }
 
 /**
@@ -54,13 +55,13 @@ function configFromUrl(): GameConfig | null {
   const params = new URLSearchParams(window.location.search);
   const seed = Number(params.get('seed'));
   if (!Number.isInteger(seed) || seed <= 0) return null;
-  const known = (id: string | null, side: 'corp' | 'runner') => DECKS.some(d => d.id === id && d.side === side);
-  const corp = params.get('corp');
-  const runner = params.get('runner');
+  const decks = [...DECKS, ...loadCustomDecks()];
+  const find = (id: string | null, side: 'corp' | 'runner', fallback: string) =>
+    decks.find(d => d.id === id && d.side === side) ?? decks.find(d => d.id === fallback)!;
   return {
     seed,
-    corpDeckId: known(corp, 'corp') ? corp! : DEFAULT_CORP_DECK,
-    runnerDeckId: known(runner, 'runner') ? runner! : DEFAULT_RUNNER_DECK,
+    corpDeck: find(params.get('corp'), 'corp', DEFAULT_CORP_DECK),
+    runnerDeck: find(params.get('runner'), 'runner', DEFAULT_RUNNER_DECK),
   };
 }
 
@@ -73,9 +74,9 @@ export default function App() {
       <DeckPicker
         initialCorpDeckId={lastDecks.corp}
         initialRunnerDeckId={lastDecks.runner}
-        onStart={(corpDeckId, runnerDeckId) => {
-          setLastDecks({ corp: corpDeckId, runner: runnerDeckId });
-          setConfig({ seed: randomSeed(), corpDeckId, runnerDeckId });
+        onStart={(corpDeck, runnerDeck) => {
+          setLastDecks({ corp: corpDeck.id, runner: runnerDeck.id });
+          setConfig({ seed: randomSeed(), corpDeck, runnerDeck });
         }}
       />
     );
@@ -85,7 +86,7 @@ export default function App() {
 
 function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void }) {
   const [gameState, setGameState] = useState(() =>
-    createInitialGameState(deckGameSetup(config.seed, config.corpDeckId, config.runnerDeckId))
+    createInitialGameState(deckGameSetup(config.seed, config.corpDeck, config.runnerDeck))
   );
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -149,7 +150,7 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
             </span>
             <span
               className="text-[10px] text-slate-500 font-mono hidden md:inline"
-              title={`Open the app with ?seed=${gameState.rng.seed}&corp=${config.corpDeckId}&runner=${config.runnerDeckId} to replay this deal`}
+              title={`Open the app with ?seed=${gameState.rng.seed}&corp=${config.corpDeck.id}&runner=${config.runnerDeck.id} to replay this deal`}
             >
               SEED {gameState.rng.seed}
             </span>
