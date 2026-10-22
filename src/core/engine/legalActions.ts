@@ -6,6 +6,8 @@ import { activePrompt } from './prompts';
 import { breakerScript } from './ice';
 import { activeCards } from './triggers';
 import { getCardScript } from '../scripts';
+import { cardDef } from '../cards';
+import { isAdvanceable } from './helpers';
 
 /**
  * Lists every action the given side can legally take right now.
@@ -25,23 +27,26 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
   if (prompt) return prompt.side === side ? promptAnswers(state) : [];
 
   const candidates: GameAction[] = [];
+  // Cheap necessary conditions first (the engine still checks every candidate):
+  // basic actions need the side's own action phase, and all but scoring need a click.
+  const actionPhase = state.activePlayer === side && !state.activeRun;
+  const hasClick = state[side].clicks > 0;
 
   if (state.activeRun) {
     if (side === 'runner') {
       candidates.push({ type: 'CONTINUE_RUN', player: 'runner' }, { type: 'JACK_OUT', player: 'runner' });
       candidates.push(...breakCandidates(state));
     }
-  } else {
-    candidates.push(
-      { type: 'GAIN_CREDIT', player: side },
-      { type: 'DRAW_CARD', player: side },
-      { type: 'END_TURN', player: side }
-    );
-    if (side === 'runner') candidates.push({ type: 'REMOVE_TAG', player: 'runner' });
-    if (side === 'corp') {
-      candidates.push({ type: 'PURGE_VIRUS', player: 'corp' });
-      for (const card of state.runner.rig.resources) {
-        candidates.push({ type: 'TRASH_RESOURCE', player: 'corp', cardInstanceId: card.instanceId });
+  } else if (actionPhase) {
+    candidates.push({ type: 'END_TURN', player: side });
+    if (hasClick) candidates.push({ type: 'GAIN_CREDIT', player: side }, { type: 'DRAW_CARD', player: side });
+    if (side === 'runner' && hasClick && state.runner.tags > 0) candidates.push({ type: 'REMOVE_TAG', player: 'runner' });
+    if (side === 'corp' && hasClick) {
+      if (state.corp.clicks >= 3) candidates.push({ type: 'PURGE_VIRUS', player: 'corp' });
+      if (state.runner.tags > 0) {
+        for (const card of state.runner.rig.resources) {
+          candidates.push({ type: 'TRASH_RESOURCE', player: 'corp', cardInstanceId: card.instanceId });
+        }
       }
     }
   }
@@ -50,34 +55,48 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
   candidates.push(...abilityCandidates(state, side));
 
   if (side === 'corp') {
-    if (!state.activeRun) {
-      for (const card of state.corp.hq) {
-        candidates.push({ type: 'PLAY_OPERATION_OR_EVENT', player: 'corp', cardInstanceId: card.instanceId });
-        candidates.push({ type: 'INSTALL_CARD', player: 'corp', cardInstanceId: card.instanceId, asNewRemote: true });
-        for (const server of servers) {
-          candidates.push({ type: 'INSTALL_CARD', player: 'corp', cardInstanceId: card.instanceId, targetServerId: server.id });
+    if (actionPhase) {
+      if (hasClick) {
+        for (const card of state.corp.hq) {
+          const type = cardDef(card).type_code;
+          if (type === 'operation') {
+            candidates.push({ type: 'PLAY_OPERATION_OR_EVENT', player: 'corp', cardInstanceId: card.instanceId });
+            continue;
+          }
+          candidates.push({ type: 'INSTALL_CARD', player: 'corp', cardInstanceId: card.instanceId, asNewRemote: true });
+          for (const server of servers) {
+            if (!server.isRemote && (type === 'agenda' || type === 'asset')) continue;
+            if (type === 'ice' && server.ice.length > state.corp.credits) continue;
+            candidates.push({ type: 'INSTALL_CARD', player: 'corp', cardInstanceId: card.instanceId, targetServerId: server.id });
+          }
         }
       }
       for (const server of servers) {
-        for (const card of [...server.ice, ...server.root]) {
-          candidates.push({ type: 'ADVANCE_CARD', player: 'corp', cardInstanceId: card.instanceId, serverId: server.id });
+        if (hasClick) {
+          for (const card of [...server.ice, ...server.root]) {
+            if (!isAdvanceable(card)) continue;
+            candidates.push({ type: 'ADVANCE_CARD', player: 'corp', cardInstanceId: card.instanceId, serverId: server.id });
+          }
         }
         for (const card of server.root) {
+          const def = cardDef(card);
+          if (def.type_code !== 'agenda' || card.advancementCounters < (def.advancement_cost ?? 0)) continue;
           candidates.push({ type: 'SCORE_AGENDA', player: 'corp', cardInstanceId: card.instanceId });
         }
       }
     }
     for (const server of servers) {
       for (const card of [...server.ice, ...server.root]) {
-        if (!card.isRezzed) {
+        if (!card.isRezzed && cardDef(card).type_code !== 'agenda') {
           candidates.push({ type: 'REZ_CARD', player: 'corp', cardInstanceId: card.instanceId });
         }
       }
     }
-  } else if (!state.activeRun) {
+  } else if (actionPhase && hasClick) {
     for (const card of state.runner.grip) {
-      candidates.push({ type: 'PLAY_OPERATION_OR_EVENT', player: 'runner', cardInstanceId: card.instanceId });
-      if (getCardScript(card.cardCode)?.installsOnIce) {
+      if (cardDef(card).type_code === 'event') {
+        candidates.push({ type: 'PLAY_OPERATION_OR_EVENT', player: 'runner', cardInstanceId: card.instanceId });
+      } else if (getCardScript(card.cardCode)?.installsOnIce) {
         for (const ice of servers.flatMap(s => s.ice)) {
           candidates.push({ type: 'INSTALL_CARD', player: 'runner', cardInstanceId: card.instanceId, hostInstanceId: ice.instanceId });
         }
