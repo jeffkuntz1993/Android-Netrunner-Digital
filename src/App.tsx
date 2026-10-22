@@ -10,7 +10,8 @@ import {
   getLegalActions,
   isLegalAction,
 } from './core';
-import { starterGameSetup } from './data/starterDecks';
+import { DECKS, DEFAULT_CORP_DECK, DEFAULT_RUNNER_DECK, deckGameSetup } from './data/decks';
+import { DeckPicker } from './ui/components/DeckPicker';
 import { CardView } from './ui/components/CardView';
 import { ServerColumn } from './ui/components/ServerColumn';
 import { RigView } from './ui/components/RigView';
@@ -35,18 +36,57 @@ import {
   Biohazard,
 } from 'lucide-react';
 
-/** Seed from `?seed=123` in the URL (to reproduce a game), otherwise random. */
-function initialSeed(): number {
-  const fromUrl = Number(new URLSearchParams(window.location.search).get('seed'));
-  return Number.isInteger(fromUrl) && fromUrl > 0 ? fromUrl : randomSeed();
-}
-
 function randomSeed(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0];
 }
 
+interface GameConfig {
+  seed: number;
+  corpDeckId: string;
+  runnerDeckId: string;
+}
+
+/**
+ * `?seed=123&corp=<deck id>&runner=<deck id>` starts that exact game (to
+ * replay a deal); without a seed the app opens on the deck picker.
+ */
+function configFromUrl(): GameConfig | null {
+  const params = new URLSearchParams(window.location.search);
+  const seed = Number(params.get('seed'));
+  if (!Number.isInteger(seed) || seed <= 0) return null;
+  const known = (id: string | null, side: 'corp' | 'runner') => DECKS.some(d => d.id === id && d.side === side);
+  const corp = params.get('corp');
+  const runner = params.get('runner');
+  return {
+    seed,
+    corpDeckId: known(corp, 'corp') ? corp! : DEFAULT_CORP_DECK,
+    runnerDeckId: known(runner, 'runner') ? runner! : DEFAULT_RUNNER_DECK,
+  };
+}
+
 export default function App() {
-  const [gameState, setGameState] = useState(() => createInitialGameState(starterGameSetup(initialSeed())));
+  const [config, setConfig] = useState<GameConfig | null>(configFromUrl);
+  const [lastDecks, setLastDecks] = useState({ corp: DEFAULT_CORP_DECK, runner: DEFAULT_RUNNER_DECK });
+
+  if (!config) {
+    return (
+      <DeckPicker
+        initialCorpDeckId={lastDecks.corp}
+        initialRunnerDeckId={lastDecks.runner}
+        onStart={(corpDeckId, runnerDeckId) => {
+          setLastDecks({ corp: corpDeckId, runner: runnerDeckId });
+          setConfig({ seed: randomSeed(), corpDeckId, runnerDeckId });
+        }}
+      />
+    );
+  }
+  return <Game key={config.seed} config={config} onNewGame={() => setConfig(null)} />;
+}
+
+function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void }) {
+  const [gameState, setGameState] = useState(() =>
+    createInitialGameState(deckGameSetup(config.seed, config.corpDeckId, config.runnerDeckId))
+  );
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [perspective, setPerspective] = useState<'both' | 'corp' | 'runner'>('both');
@@ -63,10 +103,7 @@ export default function App() {
     }
   };
 
-  const resetGame = () => {
-    setGameState(createInitialGameState(starterGameSetup(randomSeed())));
-    setSelectedCardId(null);
-  };
+  const resetGame = onNewGame;
 
   const { corp, runner, activePlayer, activeRun, winner, winReason } = gameState;
 
@@ -112,7 +149,7 @@ export default function App() {
             </span>
             <span
               className="text-[10px] text-slate-500 font-mono hidden md:inline"
-              title="Open the app with ?seed=<this number> to replay this deal"
+              title={`Open the app with ?seed=${gameState.rng.seed}&corp=${config.corpDeckId}&runner=${config.runnerDeckId} to replay this deal`}
             >
               SEED {gameState.rng.seed}
             </span>
@@ -191,7 +228,7 @@ export default function App() {
           <button
             onClick={resetGame}
             className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg border border-slate-800 transition-colors"
-            title="Reset Game"
+            title="New game (pick decks)"
           >
             <RotateCcw className="w-4 h-4" />
           </button>

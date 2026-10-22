@@ -1,9 +1,10 @@
-import { createInitialGameState, createCardInstance, cardDef, executeAction, GameState, CardTypeCode } from '../src/core';
-import { starterGameSetup } from '../src/data/starterDecks';
+import { createInitialGameState, createCardInstance, cardDef, executeAction, getLegalActions, GameState, CardTypeCode, SideCode } from '../src/core';
+import { GameSetup } from '../src/core/engine/gameState';
+import { sampleGameSetup } from '../src/data/sampleDecks';
 
 /** A starter-deck game still waiting on both mulligan decisions. */
 export function newGameAtSetup(seed = 1): GameState {
-  return createInitialGameState(starterGameSetup(seed));
+  return createInitialGameState(sampleGameSetup(seed));
 }
 
 /** A fresh starter-deck game where both players kept, at the start of Corp turn 1. */
@@ -180,3 +181,31 @@ export function passTurn(state: GameState): GameState {
   }
   return s;
 }
+
+/**
+ * Plays whole games by picking random legal actions, to check that the
+ * engine never offers an action it then rejects, never gets stuck with no
+ * legal action, and never throws an unexpected error.
+ */
+export function playout(seed: number, maxSteps: number, setup: GameSetup = sampleGameSetup(seed)): GameState {
+  let state = createInitialGameState(setup);
+  let rand = seed;
+  const next = () => {
+    rand = (rand * 1103515245 + 12345) % 2147483648;
+    return rand / 2147483648;
+  };
+  for (let step = 0; step < maxSteps && !state.winner; step++) {
+    const sides: SideCode[] = state.pendingPrompts.length > 0 ? [state.pendingPrompts[0].side] : [state.activePlayer];
+    let actions = sides.flatMap(side => getLegalActions(state, side));
+    // During a run the Corp may also rez; give it a turn sometimes.
+    if (state.activeRun && state.pendingPrompts.length === 0 && next() < 0.3) {
+      const corp = getLegalActions(state, 'corp');
+      if (corp.length > 0) actions = corp;
+    }
+    if (actions.length === 0) throw new Error(`Seed ${seed}: no legal actions at step ${step}`);
+    const action = actions[Math.floor(next() * actions.length)];
+    state = executeAction(state, action);
+  }
+  return state;
+}
+
