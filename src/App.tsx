@@ -26,6 +26,7 @@ import { AbilityBar } from './ui/components/AbilityBar';
 import { ZoneGroup, ZoneViewer } from './ui/components/ZoneViewer';
 import { Pile } from './ui/components/Pile';
 import { HandoffScreen } from './ui/components/HandoffScreen';
+import { GameOverModal } from './ui/components/GameOverModal';
 import { ViewMode, Viewer, actingSide, canActAs, canSeeCorpSecrets, canSeeRunnerSecrets, corpRezWindow } from './ui/viewer';
 import { playForLog, setSoundEnabled, soundEnabled } from './ui/sound';
 import {
@@ -118,11 +119,16 @@ export default function App() {
         if (window.location.search) window.history.replaceState(null, '', window.location.pathname);
         setConfig(null);
       }}
+      onRematch={() => {
+        if (window.location.search) window.history.replaceState(null, '', window.location.pathname);
+        setConfig({ ...config, seed: randomSeed() });
+      }}
     />
   );
 }
 
-function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void }) {
+function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame: () => void; onRematch: () => void }) {
+  const [gameOverHidden, setGameOverHidden] = useState(false);
   const [gameState, setGameState] = useState(() =>
     createInitialGameState(deckGameSetup(config.seed, config.corpDeck, config.runnerDeck))
   );
@@ -456,12 +462,20 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
               </h2>
               <p className="text-xs text-slate-300 mt-1">{winReason}</p>
             </div>
-            <button
-              onClick={resetGame}
-              className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-xl text-xs shadow-lg transition-colors"
-            >
-              Play Again
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setGameOverHidden(false)}
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold rounded-xl text-xs shadow-lg transition-colors"
+              >
+                Show result
+              </button>
+              <button
+                onClick={resetGame}
+                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-xl text-xs shadow-lg transition-colors"
+              >
+                Play Again
+              </button>
+            </div>
           </div>
         )}
 
@@ -937,6 +951,19 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
               if (board) window.scrollTo({ top: board.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
             });
           }}
+        />
+      )}
+
+      {winner && !gameOverHidden && (
+        <GameOverModal
+          winner={winner}
+          reason={winReason}
+          corpScore={corp.score}
+          runnerScore={runner.score}
+          humanSide={humanSide}
+          onRematch={onRematch}
+          onDeckSelect={onNewGame}
+          onViewBoard={() => setGameOverHidden(true)}
         />
       )}
 
