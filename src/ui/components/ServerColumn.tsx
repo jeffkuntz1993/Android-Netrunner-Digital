@@ -78,58 +78,8 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
         )}
       </div>
 
-      {/* Protecting Ice (outermost ice at the top, innermost ice at the bottom) */}
-      <div className="flex flex-col-reverse gap-2.5 my-2 w-full items-center min-h-[140px] border border-dashed border-slate-800/90 rounded-xl p-2 bg-black/40">
-        <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider mb-0.5 font-bold">
-          Ice Wall ({server.ice.length})
-        </div>
-        {server.ice.length === 0 ? (
-          <span className="text-xs text-slate-600 italic py-4">No Ice Installed</span>
-        ) : (
-          server.ice.map((iceCard) => (
-            <div key={iceCard.instanceId} className="flex flex-col items-center w-full">
-              {/* Ice lies sideways, as on the table; the hover popout shows it upright */}
-              <div className={`relative ${SIDEWAYS_BOX[cardSize]}`}>
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90">
-                  <CardView
-                    card={iceCard}
-                    isFaceDown={!iceCard.isRezzed}
-                    canPeek={canCorpPeek}
-                    size={ICE_SIZE[cardSize]}
-                    onInspect={onInspectCard}
-                  />
-                </div>
-              </div>
-              {canRez(iceCard) && onRezCard && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRezCard(iceCard.instanceId);
-                  }}
-                  className="mt-1.5 w-full py-1 bg-cyan-950 hover:bg-cyan-800 text-cyan-300 hover:text-cyan-100 text-xs font-mono font-bold rounded-lg border border-cyan-600 shadow-md flex items-center justify-center gap-1 transition-all"
-                  title={`Rez ${cardDef(iceCard).title} for ${cardDef(iceCard).cost || 0} credits`}
-                >
-                  <Zap className="w-3.5 h-3.5 text-amber-400" /> Rez (<Credits amount={cardDef(iceCard).cost || 0} />)
-                </button>
-              )}
-              {canAdvance(iceCard) && onAdvanceCard && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAdvanceCard(iceCard.instanceId, server.id);
-                  }}
-                  className={smallButton}
-                >
-                  <ChevronsUp className="w-3 h-3 text-amber-400" /> Advance ({iceCard.advancementCounters})
-                </button>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Server Root (Agendas, Assets, Upgrades) */}
-      <div className="flex flex-col items-center gap-1.5 w-full mt-auto pt-2.5 border-t border-slate-800">
+      {/* Server Root (Agendas, Assets, Upgrades), on the Corp's side */}
+      <div className="flex flex-col items-center gap-1.5 w-full pb-2.5 mb-2 border-b border-slate-800">
         <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider font-bold">
           Root ({server.root.length})
         </div>
@@ -185,6 +135,56 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
           )}
         </div>
       </div>
+      {/* Protecting Ice, on the Runner's side of the root: innermost at the top, outermost at the bottom */}
+      <div className="flex flex-col gap-2.5 mt-auto mb-1 w-full items-center min-h-[140px] border border-dashed border-slate-800/90 rounded-xl p-2 bg-black/40">
+        <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider mb-0.5 font-bold">
+          Ice Wall ({server.ice.length})
+        </div>
+        {server.ice.length === 0 ? (
+          <span className="text-xs text-slate-600 italic py-4">No Ice Installed</span>
+        ) : (
+          server.ice.map((iceCard) => (
+            <div key={iceCard.instanceId} className="flex flex-col items-center w-full">
+              {/* Ice lies sideways, as on the table; the hover popout shows it upright */}
+              <div className={`relative ${SIDEWAYS_BOX[cardSize]}`}>
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90">
+                  <CardView
+                    card={iceCard}
+                    isFaceDown={!iceCard.isRezzed}
+                    canPeek={canCorpPeek}
+                    size={ICE_SIZE[cardSize]}
+                    onInspect={onInspectCard}
+                  />
+                </div>
+              </div>
+              {canRez(iceCard) && onRezCard && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRezCard(iceCard.instanceId);
+                  }}
+                  className="mt-1.5 w-full py-1 bg-cyan-950 hover:bg-cyan-800 text-cyan-300 hover:text-cyan-100 text-xs font-mono font-bold rounded-lg border border-cyan-600 shadow-md flex items-center justify-center gap-1 transition-all"
+                  title={`Rez ${cardDef(iceCard).title} for ${cardDef(iceCard).cost || 0} credits`}
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-400" /> Rez (<Credits amount={cardDef(iceCard).cost || 0} />)
+                </button>
+              )}
+              {canAdvance(iceCard) && onAdvanceCard && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAdvanceCard(iceCard.instanceId, server.id);
+                  }}
+                  className={smallButton}
+                >
+                  <ChevronsUp className="w-3 h-3 text-amber-400" /> Advance ({iceCard.advancementCounters})
+                </button>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
     </div>
   );
 };
