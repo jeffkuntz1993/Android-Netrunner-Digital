@@ -31,6 +31,10 @@ export interface SearchOptions {
 }
 
 const DEFAULTS: SearchOptions = { timeMs: 1500, candidates: 4 };
+/** How much better (in evaluation points) another move must do on average to replace the favourite. */
+const MIN_GAIN = 1;
+/** ...and by how many standard errors. */
+const MIN_Z = 1.5;
 /** Upper bound on decisions in one playout (a safety net; turns end well before). */
 const MAX_PLAYOUT_STEPS = 160;
 
@@ -173,36 +177,45 @@ export class SearchAI implements Agent {
         return { action, score: suggested && 'cardInstanceId' in suggested && suggested.cardInstanceId === card.instanceId ? 1 : 0, first: action };
       }),
     ];
+    options.sort((a, b) => b.score - a.score); // the rule-based AI's choice first
     const best = this.search(state, options, this.options.timeMs / 2);
     return best.type === 'PASS_PRIORITY' ? null : best;
   }
 
-  /** Compares candidates on the same guessed deals; ties go to the rule-based AI's favourite. */
+  /**
+   * Compares candidates on the same guessed deals. The rule-based AI's
+   * favourite (the first candidate) stands unless another candidate does
+   * clearly better across the deals, so noise in a few playouts can't
+   * talk the AI out of a sound move.
+   */
   private search(state: GameState, candidates: (ScoredAction & { first: GameAction | 'pass-rez' })[], timeMs: number): GameAction {
     if (candidates.length === 1) return candidates[0].action;
-    const totals = candidates.map(() => 0);
+    const values: number[][] = candidates.map(() => []);
     const deadline = Date.now() + timeMs;
-    let samples = 0;
     const wanted = this.options.samples;
-    while (wanted ? samples < wanted : samples < 2 || Date.now() < deadline) {
+    let samples = 0;
+    while (wanted ? samples < wanted : samples < 3 || Date.now() < deadline) {
       const seed = Math.floor(this.random() * 2 ** 32);
       candidates.forEach((candidate, i) => {
-        // The same guessed deal for every candidate, so they're compared fairly
+        // The same guessed deal (and dice) for every candidate, so they're compared fairly
         const world = determinize(state, this.side, mulberry(seed), this.memory);
-        totals[i] += playout(world, this.side, candidate.first, this.memory);
+        values[i].push(playout(world, this.side, candidate.first, this.memory));
       });
       samples++;
       if (samples >= 200) break;
     }
-    let bestIndex = 0;
-    let bestValue = -Infinity;
-    candidates.forEach((candidate, i) => {
-      const value = totals[i] / samples + 0.05 * Math.max(-20, Math.min(20, candidate.score));
-      if (value > bestValue) {
-        bestValue = value;
-        bestIndex = i;
+    let best = 0;
+    let bestGain = MIN_GAIN;
+    for (let i = 1; i < candidates.length; i++) {
+      const diffs = values[i].map((v, k) => v - values[0][k]);
+      const mean = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+      const variance = diffs.reduce((a, d) => a + (d - mean) ** 2, 0) / Math.max(1, diffs.length - 1);
+      const stderr = Math.sqrt(variance / diffs.length);
+      if (mean > bestGain && mean > MIN_Z * stderr) {
+        best = i;
+        bestGain = mean;
       }
-    });
-    return candidates[bestIndex].action;
+    }
+    return candidates[best].action;
   }
 }
