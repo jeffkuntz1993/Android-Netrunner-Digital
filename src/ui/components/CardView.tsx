@@ -161,6 +161,22 @@ export const CardView: React.FC<CardViewProps> = ({
         </div>
       )}
 
+      {/* Hosted credit and virus counters */}
+      {((card.tokens.credit ?? 0) > 0 || (card.tokens.virus ?? 0) > 0) && (
+        <div className="absolute bottom-1 right-1 flex flex-col items-end gap-0.5 z-20">
+          {(card.tokens.credit ?? 0) > 0 && (
+            <span className="bg-amber-500 text-black font-extrabold px-1.5 py-0.5 rounded-full text-[10px] shadow-lg border border-amber-200" title="Hosted credits">
+              {card.tokens.credit}c
+            </span>
+          )}
+          {(card.tokens.virus ?? 0) > 0 && (
+            <span className="bg-lime-500 text-black font-extrabold px-1.5 py-0.5 rounded-full text-[10px] shadow-lg border border-lime-200" title="Virus counters">
+              ☣ {card.tokens.virus}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Quick Inspect Button on Hover (Clicking opens large Modal) */}
       {onInspect && (
         <button

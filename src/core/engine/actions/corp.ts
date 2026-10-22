@@ -1,5 +1,8 @@
 import { AdvanceCardAction, RezCardAction, ScoreAgendaAction } from '../../types/actions';
 import { GameState } from '../../types/state';
+import { CardInstance } from '../../types/card';
+import { fireTrigger } from '../triggers';
+import { bumpTurnFlag, enforceInstallLimits, turnFlag, TurnFlag } from '../cardEffects';
 import { cardDef } from '../../cards';
 import { getCardScript } from '../../scripts';
 import { addLog } from '../log';
@@ -26,9 +29,11 @@ export function advanceCard(state: GameState, action: AdvanceCardAction): void {
 
   state.corp.clicks -= 1;
   state.corp.credits -= 1;
+  const hadCounters = card.advancementCounters > 0;
   card.advancementCounters += 1;
 
   addLog(state, 'corp', `Corp spent [click] and 1 [credit] to advance a card in ${server.name} (now ${card.advancementCounters} counters).`);
+  fireTrigger(state, { type: 'advanced', card, hadCounters });
 }
 
 /** Scoring is a separate Corp choice, available in their own turn once the requirement is met. */
@@ -41,6 +46,7 @@ export function scoreAgenda(state: GameState, action: ScoreAgendaAction): void {
   const { card, server } = found;
   const def = cardDef(card);
   if (def.type_code !== 'agenda') illegal('Only agendas can be scored');
+  if (turnFlag(state, TurnFlag.cannotScore)) illegal('You cannot score agendas for the remainder of the turn');
   if (card.advancementCounters < (def.advancement_cost ?? 0)) {
     illegal(`Needs ${def.advancement_cost} advancement counters to score`);
   }
@@ -50,8 +56,10 @@ export function scoreAgenda(state: GameState, action: ScoreAgendaAction): void {
   state.corp.scoreArea.push(card);
   const pts = def.agenda_points || 0;
   state.corp.score += pts;
+  bumpTurnFlag(state, TurnFlag.agendaPointsScored, pts);
   addLog(state, 'corp', `Corp scored ${def.title} for ${pts} agenda point(s)! Total: ${state.corp.score}`);
   checkAgendaVictory(state);
+  if (!state.winner) fireTrigger(state, { type: 'agenda_scored', card, serverId: server.id });
 }
 
 export function rezCard(state: GameState, action: RezCardAction): void {
@@ -77,13 +85,20 @@ export function rezCard(state: GameState, action: RezCardAction): void {
     }
   }
 
-  const rezCost = def.cost || 0;
+  const rezCost = (def.cost || 0) + (location === 'ice' ? state.activeRun?.iceRezCostIncrease ?? 0 : 0);
   if (state.corp.credits < rezCost) illegal('Not enough credits to rez');
 
   state.corp.credits -= rezCost;
-  card.isRezzed = true;
   addLog(state, 'corp', `Corp spent ${rezCost} [credit] to rez ${def.title}.`);
+  rezForFree(state, card);
   if (state.activeRun?.server === server.id) {
     getCardScript(card.cardCode)?.ice?.onRezDuringRunOnServer?.({ state, card, side: 'corp' });
   }
+}
+
+/** Rezzes a card without paying (rez action after payment, or "ignoring all costs") and fires rez triggers. */
+export function rezForFree(state: GameState, card: CardInstance): void {
+  card.isRezzed = true;
+  enforceInstallLimits(state, card);
+  fireTrigger(state, { type: 'rezzed', card });
 }

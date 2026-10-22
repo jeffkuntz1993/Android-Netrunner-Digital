@@ -7,7 +7,6 @@ const CREATIVE_COMMISSION = '30020';
 const VRCATION = '30021';
 const WILDCAT_STRIKE = '30002';
 const MUTUAL_FAVOR = '30011';
-const TREAD_LIGHTLY = '30012';
 const HEDGE_FUND = '30075';
 const GOVERNMENT_SUBSIDY = '30064';
 const HANSEI_REVIEW = '30048';
@@ -46,9 +45,6 @@ describe('Playing operations and events', () => {
     expect(() => play(state, 'corp', ice)).toThrow(/Only operations/);
     const neuro = giveCard(state, 'corp', NEUROSPIKE);
     expect(() => play(state, 'corp', neuro)).toThrow(NotImplementedError);
-    startRunnerTurn(state);
-    const tread = giveCard(state, 'runner', TREAD_LIGHTLY);
-    expect(() => play(state, 'runner', tread)).toThrow(NotImplementedError);
   });
 
   it('only allows playing on your own turn', () => {

@@ -3,6 +3,7 @@ import { CardInstance } from '../../types/card';
 import { EncounterState, GameState } from '../../types/state';
 import { cardDef } from '../../cards';
 import { addLog } from '../log';
+import { availableCredits, spendCredits } from '../cardEffects';
 import { illegal } from '../helpers';
 import { breakerScript, breakerStrength, encounteredIce, iceStrength, iceSubtypes, isBioroid } from '../ice';
 
@@ -46,8 +47,8 @@ export function breakSubroutine(state: GameState, action: BreakSubroutineAction)
   }
 
   const cost = script.breakCost(state, breaker);
-  if (state.runner.credits < cost) illegal(`Need ${cost} credits`);
-  state.runner.credits -= cost;
+  if (availableCredits(state, 'runner') < cost) illegal(`Need ${cost} credits`);
+  spendCredits(state, 'runner', cost);
   for (const i of indices) encounter.broken[i] = true;
   script.onBreakUsed?.(state, breaker);
   addLog(state, 'runner', `Runner paid ${cost} [credit] to break ${indices.length} subroutine(s) on ${cardDef(ice).title} with ${name}.`);
@@ -57,9 +58,9 @@ export function boostBreaker(state: GameState, action: BoostBreakerAction): void
   const { encounter } = breakWindow(state, action.player);
   const breaker = installedBreaker(state, action.breakerInstanceId);
   const script = breakerScript(breaker)!;
-  if (state.runner.credits < script.boostCost) illegal(`Need ${script.boostCost} credits`);
+  if (availableCredits(state, 'runner') < script.boostCost) illegal(`Need ${script.boostCost} credits`);
   const amount = script.boostAmount(state, breaker);
-  state.runner.credits -= script.boostCost;
+  spendCredits(state, 'runner', script.boostCost);
   encounter.boosts[breaker.instanceId] = (encounter.boosts[breaker.instanceId] ?? 0) + amount;
   addLog(state, 'runner', `Runner paid ${script.boostCost} [credit]: ${cardDef(breaker).title} +${amount} strength (now ${breakerStrength(state, breaker)}).`);
 }

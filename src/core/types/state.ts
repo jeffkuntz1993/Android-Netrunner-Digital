@@ -74,6 +74,14 @@ export interface EncounterState {
   boosts: Record<string, number>;
   /** Index of the next unbroken subroutine to resolve, once resolution has started. */
   resolvingIndex: number | null;
+  /** Strength change to the encountered ice for this encounter only (e.g. Leech). */
+  iceStrengthModifier: number;
+}
+
+/** A card whose "if successful" effect is attached to this run (Red Team, Jailbreak, Conduit). */
+export interface RunEffectSource {
+  cardCode: string;
+  instanceId: string;
 }
 
 export interface RunState {
@@ -93,6 +101,20 @@ export interface RunState {
   cannotStealOrTrash: boolean;
   /** Programs to trash when the run ends (e.g. Mayfly after using its ability). */
   trashAtRunEnd: string[];
+  /** Cards whose run-scoped effects apply (see CardScript.onRunSuccessful). */
+  runEffects: RunEffectSource[];
+  /** Extra cards to access when breaching the attacked server (Jailbreak, Conduit). */
+  extraAccesses: number;
+  /** Cards accessed so far this run (Zahya). */
+  accessedCount: number;
+  /** Did the Runner steal an agenda this run (AMAZE Amusements)? */
+  stoleAgenda: boolean;
+  /** Added to the rez cost of each piece of ice during this run (Tread Lightly). */
+  iceRezCostIncrease: number;
+  /** Credits the Runner can spend only during this run, spent before their pool (Overclock). */
+  bonusCredits: number;
+  /** Persistent cards trashed during this run whose abilities still apply until it ends (AMAZE). */
+  persistentIds: string[];
 }
 
 export type TurnPlayer = SideCode;
@@ -123,6 +145,15 @@ export interface GameState {
   nextPromptId: number;
   /** Runs made during the current turn (reset when the turn passes). */
   runsThisTurn: { server: string; successful: boolean }[];
+  /** Runs the Runner made during their most recent turn (Public Trail). */
+  runnerLastTurnRuns: { server: string; successful: boolean }[];
+  /**
+   * Counters and "once per turn" flags for the current turn, reset when the
+   * turn passes. Keys are listed in engine/turnFlags.ts.
+   */
+  turnFlags: Record<string, number>;
+  /** Cards removed from the game (Spin Doctor). */
+  removedFromGame: CardInstance[];
   turnNumber: number;
   activePlayer: TurnPlayer;
   phase: GamePhase;

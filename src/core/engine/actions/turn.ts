@@ -4,6 +4,8 @@ import { GameState } from '../../types/state';
 import { addLog } from '../log';
 import { requireActionPhase, illegal } from '../helpers';
 import { pushPrompt, sideName } from '../prompts';
+import { fireTrigger } from '../triggers';
+import { maxHandSize } from '../cardEffects';
 
 export function handSize(state: GameState, side: SideCode): number {
   return side === 'corp' ? state.corp.hq.length : state.runner.grip.length;
@@ -14,28 +16,34 @@ export function endTurn(state: GameState, action: EndTurnAction): void {
   requireActionPhase(state, side);
   if (state[side].clicks > 0) illegal('You must spend all clicks before ending your turn');
 
-  const excess = handSize(state, side) - state[side].handSizeLimit;
+  const limit = maxHandSize(state, side);
+  const excess = handSize(state, side) - Math.max(0, limit);
   if (excess > 0) {
     // The turn finishes once the discard prompt is resolved.
     pushPrompt(state, {
       kind: 'discard',
       side,
       count: excess,
-      message: `${sideName(side)}: discard ${excess} card(s) down to your maximum hand size of ${state[side].handSizeLimit}.`,
+      message: `${sideName(side)}: discard ${excess} card(s) down to your maximum hand size of ${limit}.`,
     });
     return;
   }
   finishEndTurn(state, side);
 }
 
-/** Hands the turn to the other player (after any end-of-turn discard). */
+/** Ends the discard phase and hands the turn to the other player. */
 export function finishEndTurn(state: GameState, side: SideCode): void {
+  fireTrigger(state, { type: 'discard_phase_ends', side });
+  if (state.winner) return;
+  if (side === 'runner') state.runnerLastTurnRuns = state.runsThisTurn;
   state.runsThisTurn = [];
+  state.turnFlags = {};
   if (side === 'corp') {
     state.activePlayer = 'runner';
     state.phase = 'runner_turn';
     state.runner.clicks = state.runner.maxClicks;
     addLog(state, 'corp', 'Corp ended turn. Runner turn begins (4 clicks).');
+    fireTrigger(state, { type: 'turn_begins', side: 'runner' });
     return;
   }
   state.turnNumber += 1;
@@ -43,11 +51,13 @@ export function finishEndTurn(state: GameState, side: SideCode): void {
   beginCorpTurn(state);
 }
 
-/** Starts a Corp turn: refill clicks and perform the mandatory draw. */
+/** Starts a Corp turn: refill clicks, "when your turn begins" abilities, then the mandatory draw. */
 export function beginCorpTurn(state: GameState): void {
   state.activePlayer = 'corp';
   state.phase = 'corp_turn';
   state.corp.clicks = state.corp.maxClicks;
+  fireTrigger(state, { type: 'turn_begins', side: 'corp' });
+  if (state.winner) return;
 
   if (state.corp.rd.length === 0) {
     state.winner = 'runner';

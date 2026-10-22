@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { CardInstance, GameAction, cardDef, createInitialGameState, executeAction, getCardScript, isLegalAction } from './core';
+import {
+  CardInstance,
+  GameAction,
+  cardDef,
+  createInitialGameState,
+  executeAction,
+  findCardAnywhere,
+  getCardScript,
+  getLegalActions,
+  isLegalAction,
+} from './core';
 import { starterGameSetup } from './data/starterDecks';
 import { CardView } from './ui/components/CardView';
 import { ServerColumn } from './ui/components/ServerColumn';
@@ -8,6 +18,7 @@ import { RunOverlay } from './ui/components/RunOverlay';
 import { LogFeed } from './ui/components/LogFeed';
 import { PromptPanel } from './ui/components/PromptPanel';
 import { CardZoomModal } from './ui/components/CardZoomModal';
+import { AbilityBar } from './ui/components/AbilityBar';
 import {
   Coins,
   Clock,
@@ -329,6 +340,8 @@ export default function App() {
             </div>
           )}
 
+          <AbilityBar state={gameState} side="corp" onAction={handleAction} />
+
           {/* Corp HQ Hand (Full Width with min-w-0 for safe scrolling) */}
           <div className="w-full min-w-0 pt-3 border-t border-slate-900">
             <div className="text-xs text-cyan-400 font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
@@ -424,7 +437,26 @@ export default function App() {
                   <Layers className="w-3.5 h-3.5 text-pink-400" /> Draw Card
                 </button>
                 {playButton('runner')}
-                {selectedCardId && !selectedIsPlayable && (
+                {selectedCardId &&
+                  !selectedIsPlayable &&
+                  selectedCard &&
+                  getCardScript(selectedCard.cardCode)?.installsOnIce &&
+                  getLegalActions(gameState, 'runner')
+                    .filter(a => a.type === 'INSTALL_CARD' && a.cardInstanceId === selectedCardId && a.hostInstanceId)
+                    .map(a => {
+                      const host = a.type === 'INSTALL_CARD' && a.hostInstanceId ? findCardAnywhere(gameState, a.hostInstanceId) : undefined;
+                      const server = host && Object.values(corp.servers).find(s => s.ice.includes(host));
+                      return (
+                        <button
+                          key={a.type === 'INSTALL_CARD' ? a.hostInstanceId : ''}
+                          onClick={() => handleAction(a)}
+                          className="px-4 py-1.5 bg-cyber-neonPink hover:bg-pink-600 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-lg"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Install on {host?.isRezzed ? cardDef(host).title : 'unrezzed ice'} ({server?.name})
+                        </button>
+                      );
+                    })}
+                {selectedCardId && !selectedIsPlayable && !(selectedCard && getCardScript(selectedCard.cardCode)?.installsOnIce) && (
                   <button
                     onClick={() => {
                       handleAction({
@@ -450,6 +482,8 @@ export default function App() {
               </button>
             </div>
           )}
+
+          <AbilityBar state={gameState} side="runner" onAction={handleAction} />
 
           {/* Runner Grip Hand (Full Width with min-w-0 for safe scrolling) */}
           <div className="w-full min-w-0 pt-3 border-t border-slate-900">

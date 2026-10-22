@@ -84,7 +84,7 @@ export function findCardAnywhere(state: GameState, instanceId: string): CardInst
   const corp = locateCorpCard(state, instanceId);
   if (corp) return corp.card;
   const r = state.runner;
-  return [r.grip, r.stack, r.heap, r.rig.programs, r.rig.hardware, r.rig.resources, r.scoreArea, state.corp.scoreArea]
+  return [r.grip, r.stack, r.heap, r.rig.programs, r.rig.hardware, r.rig.resources, r.scoreArea, state.corp.scoreArea, state.removedFromGame, [r.identity, state.corp.identity]]
     .flat()
     .find(c => c.instanceId === instanceId);
 }
@@ -119,9 +119,24 @@ export function removeCard(cards: CardInstance[], card: CardInstance): boolean {
   return true;
 }
 
-/** Trashes an installed Corp card to Archives (face up if it was rezzed). */
+/**
+ * Trashes an installed Corp card to Archives (face up if it was rezzed).
+ * Runner programs hosted on it (Botulus, Tranquilizer) are trashed too.
+ */
 export function trashInstalledCorpCard(state: GameState, server: ServerState, card: CardInstance): void {
   removeCard(server.root, card) || removeCard(server.ice, card);
+  for (const hostedId of card.hostedCardIds) {
+    const hosted = state.runner.rig.programs.find(c => c.instanceId === hostedId);
+    if (!hosted) continue;
+    removeCard(state.runner.rig.programs, hosted);
+    state.runner.memoryUnitsUsed -= cardDef(hosted).memory_cost || 0;
+    hosted.hostedOnId = undefined;
+    hosted.tokens = {};
+    state.runner.heap.push(hosted);
+    addLog(state, 'runner', `${cardDef(hosted).title} was trashed along with its host.`);
+  }
+  card.hostedCardIds = [];
+  card.tokens = {};
   const wasRezzed = card.isRezzed;
   card.isRezzed = false;
   card.advancementCounters = 0;

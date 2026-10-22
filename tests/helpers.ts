@@ -106,3 +106,77 @@ export function runIntoFirstIce(state: GameState, serverId: string): GameState {
 }
 
 export const cont = (state: GameState) => executeAction(state, { type: 'CONTINUE_RUN', player: 'runner' });
+
+/** Gives the Runner a card and installs it with the install action (on the Runner's turn, with spare credits). */
+export function runnerInstall(state: GameState, code: string, hostInstanceId?: string): [GameState, string] {
+  if (state.activePlayer !== 'runner') startRunnerTurn(state);
+  const id = giveCard(state, 'runner', code);
+  state.runner.credits += 20;
+  state.runner.clicks += 1;
+  const next = executeAction(state, { type: 'INSTALL_CARD', player: 'runner', cardInstanceId: id, hostInstanceId });
+  next.runner.credits -= 20;
+  return [next, id];
+}
+
+/** Puts a specific Corp card (by code) into a server root, optionally rezzed, bypassing costs (test setup only). */
+export function installCorpForTest(state: GameState, code: string, serverId: string, rezzed = false): string {
+  const card = createCardInstance(state, code);
+  if (!state.corp.servers[serverId]) {
+    state.corp.servers[serverId] = { id: serverId, name: serverId, isRemote: true, ice: [], root: [] };
+  }
+  state.corp.servers[serverId].root.push(card);
+  if (rezzed) card.isRezzed = true;
+  return card.instanceId;
+}
+
+/** Rezzes a Corp card with the rez action, giving the Corp the credits for it. */
+export function rezForTest(state: GameState, instanceId: string): GameState {
+  state.corp.credits += 20;
+  const next = executeAction(state, { type: 'REZ_CARD', player: 'corp', cardInstanceId: instanceId });
+  next.corp.credits -= 20;
+  return next;
+}
+
+/** Installs a fully advanced agenda (by code) in a new remote and scores it on the Corp's turn. */
+export function scoreForTest(state: GameState, code: string, serverId = 'remote-score'): GameState {
+  const id = installCorpForTest(state, code, serverId);
+  const card = state.corp.servers[serverId].root.find(c => c.instanceId === id)!;
+  card.advancementCounters = cardDef(card).advancement_cost ?? 0;
+  if (state.activePlayer !== 'corp') {
+    state.activePlayer = 'corp';
+    state.phase = 'corp_turn';
+  }
+  return executeAction(state, { type: 'SCORE_AGENDA', player: 'corp', cardInstanceId: id });
+}
+
+/** Replaces a side's identity (test setup only). */
+export function setIdentity(state: GameState, side: 'corp' | 'runner', code: string): void {
+  const card = createCardInstance(state, code);
+  card.isRezzed = true;
+  state[side].identity = card;
+}
+
+/** Uses an ability by index on a card (test shorthand). */
+export function useAbility(state: GameState, side: 'corp' | 'runner', cardInstanceId: string, abilityIndex = 0): GameState {
+  return executeAction(state, { type: 'USE_ABILITY', player: side, cardInstanceId, abilityIndex });
+}
+
+/** Starts a run with the basic action on the Runner's turn. */
+export function run(state: GameState, serverId: string): GameState {
+  if (state.activePlayer !== 'runner') startRunnerTurn(state);
+  if (state.runner.clicks < 1) state.runner.clicks = 1;
+  return executeAction(state, { type: 'INITIATE_RUN', player: 'runner', targetServerId: serverId });
+}
+
+/** Ends the current turn, spending leftover clicks and declining any discard (test shorthand). */
+export function passTurn(state: GameState): GameState {
+  const side = state.activePlayer;
+  state[side].clicks = 0;
+  let s = executeAction(state, { type: 'END_TURN', player: side });
+  while (s.pendingPrompts[0]?.kind === 'discard') {
+    const p = s.pendingPrompts[0];
+    const hand = p.side === 'corp' ? s.corp.hq : s.runner.grip;
+    s = answer(s, { kind: 'discard', cardInstanceIds: hand.slice(0, p.kind === 'discard' ? p.count : 0).map(c => c.instanceId) });
+  }
+  return s;
+}

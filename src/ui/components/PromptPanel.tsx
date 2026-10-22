@@ -141,17 +141,32 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
                 {card && <CardView card={card} size="md" onInspect={onInspectCard} />}
                 <div className="text-xs text-slate-300">
                   {card && <div className="font-bold text-slate-100 mb-1">{cardDef(card).title}</div>}
-                  Trash cost: <span className="text-red-300 font-bold">{prompt.trashCost}c</span> · You have{' '}
-                  <span className="text-amber-300 font-bold">{state.runner.credits}c</span>
+                  {prompt.trashCost !== null && (
+                    <>
+                      Trash cost: <span className="text-red-300 font-bold">{prompt.trashCost}c</span> ·{' '}
+                    </>
+                  )}
+                  You have <span className="text-amber-300 font-bold">{state.runner.credits}c</span>
                 </div>
               </div>
-              <div className="flex gap-2 justify-end">
+              <div className="flex gap-2 justify-end flex-wrap">
                 <button className={`${button} bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-200`} onClick={() => answer({ kind: 'access_trash', trash: false })}>
-                  <X className="w-3.5 h-3.5" /> Leave it
+                  <X className="w-3.5 h-3.5" /> {card && cardDef(card).type_code === 'agenda' ? 'Steal it' : 'Leave it'}
                 </button>
-                <button className={`${button} bg-red-700 hover:bg-red-600 border-red-500 text-white`} onClick={() => answer({ kind: 'access_trash', trash: true })}>
-                  <Trash2 className="w-3.5 h-3.5" /> Trash ({prompt.trashCost}c)
-                </button>
+                {(prompt.alternatives ?? []).map(alt => (
+                  <button
+                    key={alt.id}
+                    className={`${button} bg-purple-800 hover:bg-purple-700 border-purple-500 text-white`}
+                    onClick={() => answer({ kind: 'access_trash', trash: false, alternativeId: alt.id })}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> {alt.label}
+                  </button>
+                ))}
+                {prompt.trashCost !== null && (
+                  <button className={`${button} bg-red-700 hover:bg-red-600 border-red-500 text-white`} onClick={() => answer({ kind: 'access_trash', trash: true })}>
+                    <Trash2 className="w-3.5 h-3.5" /> Trash ({prompt.trashCost}c)
+                  </button>
+                )}
               </div>
             </>
           );

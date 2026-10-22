@@ -1,5 +1,4 @@
 import { ResolvePromptAction } from '../../types/actions';
-import { CardInstance } from '../../types/card';
 import { EffectSource, PromptChoice } from '../../types/prompts';
 import { GameState } from '../../types/state';
 import { cardDef } from '../../cards';
@@ -9,13 +8,25 @@ import { findCardAnywhere, illegal, locateCorpCard, removeCard } from '../helper
 import { getCardScript } from '../../scripts';
 import { activePrompt, sideName } from '../prompts';
 import { beginCorpTurn, finishEndTurn } from './turn';
-import { continueAccess } from './run';
+import { continueAccess, finishAccess, trashAccessedCard } from './run';
+import { availableCredits, spendCredits } from '../cardEffects';
 import { resumeEncounter } from '../ice';
 
 export function resolvePrompt(state: GameState, action: ResolvePromptAction): void {
   answerPrompt(state, action);
-  // A subroutine may have been waiting on this answer.
-  resumeEncounter(state);
+  resumeRun(state);
+}
+
+/**
+ * Once no decision is pending, picks up whatever run step was waiting:
+ * resolving subroutines, or accessing the rest of the breach.
+ */
+export function resumeRun(state: GameState): void {
+  if (state.pendingPrompts.length > 0 || state.winner) return;
+  const run = state.activeRun;
+  if (!run) return;
+  if (run.encounter?.resolvingIndex != null) resumeEncounter(state);
+  else if (run.phase === 'access') continueAccess(state);
 }
 
 function answerPrompt(state: GameState, action: ResolvePromptAction): void {
@@ -83,16 +94,25 @@ function answerPrompt(state: GameState, action: ResolvePromptAction): void {
 
     case 'access_trash': {
       if (choice.kind !== 'access_trash') return;
-      if (choice.trash) {
-        if (state.runner.credits < prompt.trashCost) illegal('Not enough credits to trash');
-        const found = locateCorpCard(state, prompt.cardInstanceId);
-        if (found) {
-          state.runner.credits -= prompt.trashCost;
-          trashAccessedCard(state, found.card, found.zone);
-          addLog(state, 'runner', `Runner paid ${prompt.trashCost} [credit] to trash ${cardDef(found.card).title}.`);
-        }
+      const found = locateCorpCard(state, prompt.cardInstanceId);
+      if (!found) return;
+      if (choice.alternativeId) {
+        const alt = prompt.alternatives?.find(a => a.id === choice.alternativeId);
+        const source = alt && findCardAnywhere(state, alt.id);
+        const ability = source && getCardScript(source.cardCode)?.accessAbility;
+        if (!source || !ability) illegal('That ability is not available');
+        ability.use({ state, card: source, side: 'runner' }, found.card);
+        return;
       }
-      if (state.activeRun) continueAccess(state);
+      if (choice.trash) {
+        if (prompt.trashCost === null) illegal('This card cannot be trashed by paying its trash cost');
+        if (availableCredits(state, 'runner') < prompt.trashCost) illegal('Not enough credits to trash');
+        spendCredits(state, 'runner', prompt.trashCost);
+        addLog(state, 'runner', `Runner paid ${prompt.trashCost} [credit] to trash ${cardDef(found.card).title}.`);
+        trashAccessedCard(state, found.card);
+        return;
+      }
+      finishAccess(state, found.card, found.zone);
       return;
     }
   }
@@ -109,14 +129,6 @@ function runScriptAnswer(
   // The card's controller resolves the effect even when the other side answers.
   const controller = cardDef(card).side_code;
   script.onPromptAnswer({ state, card, side: controller }, source, answer);
-}
-
-function trashAccessedCard(state: GameState, card: CardInstance, zone: CardInstance[]): void {
-  removeCard(zone, card);
-  card.isRezzed = false;
-  card.advancementCounters = 0;
-  // Cards trashed by the Runner go to Archives face up.
-  state.corp.archives.faceUp.push(card);
 }
 
 /** Shuffles the hand back into the deck and draws 5 new cards. */

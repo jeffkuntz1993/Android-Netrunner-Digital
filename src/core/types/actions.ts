@@ -21,6 +21,9 @@ export type GameActionType =
   | 'BIOROID_BREAK'
   | 'PASS_PRIORITY'
   | 'RESOLVE_PROMPT'
+  | 'USE_ABILITY'
+  | 'REMOVE_TAG'
+  | 'TRASH_RESOURCE'
   | 'END_TURN';
 
 export interface BaseAction {
@@ -41,6 +44,8 @@ export interface InstallCardAction extends BaseAction {
   cardInstanceId: string;
   targetServerId?: string; // required for Corp installs
   asNewRemote?: boolean;
+  /** Runner programs that install onto a card (Botulus, Tranquilizer): the host ice. */
+  hostInstanceId?: string;
 }
 
 export interface PlayOperationOrEventAction extends BaseAction {
@@ -115,6 +120,24 @@ export interface ResolvePromptAction extends BaseAction {
   choice: PromptChoice;
 }
 
+/** Use an ability printed on an active card (see CardScript.abilities). */
+export interface UseAbilityAction extends BaseAction {
+  type: 'USE_ABILITY';
+  cardInstanceId: string;
+  abilityIndex: number;
+}
+
+/** Runner basic action: [click] + 2 credits to remove 1 tag. */
+export interface RemoveTagAction extends BaseAction {
+  type: 'REMOVE_TAG';
+}
+
+/** Corp basic action: [click] + 2 credits to trash 1 installed resource while the Runner is tagged. */
+export interface TrashResourceAction extends BaseAction {
+  type: 'TRASH_RESOURCE';
+  cardInstanceId: string;
+}
+
 export interface EndTurnAction extends BaseAction {
   type: 'END_TURN';
 }
@@ -137,4 +160,7 @@ export type GameAction =
   | AccessCardAction
   | PassPriorityAction
   | ResolvePromptAction
+  | UseAbilityAction
+  | RemoveTagAction
+  | TrashResourceAction
   | EndTurnAction;

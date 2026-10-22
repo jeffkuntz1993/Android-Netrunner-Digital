@@ -24,11 +24,18 @@ export interface DiscardPrompt extends BasePrompt {
   count: number;
 }
 
-/** The Runner accessed a card with a trash cost and may pay to trash it. */
+/**
+ * The Runner is accessing a card and may use one mid-access ability: pay the
+ * trash cost (basic trash ability, when trashCost is set) or one of the
+ * alternatives offered by installed cards (e.g. Carnivore).
+ */
 export interface AccessTrashPrompt extends BasePrompt {
   kind: 'access_trash';
   cardInstanceId: string;
-  trashCost: number;
+  /** null when the basic trash ability can't be used (no trash cost, or can't afford it). */
+  trashCost: number | null;
+  /** Mid-access abilities from installed cards; ids are the source card's instance id. */
+  alternatives?: { id: string; label: string }[];
 }
 
 /**
@@ -61,6 +68,6 @@ export interface EffectCardsPrompt extends BasePrompt {
 export type PromptChoice =
   | { kind: 'mulligan'; mulligan: boolean }
   | { kind: 'discard'; cardInstanceIds: string[] }
-  | { kind: 'access_trash'; trash: boolean }
+  | { kind: 'access_trash'; trash: boolean; alternativeId?: string }
   | { kind: 'effect_choice'; optionId: string }
   | { kind: 'effect_cards'; cardInstanceIds: string[] };

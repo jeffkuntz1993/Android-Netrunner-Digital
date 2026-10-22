@@ -6,12 +6,14 @@ import {
   breakerStrength,
   cardDef,
   encounteredIce,
+  findCardAnywhere,
+  getCardScript,
   getLegalActions,
   iceScript,
   iceStrength,
   installedIcebreakers,
 } from '../../core';
-import { Scissors, TrendingUp, Clock } from 'lucide-react';
+import { Scissors, TrendingUp, Clock, Sparkles } from 'lucide-react';
 
 interface EncounterPanelProps {
   state: GameState;
@@ -42,6 +44,7 @@ export const EncounterPanel: React.FC<EncounterPanelProps> = ({ state, onAction 
     return { breaker, script, actions };
   });
   const bioroidActions = legal.filter(a => a.type === 'BIOROID_BREAK');
+  const abilityActions = legal.filter(a => a.type === 'USE_ABILITY');
 
   const btn =
     'px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors disabled:opacity-40';
@@ -101,6 +104,24 @@ export const EncounterPanel: React.FC<EncounterPanelProps> = ({ state, onAction 
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {abilityActions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-mono text-slate-400 w-40">Card abilities</span>
+          {abilityActions.map((a, k) => {
+            if (a.type !== 'USE_ABILITY') return null;
+            const card = findCardAnywhere(state, a.cardInstanceId);
+            const ability = card && getCardScript(card.cardCode)?.abilities?.[a.abilityIndex];
+            if (!card || !ability) return null;
+            return (
+              <button key={k} onClick={() => onAction(a)} className={`${btn} bg-lime-950 border-lime-700 text-lime-200 hover:bg-lime-900`} title={ability.label}>
+                <Sparkles className="inline w-3 h-3 mr-1" />
+                {cardDef(card).title}
+              </button>
+            );
+          })}
         </div>
       )}
 

@@ -3,6 +3,8 @@ import { operationScripts } from './operations';
 import { eventScripts } from './events';
 import { iceScripts } from './ice';
 import { breakerScripts } from './breakers';
+import { corpCardScripts } from './corpCards';
+import { runnerCardScripts } from './runnerCards';
 
 export type { CardScript, EffectContext, EffectAnswer } from './types';
 
@@ -11,6 +13,8 @@ const SCRIPTS: Record<string, CardScript> = {
   ...eventScripts,
   ...iceScripts,
   ...breakerScripts,
+  ...corpCardScripts,
+  ...runnerCardScripts,
 };
 
 /** The script for a card code, if its abilities are implemented. */

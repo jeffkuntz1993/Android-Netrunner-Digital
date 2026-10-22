@@ -4,6 +4,8 @@ import { cardDef } from '../../cards';
 import { getCardScript } from '../../scripts';
 import { addLog } from '../log';
 import { CardInstance } from '../../types/card';
+import { activeCards, fireTrigger } from '../triggers';
+import { availableCredits, bumpTurnFlag, enforceInstallLimits, installedIce, memoryLimit, spendCredits, TurnFlag } from '../cardEffects';
 import {
   createRemoteServer,
   illegal,
@@ -74,6 +76,7 @@ export function installCorpCardFrom(
     // Outer ice is placed at the end of the array
     server.ice.push(card);
     addLog(state, 'corp', `Corp installed Ice protecting ${server.name} (cost: ${installCost} [credit]).`);
+    fireTrigger(state, { type: 'installed', card });
     return;
   }
 
@@ -86,30 +89,49 @@ export function installCorpCardFrom(
   }
   server.root.push(card);
   addLog(state, 'corp', `Corp installed a card into ${server.name}.`);
+  fireTrigger(state, { type: 'installed', card });
 }
 
 function installRunnerCard(state: GameState, action: InstallCardAction): void {
-  const cardIndex = state.runner.grip.findIndex(c => c.instanceId === action.cardInstanceId);
-  if (cardIndex === -1) illegal('Card not in Grip');
-
-  const card = state.runner.grip[cardIndex];
+  const card = state.runner.grip.find(c => c.instanceId === action.cardInstanceId);
+  if (!card) illegal('Card not in Grip');
   if (cardDef(card).type_code === 'event') illegal('Events are played, not installed');
+  const blocker = runnerInstallBlocker(state, card, action.hostInstanceId);
+  if (blocker) illegal(blocker);
   state.runner.clicks -= 1;
-  installRunnerCardFrom(state, card, state.runner.grip);
+  installRunnerCardFrom(state, card, state.runner.grip, action.hostInstanceId);
 }
 
-/** Install cost after card-specific modifiers (e.g. Carmen's discount). */
+/** Install cost after modifiers: the card's own (Carmen) and active cards' (DZMZ Optimizer). */
 export function runnerInstallCost(state: GameState, card: CardInstance): number {
-  const modifier = getCardScript(card.cardCode)?.installCostModifier?.(state, card) ?? 0;
-  return Math.max(0, (cardDef(card).cost || 0) + modifier);
+  const own = getCardScript(card.cardCode)?.installCostModifier?.(state, card) ?? 0;
+  const fromCards = activeCards(state, 'runner').reduce(
+    (n, c) => n + (getCardScript(c.cardCode)?.modifiers?.runnerInstallCost?.(state, c, card) ?? 0),
+    0
+  );
+  return Math.max(0, (cardDef(card).cost || 0) + own + fromCards);
 }
 
-/** Can the Runner pay to install this card right now (credits and MU)? Returns a reason if not. */
-export function runnerInstallBlocker(state: GameState, card: CardInstance): string | null {
+/**
+ * Can the Runner install this card right now (credits, MU, host, card
+ * restrictions)? Returns a reason if not. Programs that install on ice
+ * need a host; other cards must not have one.
+ */
+export function runnerInstallBlocker(state: GameState, card: CardInstance, hostInstanceId?: string): string | null {
   const def = cardDef(card);
-  if (state.runner.credits < runnerInstallCost(state, card)) return 'Not enough credits to install';
+  const script = getCardScript(card.cardCode);
+  if (!['program', 'hardware', 'resource'].includes(def.type_code)) return 'Only programs, hardware and resources can be installed';
+  if (script?.installsOnIce) {
+    if (!hostInstanceId) return `${def.title} must be installed on a piece of ice`;
+    if (!installedIce(state).some(c => c.instanceId === hostInstanceId)) return 'Host must be an installed piece of ice';
+  } else if (hostInstanceId) {
+    return `${def.title} cannot be hosted`;
+  }
+  const restriction = script?.canInstall?.({ state, card, side: 'runner' });
+  if (restriction) return restriction;
+  if (availableCredits(state, 'runner') < runnerInstallCost(state, card)) return 'Not enough credits to install';
   const mem = def.type_code === 'program' ? def.memory_cost || 0 : 0;
-  if (state.runner.memoryUnitsUsed + mem > state.runner.memoryUnitsTotal) {
+  if (state.runner.memoryUnitsUsed + mem > memoryLimit(state)) {
     return 'Not enough memory units to install this program';
   }
   return null;
@@ -119,26 +141,34 @@ export function runnerInstallBlocker(state: GameState, card: CardInstance): stri
  * Installs a Runner card from any zone, paying its install cost (but no
  * click). Used by the install action and by effects like Mutual Favor.
  */
-export function installRunnerCardFrom(state: GameState, card: CardInstance, zone: CardInstance[]): void {
-  const blocker = runnerInstallBlocker(state, card);
+export function installRunnerCardFrom(state: GameState, card: CardInstance, zone: CardInstance[], hostInstanceId?: string): void {
+  const blocker = runnerInstallBlocker(state, card, hostInstanceId);
   if (blocker) illegal(blocker);
   const def = cardDef(card);
   const installCost = runnerInstallCost(state, card);
   const mem = def.type_code === 'program' ? def.memory_cost || 0 : 0;
 
   removeCard(zone, card);
-  state.runner.credits -= installCost;
+  spendCredits(state, 'runner', installCost);
   card.isRezzed = true; // Runner cards enter the game active / face up
   card.installedTurn = turnKey(state);
 
   if (def.type_code === 'program') {
     state.runner.memoryUnitsUsed += mem;
     state.runner.rig.programs.push(card);
+    bumpTurnFlag(state, TurnFlag.programsInstalled);
   } else if (def.type_code === 'hardware') {
     state.runner.rig.hardware.push(card);
   } else if (def.type_code === 'resource') {
     state.runner.rig.resources.push(card);
   }
+  const host = hostInstanceId ? installedIce(state).find(c => c.instanceId === hostInstanceId) : undefined;
+  if (host) {
+    card.hostedOnId = host.instanceId;
+    host.hostedCardIds.push(card.instanceId);
+  }
 
-  addLog(state, 'runner', `Runner paid ${installCost} [credit] to install ${def.title}.`);
+  addLog(state, 'runner', `Runner paid ${installCost} [credit] to install ${def.title}${host ? ' on a piece of ice' : ''}.`);
+  enforceInstallLimits(state, card);
+  fireTrigger(state, { type: 'installed', card });
 }

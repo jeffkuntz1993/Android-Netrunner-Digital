@@ -52,6 +52,7 @@ export interface CardDefinition {
   illustrator?: string;
   stripped_text?: string;
   stripped_title?: string;
+  uniqueness?: boolean;
 }
 
 export interface CardInstance {

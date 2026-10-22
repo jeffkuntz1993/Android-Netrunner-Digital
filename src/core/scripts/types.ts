@@ -30,6 +30,101 @@ export interface CardScript {
   breaker?: BreakerScript;
   /** Install cost change for Runner cards (e.g. Carmen). Negative = cheaper. */
   installCostModifier?(state: GameState, card: Card): number;
+
+  /** Reactions to game events while this card is active (see engine/triggers.ts). */
+  triggers?: TriggerHandlers;
+  /** Abilities the controller can trigger on this active card (USE_ABILITY). */
+  abilities?: CardAbility[];
+  /** Constant effects while this card is active. */
+  modifiers?: CardModifiers;
+  /** "When the Runner accesses this card": active even while the card is inactive (Urtica Cipher). */
+  onAccessed?(ctx: EffectContext): void;
+  /** A mid-access ability this active card offers on each access (Carnivore). */
+  accessAbility?: AccessAbility;
+  /** A run started by this card is successful (Red Team, Jailbreak, Conduit). */
+  onRunSuccessful?(ctx: EffectContext): void;
+  /** Trash this card when its last hosted credit is taken ("When it is empty, trash it"). */
+  trashWhenEmpty?: boolean;
+  /** Extra effect when emptied, after it is trashed (Nico Campaign: draw 1 card). */
+  onEmptied?(ctx: EffectContext): void;
+  /** Abilities still apply for the rest of the run if this is trashed while accessed (AMAZE Amusements). */
+  persistent?: boolean;
+  /** Runner program that must be installed on a piece of ice (Botulus, Tranquilizer). */
+  installsOnIce?: boolean;
+  /** Extra play restriction checked before a Runner card is installed. Return a reason to forbid. */
+  canInstall?(ctx: EffectContext): string | null;
+}
+
+/**
+ * Game events that card abilities react to. Handlers receive the context of
+ * the reacting card (its controller as `side`), not the card that caused the
+ * event, which is in the event itself.
+ */
+export type TriggerEvent =
+  | { type: 'turn_begins'; side: SideCode }
+  | { type: 'discard_phase_ends'; side: SideCode }
+  | { type: 'installed'; card: Card }
+  | { type: 'rezzed'; card: Card }
+  | { type: 'advanced'; card: Card; hadCounters: boolean }
+  | { type: 'agenda_scored'; card: Card; serverId: string }
+  | { type: 'agenda_stolen'; card: Card }
+  | { type: 'successful_run'; server: string }
+  | { type: 'approach_server'; server: string }
+  | { type: 'run_ends'; server: string; successful: boolean; accessedCount: number; stoleAgenda: boolean }
+  | { type: 'tags_taken'; count: number }
+  | { type: 'trashed_on_access'; card: Card };
+
+export type TriggerType = TriggerEvent['type'];
+
+export type TriggerHandlers = {
+  [K in TriggerType]?: (ctx: EffectContext, event: Extract<TriggerEvent, { type: K }>) => void;
+};
+
+/**
+ * An ability on an active card. Costs are checked and paid in this order:
+ * clicks, credits, hosted counters; then `resolve` runs; then the card is
+ * trashed or removed from the game if that is part of the cost (so the
+ * effect can still read the card's counters, as with Fermenter).
+ */
+export interface CardAbility {
+  label: string;
+  /** Click abilities can only be used in the controller's action phase. */
+  clicks?: number;
+  credits?: number;
+  /** Hosted counters spent from this card (Botulus, Leech: 'virus'). */
+  counters?: { type: CounterType; count: number };
+  trashSelf?: boolean;
+  removeSelfFromGame?: boolean;
+  oncePerTurn?: boolean;
+  /** Extra condition. Return a reason to forbid using the ability now. */
+  canUse?(ctx: EffectContext): string | null;
+  resolve(ctx: EffectContext): void;
+}
+
+export type CounterType = 'credit' | 'virus';
+
+export interface CardModifiers {
+  /** +memory units while active (Runner hardware). */
+  memory?: number;
+  /** +maximum hand size for the controller while active. */
+  handSize?: number;
+  /** Change to the install cost of a Runner card (DZMZ Optimizer). Negative = cheaper. */
+  runnerInstallCost?(state: GameState, self: Card, installing: Card): number;
+  /** Cards drawn by the first basic draw action each turn, instead of 1 (Verbal Plasticity). */
+  firstBasicDraw?: number;
+  /** Extra cards to access when breaching a server (Docklands Pass). */
+  breachAccesses?(state: GameState, self: Card, serverId: string): number;
+}
+
+/**
+ * A mid-access ability offered while the Runner accesses a card (Carnivore).
+ * `use` pays the cost (possibly via a prompt) and then trashes the accessed
+ * card with trashAccessedCard().
+ */
+export interface AccessAbility {
+  label: string;
+  canUse(ctx: EffectContext, accessed: Card): boolean;
+  use(ctx: EffectContext, accessed: Card): void;
 }
 
 export interface Subroutine {

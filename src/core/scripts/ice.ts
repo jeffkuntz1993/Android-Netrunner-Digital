@@ -3,6 +3,7 @@ import { cardDef } from '../cards';
 import { addLog } from '../engine/log';
 import { dealNetDamage, giveTags, installedRunnerCards, trashInstalledRunnerCard } from '../engine/damage';
 import { endRun, endTheRun } from '../engine/runEnd';
+import { availableCredits, spendCredits } from '../engine/cardEffects';
 import { findCardAnywhere } from '../engine/helpers';
 import { corpInstallBlocker, installCorpCardFrom } from '../engine/actions/install';
 import { CardScript, EffectContext, Subroutine } from './types';
@@ -154,7 +155,7 @@ const funhouse: CardScript = {
       {
         label: 'Give the Runner 1 tag unless they pay 4 credits.',
         resolve: ctx => {
-          if (ctx.state.runner.credits < 4) {
+          if (availableCredits(ctx.state, 'runner') < 4) {
             giveTags(ctx.state, 1);
             return;
           }
@@ -169,7 +170,7 @@ const funhouse: CardScript = {
   onPromptAnswer: ({ state }, source, answer) => {
     if (answer.kind !== 'effect_choice') return;
     if (answer.optionId === 'tag') giveTags(state, 1);
-    else if (answer.optionId === 'pay') state.runner.credits -= 4;
+    else if (answer.optionId === 'pay') spendCredits(state, 'runner', 4);
     else if (answer.optionId === 'end' && source.step === 'encounter') endTheRun(state);
   },
 };

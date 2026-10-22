@@ -4,6 +4,8 @@ import { GameState } from '../types/state';
 import { isLegalAction } from './gameEngine';
 import { activePrompt } from './prompts';
 import { breakerScript } from './ice';
+import { activeCards } from './triggers';
+import { getCardScript } from '../scripts';
 
 /**
  * Lists every action the given side can legally take right now.
@@ -38,6 +40,7 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
   }
 
   const servers = Object.values(state.corp.servers);
+  candidates.push(...abilityCandidates(state, side));
 
   if (side === 'corp') {
     if (!state.activeRun) {
@@ -67,7 +70,13 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
   } else if (!state.activeRun) {
     for (const card of state.runner.grip) {
       candidates.push({ type: 'PLAY_OPERATION_OR_EVENT', player: 'runner', cardInstanceId: card.instanceId });
-      candidates.push({ type: 'INSTALL_CARD', player: 'runner', cardInstanceId: card.instanceId });
+      if (getCardScript(card.cardCode)?.installsOnIce) {
+        for (const ice of servers.flatMap(s => s.ice)) {
+          candidates.push({ type: 'INSTALL_CARD', player: 'runner', cardInstanceId: card.instanceId, hostInstanceId: ice.instanceId });
+        }
+      } else {
+        candidates.push({ type: 'INSTALL_CARD', player: 'runner', cardInstanceId: card.instanceId });
+      }
     }
     for (const server of servers) {
       candidates.push({ type: 'INITIATE_RUN', player: 'runner', targetServerId: server.id });
@@ -75,6 +84,18 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
   }
 
   return candidates;
+}
+
+/** Every ability on the side's active cards; the engine filters out the unusable ones. */
+function abilityCandidates(state: GameState, side: SideCode): GameAction[] {
+  return activeCards(state, side).flatMap(card =>
+    (getCardScript(card.cardCode)?.abilities ?? []).map((_, abilityIndex) => ({
+      type: 'USE_ABILITY' as const,
+      player: side,
+      cardInstanceId: card.instanceId,
+      abilityIndex,
+    }))
+  );
 }
 
 /** Break, boost and bioroid-break options for the current encounter. */
@@ -107,7 +128,13 @@ function promptAnswers(state: GameState): GameAction[] {
     case 'mulligan':
       return [false, true].map(mulligan => ({ ...base, choice: { kind: 'mulligan' as const, mulligan } }));
     case 'access_trash':
-      return [false, true].map(trash => ({ ...base, choice: { kind: 'access_trash' as const, trash } }));
+      return [
+        ...[false, true].map(trash => ({ ...base, choice: { kind: 'access_trash' as const, trash } })),
+        ...(prompt.alternatives ?? []).map(a => ({
+          ...base,
+          choice: { kind: 'access_trash' as const, trash: false, alternativeId: a.id },
+        })),
+      ];
     case 'effect_choice':
       return prompt.options.map(o => ({ ...base, choice: { kind: 'effect_choice' as const, optionId: o.id } }));
     case 'effect_cards': {

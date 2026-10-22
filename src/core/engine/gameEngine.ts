@@ -9,6 +9,8 @@ import { endTurn } from './actions/turn';
 import { resolvePrompt } from './actions/prompt';
 import { playOperationOrEvent } from './actions/play';
 import { bioroidBreak, boostBreaker, breakSubroutine } from './actions/breaking';
+import { useAbility } from './actions/ability';
+import { syncDerivedStats } from './cardEffects';
 
 export { addLog } from './log';
 
@@ -42,6 +44,9 @@ const handlers: ActionHandlers = {
   BREAK_SUBROUTINE: breakSubroutine,
   BOOST_BREAKER: boostBreaker,
   BIOROID_BREAK: bioroidBreak,
+  USE_ABILITY: useAbility,
+  REMOVE_TAG: notImplemented,
+  TRASH_RESOURCE: notImplemented,
   ACCESS_CARD: notImplemented,
   PASS_PRIORITY: notImplemented,
 };
@@ -65,6 +70,7 @@ export function executeAction(prevState: GameState, action: GameAction): GameSta
     throw new IllegalActionError(`Unknown action type: ${(action as { type: string }).type}`);
   }
   handler(state, action);
+  syncDerivedStats(state);
   return state;
 }
 

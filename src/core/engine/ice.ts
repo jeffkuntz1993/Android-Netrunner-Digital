@@ -5,6 +5,7 @@ import { getCardScript } from '../scripts';
 import { BreakerScript, IceScript, IceSubtype } from '../scripts/types';
 import { addLog } from './log';
 import { endRun } from './runEnd';
+import { fireTrigger } from './triggers';
 
 export function iceScript(ice: CardInstance): IceScript | undefined {
   return getCardScript(ice.cardCode)?.ice;
@@ -32,7 +33,9 @@ export function installedIcebreakers(state: GameState): CardInstance[] {
 }
 
 export function iceStrength(state: GameState, ice: CardInstance): number {
-  return (cardDef(ice).strength ?? 0) + (iceScript(ice)?.strengthModifier?.(state, ice) ?? 0);
+  const encounter = state.activeRun?.encounter;
+  const encounterMod = encounter?.iceId === ice.instanceId ? encounter.iceStrengthModifier : 0;
+  return Math.max(0, (cardDef(ice).strength ?? 0) + (iceScript(ice)?.strengthModifier?.(state, ice) ?? 0) + encounterMod);
 }
 
 /** Current breaker strength, including boosts for the encounter in progress. */
@@ -53,7 +56,7 @@ export function beginEncounter(state: GameState, ice: CardInstance): void {
   const run = state.activeRun!;
   const subs = iceScript(ice)?.subroutines ?? [];
   run.phase = 'encounter_ice';
-  run.encounter = { iceId: ice.instanceId, broken: subs.map(() => false), boosts: {}, resolvingIndex: null };
+  run.encounter = { iceId: ice.instanceId, broken: subs.map(() => false), boosts: {}, resolvingIndex: null, iceStrengthModifier: 0 };
   addLog(state, 'system', `Runner encounters ${cardDef(ice).title} (strength ${iceStrength(state, ice)}).`);
   iceScript(ice)?.onEncounter?.({ state, card: ice, side: 'corp' });
 }
@@ -103,9 +106,16 @@ export function passIce(state: GameState): void {
     run.icePosition! -= 1;
     run.phase = 'approach_ice';
   } else {
-    run.phase = 'approach_server';
-    run.icePosition = null;
+    approachServer(state);
   }
+}
+
+/** The Runner approaches the attacked server ("whenever the Runner approaches this server"). */
+export function approachServer(state: GameState): void {
+  const run = state.activeRun!;
+  run.phase = 'approach_server';
+  run.icePosition = null;
+  fireTrigger(state, { type: 'approach_server', server: run.server });
 }
 
 export { endRun };

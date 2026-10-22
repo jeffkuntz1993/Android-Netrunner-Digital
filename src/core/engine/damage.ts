@@ -3,7 +3,9 @@ import { GameState } from '../types/state';
 import { cardDef } from '../cards';
 import { nextInt } from '../rng';
 import { addLog } from './log';
-import { removeCard } from './helpers';
+import { findCardAnywhere, removeCard } from './helpers';
+import { bumpTurnFlag, TurnFlag } from './cardEffects';
+import { fireTrigger } from './triggers';
 
 /**
  * Net damage: trash cards at random from the grip, one per point. If the
@@ -31,10 +33,13 @@ export function dealNetDamage(state: GameState, amount: number): CardInstance[] 
   return trashed;
 }
 
-/** Gives the Runner tags. TODO (roadmap M4): tag consequences and the remove-tag action. */
+/** Gives the Runner tags and fires "whenever the Runner takes a tag" abilities. */
 export function giveTags(state: GameState, count: number): void {
+  if (count <= 0) return;
   state.runner.tags += count;
   addLog(state, 'corp', `The Runner took ${count} tag(s) (now ${state.runner.tags}).`);
+  bumpTurnFlag(state, TurnFlag.tagEvents);
+  fireTrigger(state, { type: 'tags_taken', count });
 }
 
 /** All installed Runner cards. */
@@ -51,5 +56,11 @@ export function trashInstalledRunnerCard(state: GameState, card: CardInstance): 
   } else {
     removeCard(rig.hardware, card) || removeCard(rig.resources, card);
   }
+  if (card.hostedOnId) {
+    const host = findCardAnywhere(state, card.hostedOnId);
+    if (host) host.hostedCardIds = host.hostedCardIds.filter(id => id !== card.instanceId);
+    card.hostedOnId = undefined;
+  }
+  card.tokens = {};
   state.runner.heap.push(card);
 }

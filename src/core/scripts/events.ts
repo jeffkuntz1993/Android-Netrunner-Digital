@@ -3,7 +3,9 @@ import { addLog } from '../engine/log';
 import { drawCards, madeSuccessfulRunThisTurn } from '../engine/helpers';
 import { installRunnerCardFrom, runnerInstallBlocker } from '../engine/actions/install';
 import { shuffleInPlace } from '../rng';
-import { CardScript } from './types';
+import { CardScript, EffectContext } from './types';
+import { startRun } from '../engine/actions/run';
+import { drawForEffect } from '../engine/cardEffects';
 import { askCards, askChoice, gainCredits, loseClickIfAny } from './effects';
 
 /** Runner events from System Gateway. */
@@ -117,9 +119,51 @@ const mutualFavor: CardScript = {
   },
 };
 
+/** Asks the Runner which server to run (for "Run any server" events). */
+function askRunTarget(ctx: EffectContext, serverIds: string[], cardTitle: string): void {
+  const options = serverIds.map(id => ({ id, label: ctx.state.corp.servers[id].name }));
+  askChoice(ctx, 'runner', `${cardTitle}: run which server?`, options, 'run');
+}
+
+const runSource = (ctx: EffectContext) => ({ cardCode: ctx.card.cardCode, instanceId: ctx.card.instanceId });
+
+// Tread Lightly: Run any server. During that run, the rez cost of each piece of
+// ice is increased by 3 credits.
+const treadLightly: CardScript = {
+  onPlay: ctx => askRunTarget(ctx, Object.keys(ctx.state.corp.servers), 'Tread Lightly'),
+  onPromptAnswer: ({ state }, _source, answer) => {
+    if (answer.kind === 'effect_choice') startRun(state, answer.optionId, { iceRezCostIncrease: 3 });
+  },
+};
+
+// Jailbreak: Run HQ or R&D. If successful, draw 1 card and when you breach the
+// attacked server, access 1 additional card.
+const jailbreak: CardScript = {
+  onPlay: ctx => askRunTarget(ctx, ['hq', 'rd'], 'Jailbreak'),
+  onPromptAnswer: (ctx, _source, answer) => {
+    if (answer.kind === 'effect_choice') startRun(ctx.state, answer.optionId, { source: runSource(ctx) });
+  },
+  onRunSuccessful: ({ state }) => {
+    drawForEffect(state, 'runner', 1, 'Jailbreak');
+    state.activeRun!.extraAccesses += 1;
+  },
+};
+
+// Overclock: Place 5 credits on this event, then run any server. You can spend
+// hosted credits during that run.
+const overclock: CardScript = {
+  onPlay: ctx => askRunTarget(ctx, Object.keys(ctx.state.corp.servers), 'Overclock'),
+  onPromptAnswer: ({ state }, _source, answer) => {
+    if (answer.kind === 'effect_choice') startRun(state, answer.optionId, { bonusCredits: 5 });
+  },
+};
+
 export const eventScripts: Record<string, CardScript> = {
   '30002': wildcatStrike,
   '30011': mutualFavor,
+  '30012': treadLightly,
+  '30028': jailbreak,
+  '30029': overclock,
   '30020': creativeCommission,
   '30021': vrcation,
   '30030': sureGamble,

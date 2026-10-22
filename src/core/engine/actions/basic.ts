@@ -2,7 +2,10 @@ import { DrawCardAction, GainCreditAction } from '../../types/actions';
 import { GameState } from '../../types/state';
 import { cardDef } from '../../cards';
 import { addLog } from '../log';
-import { illegal, requireActionPhase, requireClicks } from '../helpers';
+import { drawCards, illegal, requireActionPhase, requireClicks } from '../helpers';
+import { getCardScript } from '../../scripts';
+import { activeCards } from '../triggers';
+import { bumpTurnFlag, TurnFlag } from '../cardEffects';
 
 export function gainCredit(state: GameState, action: GainCreditAction): void {
   const side = action.player;
@@ -30,8 +33,15 @@ export function drawCard(state: GameState, action: DrawCardAction): void {
   } else {
     if (state.runner.stack.length === 0) illegal('Stack is empty');
     state.runner.clicks -= 1;
-    const drawn = state.runner.stack.shift()!;
-    state.runner.grip.push(drawn);
-    addLog(state, 'runner', `Runner spent [click] to draw 1 card (${cardDef(drawn).title}).`);
+    // Replacement effects such as Verbal Plasticity change how many cards the basic action draws.
+    const first = bumpTurnFlag(state, TurnFlag.basicDraws) === 1;
+    const count = activeCards(state, 'runner').reduce(
+      (n, c) => Math.max(n, (first && getCardScript(c.cardCode)?.modifiers?.firstBasicDraw) || 1),
+      1
+    );
+    const before = state.runner.grip.length;
+    drawCards(state, 'runner', count);
+    const drawn = state.runner.grip.slice(before);
+    addLog(state, 'runner', `Runner spent [click] to draw ${drawn.length} card(s) (${drawn.map(c => cardDef(c).title).join(', ')}).`);
   }
 }
