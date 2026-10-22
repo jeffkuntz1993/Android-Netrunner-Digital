@@ -4,6 +4,8 @@ import { CardInstance } from '../../core/types/card';
 import { cardDef, getCardImageUrl } from '../../data/cards';
 import { FACTION_COLOR, FACTION_LABEL, typeLine } from '../cardLabels';
 import { X, Shield, Zap, Award, Trash2, AlertCircle } from 'lucide-react';
+import { annotateKeywords } from '../glossary';
+import { Keyword } from './Keyword';
 import { CreditIcon, CREDIT_ICON_HTML, RECURRING_CREDIT_ICON_HTML } from './CreditIcon';
 
 interface CardZoomModalProps {
@@ -69,7 +71,7 @@ export const CardZoomModal: React.FC<CardZoomModalProps> = ({
               </span>
               {!card.isRezzed && (
                 <span className="px-2 py-0.5 rounded border bg-amber-950 border-amber-600 text-amber-300 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> Unrezzed
+                  <AlertCircle className="w-3 h-3" /> <Keyword id="unrezzed">Unrezzed</Keyword>
                 </span>
               )}
             </div>
@@ -86,21 +88,21 @@ export const CardZoomModal: React.FC<CardZoomModalProps> = ({
               {def.cost !== null && def.cost !== undefined && (
                 <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
                   <CreditIcon className="w-4 h-4 text-amber-400" />
-                  <span className="text-slate-400">Cost:</span>
+                  <Keyword id="credit" className="text-slate-400">Cost:</Keyword>
                   <span className="font-bold text-amber-300">{def.cost} Credits</span>
                 </div>
               )}
               {def.strength !== null && def.strength !== undefined && (
                 <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
                   <Shield className="w-4 h-4 text-cyan-400" />
-                  <span className="text-slate-400">Strength:</span>
+                  <Keyword id="strength" className="text-slate-400">Strength:</Keyword>
                   <span className="font-bold text-cyan-300">{def.strength}</span>
                 </div>
               )}
               {def.agenda_points !== undefined && (
                 <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
                   <Award className="w-4 h-4 text-cyan-400" />
-                  <span className="text-slate-400">Agenda Points:</span>
+                  <Keyword id="advancement-requirement" className="text-slate-400">Agenda Points:</Keyword>
                   <span className="font-bold text-cyan-300">
                     {def.agenda_points} (Req: {def.advancement_cost || 0})
                   </span>
@@ -109,14 +111,14 @@ export const CardZoomModal: React.FC<CardZoomModalProps> = ({
               {def.memory_cost !== null && def.memory_cost !== undefined && (
                 <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
                   <Zap className="w-4 h-4 text-pink-400" />
-                  <span className="text-slate-400">Memory:</span>
+                  <Keyword id="mu" className="text-slate-400">Memory:</Keyword>
                   <span className="font-bold text-pink-300">{def.memory_cost} MU</span>
                 </div>
               )}
               {def.trash_cost !== null && def.trash_cost !== undefined && (
                 <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
                   <Trash2 className="w-4 h-4 text-red-400" />
-                  <span className="text-slate-400">Trash:</span>
+                  <Keyword id="trash-cost" className="text-slate-400">Trash:</Keyword>
                   <span className="font-bold text-red-300">{def.trash_cost} Credits</span>
                 </div>
               )}
@@ -127,13 +129,14 @@ export const CardZoomModal: React.FC<CardZoomModalProps> = ({
               <div className="bg-slate-900/80 rounded-xl p-4 border border-slate-800 text-sm leading-relaxed mb-4">
                 <div
                   dangerouslySetInnerHTML={{
-                    __html: def.text
-                      .replace(/\[credit\]/g, ` <span class="text-amber-400">${CREDIT_ICON_HTML}</span> `)
-                      .replace(/\[click\]/g, ' ⏱️ ')
-                      .replace(/\[subroutine\]/g, '<span class="text-cyan-400 font-bold block mt-1">↳ Subroutine: </span>')
-                      .replace(/\[trash\]/g, ' 🗑️ ')
-                      .replace(/\[recurring-credit\]/g, ` <span class="text-amber-300">${RECURRING_CREDIT_ICON_HTML}</span> `)
-                      .replace(/\[link\]/g, ' 🔗 ')
+                    __html: annotateKeywords(def.text)
+                      .replace(/\[credit\]/g, ` <span data-kw="credit" class="kw-label text-amber-400">${CREDIT_ICON_HTML}</span> `)
+                      .replace(/\[click\]/g, ' <span data-kw="click" class="kw-label">⏱️</span> ')
+                      .replace(/\[subroutine\]/g, '<span data-kw="subroutine" class="kw-label text-cyan-400 font-bold block mt-1">↳ Subroutine: </span>')
+                      .replace(/\[trash\]/g, ' <span data-kw="trash" class="kw-label">🗑️</span> ')
+                      .replace(/\[recurring-credit\]/g, ` <span data-kw="recurring-credit" class="kw-label text-amber-300">${RECURRING_CREDIT_ICON_HTML}</span> `)
+                      .replace(/\[mu\]/g, '<span data-kw="mu" class="kw-label font-bold"> MU</span>')
+                      .replace(/\[link\]/g, ' <span data-kw="link" class="kw-label">🔗</span> ')
                       .replace(/\n/g, '<br />'),
                   }}
                 />

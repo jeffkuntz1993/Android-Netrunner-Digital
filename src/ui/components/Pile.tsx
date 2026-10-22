@@ -2,6 +2,8 @@ import React from 'react';
 import { CardInstance, SideCode } from '../../core';
 import { getCardBackUrl } from '../../data/cards';
 import { CardView } from './CardView';
+import { Keyword } from './Keyword';
+import { labelKeyword } from '../glossary';
 
 const SIZE = { sm: 'w-28 h-40', md: 'w-36 h-52', lg: 'w-44 h-64' } as const;
 
@@ -52,6 +54,6 @@ export const Pile: React.FC<PileProps> = ({ label, count, side, topCard, size = 
         </span>
       )}
     </button>
-    <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{label}</span>
+    <Keyword id={labelKeyword(label)} className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{label}</Keyword>
   </div>
 );

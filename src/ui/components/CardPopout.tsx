@@ -4,6 +4,7 @@ import { CardInstance } from '../../core/types/card';
 import { cardDef, getCardImageUrl } from '../../data/cards';
 import { FACTION_COLOR, FACTION_LABEL, typeLine } from '../cardLabels';
 import { Shield, Zap, Award, Trash2, Clock, AlertCircle, Lock } from 'lucide-react';
+import { GLOSSARY, annotateKeywords, cardKeywords } from '../glossary';
 import { CreditIcon, Credits, CREDIT_ICON_HTML, RECURRING_CREDIT_ICON_HTML } from './CreditIcon';
 
 interface CardPopoutProps {
@@ -198,16 +199,29 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
               <div
                 className="card-rules-text font-mono space-y-1"
                 dangerouslySetInnerHTML={{
-                  __html: def.text
-                    .replace(/\[credit\]/g, `<span class="text-amber-400 font-bold inline-flex items-center">${CREDIT_ICON_HTML}</span>`)
-                    .replace(/\[click\]/g, '<span class="text-red-400 font-bold inline-flex items-center">⏱️</span>')
-                    .replace(/\[subroutine\]/g, '<span class="text-cyan-400 font-bold block mt-1">↳ <strong class="text-white">Subroutine:</strong></span>')
-                    .replace(/\[trash\]/g, '<span class="text-red-400 font-bold inline-flex items-center">🗑️</span>')
-                    .replace(/\[recurring-credit\]/g, `<span class="text-amber-300 font-bold inline-flex items-center">${RECURRING_CREDIT_ICON_HTML}</span>`)
-                    .replace(/\[link\]/g, '<span class="text-emerald-400 font-bold inline-flex items-center">🔗</span>')
+                  __html: annotateKeywords(def.text)
+                    .replace(/\[credit\]/g, `<span data-kw="credit" class="kw-label text-amber-400 font-bold inline-flex items-center">${CREDIT_ICON_HTML}</span>`)
+                    .replace(/\[click\]/g, '<span data-kw="click" class="kw-label text-red-400 font-bold inline-flex items-center">⏱️</span>')
+                    .replace(/\[subroutine\]/g, '<span data-kw="subroutine" class="kw-label text-cyan-400 font-bold block mt-1">↳ <strong class="text-white">Subroutine:</strong></span>')
+                    .replace(/\[trash\]/g, '<span data-kw="trash" class="kw-label text-red-400 font-bold inline-flex items-center">🗑️</span>')
+                    .replace(/\[recurring-credit\]/g, `<span data-kw="recurring-credit" class="kw-label text-amber-300 font-bold inline-flex items-center">${RECURRING_CREDIT_ICON_HTML}</span>`)
+                    .replace(/\[mu\]/g, '<span data-kw="mu" class="kw-label text-pink-300 font-bold"> MU</span>')
+                    .replace(/\[link\]/g, '<span data-kw="link" class="kw-label text-emerald-400 font-bold inline-flex items-center">🔗</span>')
                     .replace(/\n/g, '<br />'),
                 }}
               />
+            </div>
+          )}
+
+          {/* The popout can't be hovered, so list what this card's rules terms mean */}
+          {def.text && cardKeywords(def.text).length > 0 && (
+            <div className="mt-2 space-y-1 text-[10px] leading-snug" data-testid="popout-keywords">
+              {cardKeywords(def.text).map(id => (
+                <div key={id}>
+                  <span className="font-bold text-amber-300">{GLOSSARY[id].term}:</span>{' '}
+                  <span className="text-slate-400">{GLOSSARY[id].text}</span>
+                </div>
+              ))}
             </div>
           )}
 

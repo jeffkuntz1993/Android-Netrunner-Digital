@@ -5,6 +5,7 @@ import { Layers, Lock, Eye, AlertCircle } from 'lucide-react';
 import { CardPopout } from './CardPopout';
 import { motion } from 'framer-motion';
 import { Credits } from './CreditIcon';
+import { Keyword } from './Keyword';
 
 export interface CardViewProps {
   card: CardInstance;
@@ -84,7 +85,7 @@ const CardFace: React.FC<CardViewProps> = ({
 
         {/* Counter badges if advanced */}
         {card.advancementCounters > 0 && (
-          <div className="absolute -top-2 -right-2 bg-amber-400 text-black font-bold px-2 py-0.5 rounded-full text-xs shadow-md z-20">
+          <div data-kw="advance" className="absolute -top-2 -right-2 bg-amber-400 text-black font-bold px-2 py-0.5 rounded-full text-xs shadow-md z-20">
             ★ {card.advancementCounters}
           </div>
         )}
@@ -155,13 +156,13 @@ const CardFace: React.FC<CardViewProps> = ({
       {isUnrezzed && (
         <div className="absolute top-1 left-1 bg-cyan-950/90 text-cyan-300 border border-cyan-700/80 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase shadow z-10 flex items-center gap-1 backdrop-blur-sm">
           <Eye className="w-2.5 h-2.5 text-cyan-400" />
-          <span>Unrezzed</span>
+          <Keyword id="unrezzed">Unrezzed</Keyword>
         </div>
       )}
 
       {/* Advancement Counter Badge */}
       {card.advancementCounters > 0 && (
-        <div className="absolute top-1 right-1 bg-amber-400 text-black font-extrabold px-1.5 py-0.5 rounded-full text-[10px] shadow-lg z-20 border border-amber-200">
+        <div data-kw="advance" className="absolute top-1 right-1 bg-amber-400 text-black font-extrabold px-1.5 py-0.5 rounded-full text-[10px] shadow-lg z-20 border border-amber-200">
           ★ {card.advancementCounters}
         </div>
       )}
@@ -170,12 +171,12 @@ const CardFace: React.FC<CardViewProps> = ({
       {((card.tokens.credit ?? 0) > 0 || (card.tokens.virus ?? 0) > 0) && (
         <div className="absolute bottom-1 right-1 flex flex-col items-end gap-0.5 z-20">
           {(card.tokens.credit ?? 0) > 0 && (
-            <span className="bg-amber-500 text-black font-extrabold px-1.5 py-0.5 rounded-full text-[10px] shadow-lg border border-amber-200" title="Hosted credits">
+            <span className="bg-amber-500 text-black font-extrabold px-1.5 py-0.5 rounded-full text-[10px] shadow-lg border border-amber-200" data-kw="credit">
               <Credits amount={card.tokens.credit ?? 0} />
             </span>
           )}
           {(card.tokens.virus ?? 0) > 0 && (
-            <span className="bg-lime-500 text-black font-extrabold px-1.5 py-0.5 rounded-full text-[10px] shadow-lg border border-lime-200" title="Virus counters">
+            <span className="bg-lime-500 text-black font-extrabold px-1.5 py-0.5 rounded-full text-[10px] shadow-lg border border-lime-200" data-kw="virus-counter">
               ☣ {card.tokens.virus}
             </span>
           )}

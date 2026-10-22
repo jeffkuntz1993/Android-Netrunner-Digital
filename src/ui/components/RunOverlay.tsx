@@ -8,6 +8,12 @@ import { EncounterPanel } from './EncounterPanel';
 import { ArrowRight, LogOut, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { Credits } from './CreditIcon';
 import { FloatingPanel } from './FloatingPanel';
+import { Keyword } from './Keyword';
+
+/** The glossary entry that explains each run phase. */
+const PHASE_KEYWORD: Record<string, string> = {
+  approach_ice: 'approach', encounter_ice: 'encounter', approach_server: 'approach', access: 'breach',
+};
 
 interface RunOverlayProps {
   state: GameState;
@@ -77,7 +83,7 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
             </h3>
           </div>
           <span className="text-xs font-mono bg-pink-950 text-pink-300 px-2.5 py-1 rounded-lg border border-pink-700 font-bold shrink-0">
-            PHASE: {activeRun.phase.toUpperCase()}
+            PHASE: <Keyword id={PHASE_KEYWORD[activeRun.phase] ?? 'run'}>{activeRun.phase.toUpperCase()}</Keyword>
           </span>
         </div>
       }
@@ -104,7 +110,7 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
                   {currentIce.isRezzed ? (
                     <>
                       <div className="text-cyan-300 font-bold">
-                        Strength: {iceStrength(state, currentIce)} • {cardDef(currentIce).keywords}
+                        <Keyword id="strength">Strength</Keyword>: {iceStrength(state, currentIce)} • {cardDef(currentIce).keywords}
                       </div>
                       <div className="text-[11px] text-slate-300 mt-1 line-clamp-2">
                         {cardDef(currentIce).text}

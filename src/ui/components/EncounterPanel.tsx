@@ -15,6 +15,7 @@ import {
 } from '../../core';
 import { Scissors, TrendingUp, Clock, Sparkles } from 'lucide-react';
 import { Credits } from './CreditIcon';
+import { Keyword } from './Keyword';
 
 interface EncounterPanelProps {
   state: GameState;
@@ -55,9 +56,10 @@ export const EncounterPanel: React.FC<EncounterPanelProps> = ({ state, onAction,
   return (
     <div className="mt-3 border-t border-pink-900/50 pt-3 space-y-3" data-testid="encounter-panel">
       <div className="text-xs font-mono text-slate-300">
-        Encountering <span className="text-pink-300 font-bold">{cardDef(ice).title}</span> — strength{' '}
+        <Keyword id="encounter">Encountering</Keyword> <span className="text-pink-300 font-bold">{cardDef(ice).title}</span> —{' '}
+        <Keyword id="strength">strength</Keyword>{' '}
         <span className="text-cyan-300 font-bold">{iceStrength(state, ice)}</span>
-        {encounter.resolvingIndex !== null && <span className="text-amber-300"> • subroutines resolving</span>}
+        {encounter.resolvingIndex !== null && <span className="text-amber-300"> • <Keyword id="subroutine">subroutines</Keyword> resolving</span>}
       </div>
 
       <ol className="space-y-1">

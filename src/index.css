@@ -37,3 +37,13 @@
 .glow-yellow {
   box-shadow: 0 0 15px rgba(255, 230, 0, 0.4);
 }
+
+/* Rules keywords: hover for the glossary tooltip (see ui/glossary.ts) */
+.kw {
+  text-decoration: underline dotted rgba(251, 191, 36, 0.7);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+.kw-label {
+  cursor: help;
+}

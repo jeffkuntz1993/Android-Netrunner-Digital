@@ -49,6 +49,8 @@ import {
   Ban,
 } from 'lucide-react';
 import { CreditIcon } from './ui/components/CreditIcon';
+import { Keyword } from './ui/components/Keyword';
+import { labelKeyword } from './ui/glossary';
 
 const VIEW_MODE_KEY = 'netrunner.viewMode';
 const AI_DELAY_MS = 650;
@@ -269,7 +271,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
     >
       {icon}
       <span>
-        {label}: {count}
+        <Keyword id={labelKeyword(label)}>{label}</Keyword>: {count}
       </span>
     </button>
   );
@@ -526,15 +528,15 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
             <div className="flex items-center gap-3 text-xs font-mono flex-wrap">
               <div className="flex items-center gap-1.5 bg-cyan-950/80 border border-cyan-800 px-3 py-1.5 rounded-xl text-cyan-300 shadow">
                 <CreditIcon className="w-4 h-4 text-amber-400" />
-                <span className="font-bold">{corp.credits}</span> Credits
+                <span className="font-bold">{corp.credits}</span> <Keyword id="credit">Credits</Keyword>
               </div>
               <div className="flex items-center gap-1.5 bg-cyan-950/80 border border-cyan-800 px-3 py-1.5 rounded-xl text-cyan-300 shadow">
                 <Clock className="w-4 h-4 text-red-400" />
-                <span className="font-bold">{corp.clicks}</span> / {corp.maxClicks} Clicks
+                <span className="font-bold">{corp.clicks}</span> / {corp.maxClicks} <Keyword id="click">Clicks</Keyword>
               </div>
               <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-400 shadow">
                 <Layers className="w-4 h-4 text-slate-500" />
-                <span>R&D: {corp.rd.length}</span>
+                <span><Keyword id="rd">R&D</Keyword>: {corp.rd.length}</span>
               </div>
               {zoneButton(
                 'archives',
@@ -672,7 +674,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
           {/* Corp HQ Hand: beside the servers on wide screens */}
           <div className="w-full min-w-0 xl:w-[24rem] 2xl:w-[26rem] xl:shrink-0">
             <div className="text-xs text-cyan-400 font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
-              <span>HQ Hand ({corp.hq.length} / {corp.handSizeLimit})</span>
+              <span><Keyword id="hq">HQ</Keyword> Hand (<Keyword id="hand-size">{corp.hq.length} / {corp.handSizeLimit}</Keyword>)</span>
               <span className="text-[10px] text-slate-500 lowercase">hover to preview</span>
             </div>
             <div className="flex gap-2 xl:gap-x-0 overflow-x-auto xl:overflow-x-visible xl:flex-wrap min-w-0 py-1 xl:pl-1 w-full">
@@ -728,7 +730,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
           {/* Runner Grip Hand: beside the rig on wide screens */}
           <div className="w-full min-w-0 xl:w-[24rem] 2xl:w-[26rem] xl:shrink-0">
             <div className="text-xs text-pink-400 font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
-              <span>Grip Hand ({runner.grip.length} / {runner.handSizeLimit})</span>
+              <span><Keyword id="grip">Grip</Keyword> Hand (<Keyword id="hand-size">{runner.grip.length} / {runner.handSizeLimit}</Keyword>)</span>
               <span className="text-[10px] text-slate-500 lowercase">hover to preview</span>
             </div>
             <div className="flex gap-2 xl:gap-x-0 overflow-x-auto xl:overflow-x-visible xl:flex-wrap min-w-0 py-1 xl:pl-1 w-full">
@@ -857,19 +859,19 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
             <div className="flex items-center gap-3 text-xs font-mono flex-wrap">
               <div className="flex items-center gap-1.5 bg-pink-950/80 border border-pink-800 px-3 py-1.5 rounded-xl text-pink-300 shadow">
                 <CreditIcon className="w-4 h-4 text-amber-400" />
-                <span className="font-bold">{runner.credits}</span> Credits
+                <span className="font-bold">{runner.credits}</span> <Keyword id="credit">Credits</Keyword>
               </div>
               <div className="flex items-center gap-1.5 bg-pink-950/80 border border-pink-800 px-3 py-1.5 rounded-xl text-pink-300 shadow">
                 <Clock className="w-4 h-4 text-red-400" />
-                <span className="font-bold">{runner.clicks}</span> / {runner.maxClicks} Clicks
+                <span className="font-bold">{runner.clicks}</span> / {runner.maxClicks} <Keyword id="click">Clicks</Keyword>
               </div>
               <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-400 shadow">
                 <Zap className="w-4 h-4 text-cyan-400" />
-                <span>MU: {runner.memoryUnitsUsed} / {runner.memoryUnitsTotal}</span>
+                <span><Keyword id="mu">MU</Keyword>: {runner.memoryUnitsUsed} / {runner.memoryUnitsTotal}</span>
               </div>
               <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-400 shadow">
                 <Layers className="w-4 h-4 text-slate-500" />
-                <span>Stack: {runner.stack.length}</span>
+                <span><Keyword id="stack">Stack</Keyword>: {runner.stack.length}</span>
               </div>
               {zoneButton('heap', 'Heap', runner.heap.length, <Trash2 className="w-4 h-4 text-slate-500" />)}
               {zoneButton('runner-score', 'Stolen', runner.scoreArea.length, <Award className="w-4 h-4 text-pink-400" />)}
@@ -880,11 +882,11 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
                 data-testid="runner-tags"
               >
                 <Tag className="w-4 h-4" />
-                <span className="font-bold">{runner.tags}</span> Tag{runner.tags === 1 ? '' : 's'}
+                <span className="font-bold">{runner.tags}</span> <Keyword id="tag">Tag{runner.tags === 1 ? '' : 's'}</Keyword>
               </div>
               {runner.coreDamage > 0 && (
                 <div className="flex items-center gap-1.5 bg-red-950 border border-red-800 px-3 py-1.5 rounded-xl text-red-300 shadow">
-                  <span className="font-bold">{runner.coreDamage}</span> Core damage
+                  <span className="font-bold">{runner.coreDamage}</span> <Keyword id="core-damage">Core damage</Keyword>
                 </div>
               )}
             </div>
