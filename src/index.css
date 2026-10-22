@@ -47,3 +47,25 @@
 .kw-label {
   cursor: help;
 }
+
+/* Run highlights: the targeted server pulses pink, the ice the Runner is at glows amber */
+@keyframes run-target-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(255, 0, 85, 0.35); }
+  50% { box-shadow: 0 0 26px rgba(255, 0, 85, 0.7); }
+}
+@keyframes run-ice-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.9), 0 0 12px rgba(251, 191, 36, 0.4); }
+  50% { box-shadow: 0 0 0 2px rgba(251, 191, 36, 1), 0 0 26px rgba(251, 191, 36, 0.75); }
+}
+.run-target {
+  animation: run-target-pulse 1.6s ease-in-out infinite;
+}
+.run-ice {
+  animation: run-ice-pulse 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .run-target,
+  .run-ice {
+    animation: none;
+  }
+}

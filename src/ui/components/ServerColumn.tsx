@@ -1,5 +1,5 @@
 import React from 'react';
-import { ServerState } from '../../core/types/state';
+import { RunState, ServerState } from '../../core/types/state';
 import { CardInstance } from '../../core/types/card';
 import { CardView } from './CardView';
 import { cardDef } from '../../data/cards';
@@ -11,7 +11,8 @@ interface ServerColumnProps {
   activePlayer: 'corp' | 'runner';
   perspective?: 'both' | 'corp' | 'runner';
   cardSize?: 'sm' | 'md' | 'lg';
-  isRunTarget?: boolean;
+  /** The run in progress, when it targets this server: highlights the server and the ice the Runner is at. */
+  run?: RunState | null;
   onInitiateRun?: (serverId: string) => void;
   onSelectServer?: (serverId: string) => void;
   onRezCard?: (instanceId: string) => void;
@@ -30,6 +31,12 @@ interface ServerColumnProps {
 const ICE_SIZE = { sm: 'xs', md: 'sm', lg: 'md' } as const;
 const SIDEWAYS_BOX = { sm: 'w-28 h-20', md: 'w-40 h-28', lg: 'w-52 h-36' } as const;
 
+const ICE_PHASE_LABEL: Partial<Record<RunState['phase'], string>> = {
+  approach_ice: 'Approaching',
+  encounter_ice: 'Encountering',
+  pass_ice: 'Passing',
+};
+
 const smallButton =
   'mt-1 px-2 py-0.5 w-full bg-cyan-950 hover:bg-cyan-800 text-cyan-300 text-[11px] font-mono font-bold rounded border border-cyan-600 shadow flex items-center justify-center gap-1 transition-all';
 
@@ -38,7 +45,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
   activePlayer,
   perspective = 'both',
   cardSize = 'sm',
-  isRunTarget = false,
+  run = null,
   onInitiateRun,
   onSelectServer,
   onRezCard,
@@ -51,16 +58,31 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
   anchor,
 }) => {
   const canCorpPeek = perspective !== 'runner';
+  const isRunTarget = run !== null;
+  // The ice the Runner is at, and what they're doing there
+  const runIceId =
+    run && (run.phase === 'approach_ice' || run.phase === 'encounter_ice' || run.phase === 'pass_ice')
+      ? (run.encounter?.iceId ?? (run.icePosition !== null ? server.ice[run.icePosition]?.instanceId : undefined))
+      : undefined;
+  const iceLabel = run ? ICE_PHASE_LABEL[run.phase] : undefined;
+  const atRoot = run !== null && (run.phase === 'approach_server' || run.phase === 'access');
 
   return (
     <div
       onClick={() => onSelectServer && onSelectServer(server.id)}
-      className={`flex flex-col items-center bg-slate-900/70 border rounded-2xl p-3 min-w-[170px] sm:min-w-[190px] transition-all duration-200 shadow-lg ${
+      data-testid={`server-${server.id}`}
+      data-run-target={isRunTarget || undefined}
+      className={`relative flex flex-col items-center bg-slate-900/70 border rounded-2xl p-3 min-w-[170px] sm:min-w-[190px] transition-all duration-200 shadow-lg ${
         isRunTarget
-          ? 'border-cyber-neonPink ring-2 ring-cyber-neonPink/50 bg-pink-950/30'
+          ? 'border-cyber-neonPink ring-2 ring-cyber-neonPink/60 bg-pink-950/30 run-target'
           : 'border-slate-800 hover:border-slate-600'
       }`}
     >
+      {isRunTarget && (
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-30 px-2 py-0.5 rounded-full bg-cyber-neonPink text-white text-[10px] font-bold font-mono uppercase tracking-widest shadow-lg flex items-center gap-1 whitespace-nowrap pointer-events-none">
+          <Crosshair className="w-3 h-3" /> Run target
+        </div>
+      )}
       {/* Server Header */}
       <div className="flex items-center justify-between w-full mb-3 pb-1.5 border-b border-slate-800 text-xs font-mono">
         <span className="font-bold text-cyber-neonCyan flex items-center gap-1.5 truncate">
@@ -82,9 +104,16 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
       </div>
 
       {/* Server Root on the Corp's side: the central's own card, then assets, agendas and upgrades side by side */}
-      <div className="flex flex-col items-center gap-1.5 w-full pb-2.5 mb-2 border-b border-slate-800">
+      <div
+        className={`flex flex-col items-center gap-1.5 w-full pb-2.5 mb-2 border-b border-slate-800 rounded-xl transition-colors ${
+          atRoot ? 'bg-pink-500/10 ring-1 ring-cyber-neonPink/60' : ''
+        }`}
+      >
         <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider font-bold">
           Root ({server.root.length})
+          {atRoot && (
+            <span className="ml-1.5 text-cyber-neonPink">· {run?.phase === 'access' ? 'Breaching' : 'Approaching'}</span>
+          )}
         </div>
         <div className="flex gap-2 flex-nowrap justify-center items-start min-h-[70px] w-full py-1">
           {anchor}
@@ -149,8 +178,16 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
         ) : (
           server.ice.map((iceCard) => (
             <div key={iceCard.instanceId} className="flex flex-col items-center w-full">
+              {runIceId === iceCard.instanceId && iceLabel && (
+                <div className="mb-1 px-2 py-0.5 rounded-full bg-amber-400 text-black text-[10px] font-bold font-mono uppercase tracking-wider shadow">
+                  {iceLabel}
+                </div>
+              )}
               {/* Ice lies sideways, as on the table; the hover popout shows it upright */}
-              <div className={`relative ${SIDEWAYS_BOX[cardSize]}`}>
+              <div
+                data-run-ice={runIceId === iceCard.instanceId || undefined}
+                className={`relative ${SIDEWAYS_BOX[cardSize]} rounded-xl ${runIceId === iceCard.instanceId ? 'run-ice' : ''}`}
+              >
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90">
                   <CardView
                     card={iceCard}

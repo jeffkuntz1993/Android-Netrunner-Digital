@@ -26,6 +26,7 @@ import { CardZoomModal } from './ui/components/CardZoomModal';
 import { AbilityBar } from './ui/components/AbilityBar';
 import { ZoneGroup, ZoneViewer } from './ui/components/ZoneViewer';
 import { Pile } from './ui/components/Pile';
+import { HandRow } from './ui/components/HandRow';
 import { HandoffScreen } from './ui/components/HandoffScreen';
 import { GameOverModal } from './ui/components/GameOverModal';
 import { ViewMode, Viewer, actingSide, canActAs, canSeeCorpSecrets, canSeeRunnerSecrets, corpRezWindow } from './ui/viewer';
@@ -284,6 +285,9 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
   };
 
   const { corp, runner, activePlayer, activeRun, winner, winReason } = gameState;
+  const discardedIds = new Set(
+    [...runner.heap, ...corp.archives.faceUp, ...corp.archives.faceDown].map(c => c.instanceId),
+  );
 
   const selectedCard = [...corp.hq, ...runner.grip].find(c => c.instanceId === selectedCardId);
   const selectedIsPlayable = selectedCard && ['operation', 'event'].includes(cardDef(selectedCard).type_code);
@@ -623,6 +627,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
                 activePlayer={activePlayer}
                 perspective={viewer}
                 cardSize={boardCardSize}
+                run={activeRun?.server === server.id ? activeRun : null}
                 onInitiateRun={
                   runnerCanAct
                     ? (sId) => handleAction({ type: 'INITIATE_RUN', player: 'runner', targetServerId: sId })
@@ -677,23 +682,17 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
               <span><Keyword id="hq">HQ</Keyword> Hand (<Keyword id="hand-size">{corp.hq.length} / {corp.handSizeLimit}</Keyword>)</span>
               <span className="text-[10px] text-slate-500 lowercase">hover to preview</span>
             </div>
-            <div className="flex gap-2 xl:gap-x-0 overflow-x-auto xl:overflow-x-visible xl:flex-wrap min-w-0 py-1 xl:pl-1 w-full">
-              {corp.hq.map((card) => (
-                <div key={card.instanceId} className="relative shrink-0 hover:z-10 xl:[&:not(:first-child)]:-ml-10">
-                <CardView
-                  card={card}
-                  size={handCardSize}
-                  notInstalled
-                  isFaceDown={!canSeeCorpSecrets(viewer)}
-                  canPeek={canSeeCorpSecrets(viewer)}
-                  isSelectable={activePlayer === 'corp' && corpCanAct}
-                  isSelected={selectedCardId === card.instanceId}
-                  onClick={() => setSelectedCardId(card.instanceId)}
-                  onInspect={canSeeCorpSecrets(viewer) ? setInspectedCard : undefined}
-                />
-                </div>
-              ))}
-            </div>
+            <HandRow
+              cards={corp.hq}
+              side="corp"
+              size={handCardSize}
+              canSee={canSeeCorpSecrets(viewer)}
+              isSelectable={activePlayer === 'corp' && corpCanAct}
+              selectedCardId={selectedCardId}
+              onSelect={setSelectedCardId}
+              onInspect={setInspectedCard}
+              discardedIds={discardedIds}
+            />
           </div>
           </div>
         </section>
@@ -733,23 +732,17 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
               <span><Keyword id="grip">Grip</Keyword> Hand (<Keyword id="hand-size">{runner.grip.length} / {runner.handSizeLimit}</Keyword>)</span>
               <span className="text-[10px] text-slate-500 lowercase">hover to preview</span>
             </div>
-            <div className="flex gap-2 xl:gap-x-0 overflow-x-auto xl:overflow-x-visible xl:flex-wrap min-w-0 py-1 xl:pl-1 w-full">
-              {runner.grip.map((card) => (
-                <div key={card.instanceId} className="relative shrink-0 hover:z-10 xl:[&:not(:first-child)]:-ml-10">
-                <CardView
-                  card={card}
-                  size={handCardSize}
-                  notInstalled
-                  isFaceDown={!canSeeRunnerSecrets(viewer)}
-                  canPeek={canSeeRunnerSecrets(viewer)}
-                  isSelectable={activePlayer === 'runner' && runnerCanAct}
-                  isSelected={selectedCardId === card.instanceId}
-                  onClick={() => setSelectedCardId(card.instanceId)}
-                  onInspect={canSeeRunnerSecrets(viewer) ? setInspectedCard : undefined}
-                />
-                </div>
-              ))}
-            </div>
+            <HandRow
+              cards={runner.grip}
+              side="runner"
+              size={handCardSize}
+              canSee={canSeeRunnerSecrets(viewer)}
+              isSelectable={activePlayer === 'runner' && runnerCanAct}
+              selectedCardId={selectedCardId}
+              onSelect={setSelectedCardId}
+              onInspect={setInspectedCard}
+              discardedIds={discardedIds}
+            />
           </div>
           </div>
 

@@ -1,0 +1,88 @@
+import React from 'react';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
+import { CardInstance } from '../../core/types/card';
+import { CardView } from './CardView';
+
+interface HandRowProps {
+  cards: CardInstance[];
+  side: 'corp' | 'runner';
+  size: 'sm' | 'md' | 'lg';
+  /** Can this viewer see the faces? If not, cards come and go face down. */
+  canSee: boolean;
+  isSelectable: boolean;
+  selectedCardId: string | null;
+  onSelect: (instanceId: string) => void;
+  onInspect?: (card: CardInstance) => void;
+  /** Instance ids now in the heap or Archives, so a card that left the hand that way drops instead of lifting. */
+  discardedIds: ReadonlySet<string>;
+}
+
+type ExitCustom = ReadonlySet<string>;
+
+/**
+ * A hand of cards that animates its changes: a drawn card slides in from the
+ * deck, a played or installed card lifts out toward the table, a discarded
+ * card drops away, and the rest close the gap.
+ */
+export const HandRow: React.FC<HandRowProps> = ({
+  cards,
+  side,
+  size,
+  canSee,
+  isSelectable,
+  selectedCardId,
+  onSelect,
+  onInspect,
+  discardedIds,
+}) => {
+  const glow = side === 'corp' ? 'rgba(0, 240, 255, 0.55)' : 'rgba(255, 0, 85, 0.55)';
+
+  return (
+    <MotionConfig reducedMotion="user">
+      <div
+        data-testid={`hand-${side}`}
+        className="relative flex gap-2 xl:gap-x-0 overflow-x-auto xl:overflow-x-visible xl:flex-wrap min-w-0 py-1 xl:pl-1 w-full"
+      >
+        <AnimatePresence initial={false} mode="popLayout" custom={discardedIds}>
+          {cards.map(card => (
+            <motion.div
+              key={card.instanceId}
+              layout
+              custom={discardedIds}
+              className="relative shrink-0 hover:z-10 xl:[&:not(:first-child)]:-ml-10 rounded-xl"
+              initial={{ opacity: 0, x: 40, y: -24, scale: 0.8, boxShadow: `0 0 0px ${glow}` }}
+              animate={{
+                opacity: 1,
+                x: 0,
+                y: 0,
+                scale: 1,
+                rotate: 0,
+                boxShadow: [`0 0 18px ${glow}`, '0 0 0px rgba(0,0,0,0)'],
+              }}
+              variants={{
+                leave: (discarded: ExitCustom) =>
+                  discarded.has(card.instanceId)
+                    ? { opacity: 0, y: 40, rotate: side === 'corp' ? -8 : 8, scale: 0.85, transition: { duration: 0.3, ease: 'easeIn' } }
+                    : { opacity: 0, y: -36, scale: 1.08, transition: { duration: 0.28, ease: 'easeOut' } },
+              }}
+              exit="leave"
+              transition={{ duration: 0.3, ease: 'easeOut', layout: { duration: 0.25 }, boxShadow: { duration: 0.7 } }}
+            >
+              <CardView
+                card={card}
+                size={size}
+                notInstalled
+                isFaceDown={!canSee}
+                canPeek={canSee}
+                isSelectable={isSelectable}
+                isSelected={selectedCardId === card.instanceId}
+                onClick={() => onSelect(card.instanceId)}
+                onInspect={canSee ? onInspect : undefined}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+    </MotionConfig>
+  );
+};

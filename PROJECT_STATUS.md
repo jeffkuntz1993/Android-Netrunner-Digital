@@ -162,9 +162,11 @@ Netrunner/
 - [x] Hard difficulty: Monte Carlo look-ahead over re-dealt hidden information (`src/ai/search.ts`).
 
 ### Phase 4: UI Polish & Animation Juice
-- [ ] Framer Motion card sliding from Hand $\rightarrow$ Rig / Server.
-- [ ] CSS 3D card flip when cards are rezzed or accessed.
-- [ ] Sound effects for clicks, credits, ice rez hum, and run alarms.
+- [x] Hand animations (`HandRow`): drawn cards slide in, played/installed cards lift out, discarded cards drop away, the rest close the gap. Hidden hands animate face down.
+- [ ] Cards fly from hand to their exact spot in the Rig / Server.
+- [x] Card flip when cards are rezzed, revealed or turned over (M7).
+- [x] Sound effects for actions (M7, `src/ui/sound.ts`).
+- [x] Run highlights: the targeted server pulses with a RUN TARGET badge; the ice the Runner is at glows with Approaching / Encountering / Passing; the root shows Approaching / Breaching.
 - [x] Full card zoom modal on click/inspect and high-res hover popout via Portal.
 - [x] Dynamic card scaling system (Normal / Large / Huge) with legible card art and text.
 - [x] Decision pop-ups (prompts, run overlay, game over) are draggable and minimizable so the board stays visible.
@@ -227,3 +229,4 @@ Netrunner/
 | **2026-10-22** | Claude | Roadmap M3: `engine/triggers.ts` (active cards, `fireTrigger`) and `engine/cardEffects.ts` (turn flags, counters, hosted credits, `spendCredits`, derived hand size/MU, trash/derez/remove from game, console and unique limits); `USE_ABILITY` action; `startRun` with run options; breach extra accesses; access prompt with mid-access alternatives (Carnivore); "when accessed" hook; hosting via `INSTALL_CARD.hostInstanceId`. Scripted 37 cards in `scripts/corpCards.ts`, `scripts/runnerCards.ts` and `scripts/events.ts`. UI: `AbilityBar`, ability buttons in the encounter panel, counter badges, install-on-ice buttons, access-ability buttons. `tests/abilities.test.ts` and a random-playout stress test (`tests/playout.test.ts`). |
 | **2026-10-22** | Claude | Roadmap M2: `EncounterState` on `RunState`; `BREAK_SUBROUTINE` (subroutine indices), `BOOST_BREAKER`, `BIOROID_BREAK`; `IceScript`/`BreakerScript` on card scripts; `engine/ice.ts`, `engine/damage.ts`, `engine/runEnd.ts`, `engine/actions/breaking.ts`; rez hook for ice rezzed mid-run (Ping); install cost modifiers (Carmen); jack out only after passing ice. Scripted 11 ice + 7 breakers. UI: `EncounterPanel` in the run overlay (subroutines, legal break/boost buttons, context-aware Continue label, Jack Out disabled when illegal). `tests/ice.test.ts` (124 tests total). |
 | **2026-10-21** | Claude | Roadmap M1: `PLAY_OPERATION_OR_EVENT` basic action (click + cost, card to Archives/heap face up, then effect); `src/core/scripts/` card-script registry (`canPlay`/`onPlay`/`onPromptAnswer`) with generic `effect_choice`/`effect_cards` prompts; `runsThisTurn` and `CardInstance.installedTurn` tracking; `drawCards` helper; `installRunnerCardFrom` for installs from effects. Scripted 11 cards (see roadmap above). UI: Play button for selected operations/events (disabled with "not implemented" for unscripted cards), effect prompts in `PromptPanel`. `tests/operationsEvents.test.ts` (92 tests total). |
+| **2026-10-22** | Claude | Visual clarity: `ServerColumn` takes the active `run` (replaces unused `isRunTarget`) and highlights the target server, the current ice and the root by run phase (CSS pulses in `index.css`, off with prefers-reduced-motion). New `src/ui/components/HandRow.tsx` renders HQ and the Grip with framer-motion `AnimatePresence` (enter, layout, exit; exit drops if the card is now in the heap/Archives, lifts otherwise). |
