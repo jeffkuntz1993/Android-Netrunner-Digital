@@ -954,7 +954,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
         />
       )}
 
-      {winner && !gameOverHidden && (
+      {winner && (
         <GameOverModal
           winner={winner}
           reason={winReason}
@@ -963,7 +963,8 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
           humanSide={humanSide}
           onRematch={onRematch}
           onDeckSelect={onNewGame}
-          onViewBoard={() => setGameOverHidden(true)}
+          minimized={gameOverHidden}
+          onMinimizedChange={setGameOverHidden}
         />
       )}
 

@@ -1,8 +1,8 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { motion } from 'framer-motion';
 import { SideCode } from '../../core';
 import { Trophy, RotateCcw, LayoutGrid, Eye } from 'lucide-react';
+import { FloatingPanel } from './FloatingPanel';
 
 interface GameOverModalProps {
   winner: SideCode;
@@ -13,8 +13,9 @@ interface GameOverModalProps {
   humanSide: SideCode | null;
   onRematch: () => void;
   onDeckSelect: () => void;
-  /** Hide the box to look over the final board. */
-  onViewBoard: () => void;
+  /** Collapsed to a bar so the final board shows ("Look at the final board" or the minimize button). */
+  minimized: boolean;
+  onMinimizedChange: (minimized: boolean) => void;
 }
 
 /** Shown over the board when the game ends. */
@@ -26,25 +27,30 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   humanSide,
   onRematch,
   onDeckSelect,
-  onViewBoard,
+  minimized,
+  onMinimizedChange,
 }) => {
   const isCorp = winner === 'corp';
   const title = humanSide ? (humanSide === winner ? 'YOU WIN' : 'YOU LOSE') : `${isCorp ? 'CORP' : 'RUNNER'} WINS`;
   return createPortal(
-    <div className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4" data-testid="game-over">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="game-over-title"
-        className={`w-full max-w-md text-center rounded-3xl border-2 p-8 font-mono bg-slate-950 shadow-2xl ${
-          isCorp ? 'border-cyan-400 shadow-cyan-900/60' : 'border-pink-400 shadow-pink-900/60'
-        }`}
-      >
+    <FloatingPanel
+      id="game-over"
+      testId="game-over"
+      zIndexClass="z-[70]"
+      role="dialog"
+      ariaLabelledBy="game-over-title"
+      accentClass={isCorp ? 'border-cyan-400 shadow-cyan-900/60' : 'border-pink-400 shadow-pink-900/60'}
+      dotClass="bg-amber-400"
+      defaultPlacement="left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+      minimizedPlacement="left-1/2 top-20 -translate-x-1/2"
+      widthClass="w-[28rem]"
+      minimized={minimized}
+      onMinimizedChange={onMinimizedChange}
+      minimizedLabel={`Game over: ${title.toLowerCase()}`}
+      title={<div className="text-[11px] tracking-[0.3em] text-slate-500 font-bold text-center">GAME OVER</div>}
+    >
+      <div className="text-center px-3 pb-3">
         <Trophy className="w-12 h-12 mx-auto mb-3 text-amber-400" />
-        <div className="text-[11px] tracking-[0.3em] text-slate-500 font-bold mb-1">GAME OVER</div>
         <h2
           id="game-over-title"
           className={`font-cyber font-black tracking-widest text-2xl mb-2 ${isCorp ? 'text-cyan-400' : 'text-pink-400'}`}
@@ -75,15 +81,15 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             <LayoutGrid className="w-4 h-4" /> Back to deck selection
           </button>
           <button
-            onClick={onViewBoard}
+            onClick={() => onMinimizedChange(true)}
             data-testid="view-board"
             className="w-full px-5 py-2 text-slate-400 hover:text-white text-xs flex items-center justify-center gap-2"
           >
             <Eye className="w-3.5 h-3.5" /> Look at the final board
           </button>
         </div>
-      </motion.div>
-    </div>,
+      </div>
+    </FloatingPanel>,
     document.body
   );
 };

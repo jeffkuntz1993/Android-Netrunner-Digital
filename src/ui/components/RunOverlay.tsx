@@ -7,6 +7,7 @@ import { GameAction, iceStrength, isLegalAction } from '../../core';
 import { EncounterPanel } from './EncounterPanel';
 import { ArrowRight, LogOut, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { Credits } from './CreditIcon';
+import { FloatingPanel } from './FloatingPanel';
 
 interface RunOverlayProps {
   state: GameState;
@@ -55,22 +56,32 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
         : 'Continue Run';
 
   return (
-    <div className="fixed inset-x-0 bottom-6 z-40 max-w-3xl mx-auto px-4 pointer-events-auto">
-      <div className="bg-slate-950/95 border-2 border-cyber-neonPink rounded-2xl p-5 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom duration-300">
-        <div className="flex items-center justify-between border-b border-pink-900/50 pb-2.5 mb-3">
-          <div className="flex items-center gap-2.5">
-            <span className="relative flex h-3.5 w-3.5">
+    <FloatingPanel
+      id="run"
+      testId="run-overlay"
+      zIndexClass="z-40"
+      accentClass="border-cyber-neonPink"
+      dotClass="bg-pink-400"
+      defaultPlacement="left-1/2 bottom-6 -translate-x-1/2"
+      widthClass="w-[48rem]"
+      minimizedLabel={`Run on ${server?.name ?? 'server'}: ${activeRun.phase.replace(/_/g, ' ')}`}
+      title={
+        <div className="flex items-center justify-between gap-2 border-b border-pink-900/50 pb-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="relative flex h-3.5 w-3.5 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-cyber-neonPink"></span>
             </span>
-            <h3 className="font-cyber font-bold text-cyber-neonPink text-sm tracking-wider">
+            <h3 className="font-cyber font-bold text-cyber-neonPink text-sm tracking-wider truncate">
               RUN IN PROGRESS // {server?.name?.toUpperCase()}
             </h3>
           </div>
-          <span className="text-xs font-mono bg-pink-950 text-pink-300 px-2.5 py-1 rounded-lg border border-pink-700 font-bold">
+          <span className="text-xs font-mono bg-pink-950 text-pink-300 px-2.5 py-1 rounded-lg border border-pink-700 font-bold shrink-0">
             PHASE: {activeRun.phase.toUpperCase()}
           </span>
         </div>
+      }
+    >
 
         <div className="flex items-center gap-5 my-2">
           {currentIce ? (
@@ -160,7 +171,6 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
         </div>
 
         <EncounterPanel state={state} onAction={onAction} readOnly={!runnerControls} />
-      </div>
-    </div>
+    </FloatingPanel>
   );
 };

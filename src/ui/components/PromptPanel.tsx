@@ -3,6 +3,7 @@ import { CardInstance, GameState, PromptChoice, activePrompt, cardDef, findCardA
 import { CardView } from './CardView';
 import { Check, RefreshCw, Trash2, X } from 'lucide-react';
 import { Credits } from './CreditIcon';
+import { FloatingPanel } from './FloatingPanel';
 
 interface PromptPanelProps {
   state: GameState;
@@ -14,7 +15,8 @@ interface PromptPanelProps {
 
 /**
  * Shows the decision the game is waiting on, to the side it belongs to.
- * It sits below the header so New game and the view switch stay usable.
+ * It floats over the board without dimming it: drag it by its header or
+ * minimize it to a bar to look at the board while deciding.
  */
 export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onInspectCard, canAnswer = true }) => {
   const prompt = activePrompt(state);
@@ -41,11 +43,22 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
   const button = 'px-4 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition-colors disabled:opacity-40';
 
   return (
-    <div className="fixed inset-x-0 bottom-0 top-16 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className={`w-full max-w-4xl bg-slate-950 border-2 rounded-2xl p-5 shadow-2xl font-mono ${accent}`}>
-        <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${isCorp ? 'text-cyan-400' : 'text-pink-400'}`}>
+    <FloatingPanel
+      key={prompt.id}
+      id="prompt"
+      testId="prompt-panel"
+      accentClass={accent}
+      dotClass={isCorp ? 'bg-cyan-400' : 'bg-pink-400'}
+      defaultPlacement="left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+      minimizedPlacement="left-1/2 top-20 -translate-x-1/2"
+      widthClass="w-[56rem]"
+      minimizedLabel={`Decision waiting: ${prompt.message}`}
+      title={
+        <div className={`text-xs font-bold uppercase tracking-wider ${isCorp ? 'text-cyan-400' : 'text-pink-400'}`}>
           {isCorp ? 'Corp' : 'Runner'} decision
         </div>
+      }
+    >
         <h3 className="text-sm text-slate-100 font-bold mb-4">{prompt.message}</h3>
 
         {prompt.kind === 'mulligan' && (
@@ -181,7 +194,6 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
             </>
           );
         })()}
-      </div>
-    </div>
+    </FloatingPanel>
   );
 };
