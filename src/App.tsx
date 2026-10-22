@@ -109,7 +109,17 @@ export default function App() {
       />
     );
   }
-  return <Game key={config.seed} config={config} onNewGame={() => setConfig(null)} />;
+  return (
+    <Game
+      key={config.seed}
+      config={config}
+      onNewGame={() => {
+        // Drop ?seed=... so a reload doesn't restart the old deal
+        if (window.location.search) window.history.replaceState(null, '', window.location.pathname);
+        setConfig(null);
+      }}
+    />
+  );
 }
 
 function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void }) {
@@ -241,6 +251,11 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
   );
 
   const resetGame = onNewGame;
+  // Back to the deck picker; a game still in progress is lost, so ask first
+  const leaveGame = () => {
+    if (!gameState.winner && !window.confirm('Leave this game and go back to deck selection? The game in progress will be lost.')) return;
+    onNewGame();
+  };
 
   const { corp, runner, activePlayer, activeRun, winner, winReason } = gameState;
 
@@ -277,9 +292,14 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
       {/* Top Header Bar */}
       <header className="h-16 border-b border-slate-800 bg-slate-950/90 px-4 sm:px-6 flex items-center justify-between backdrop-blur-md sticky top-0 z-30 shadow-lg">
         <div className="flex items-center gap-3">
-          <span className="font-cyber font-black tracking-widest text-base sm:text-lg bg-gradient-to-r from-cyber-neonCyan via-indigo-400 to-cyber-neonPink bg-clip-text text-transparent">
+          <button
+            onClick={leaveGame}
+            data-testid="home-logo"
+            title="Back to deck selection"
+            className="font-cyber font-black tracking-widest text-base sm:text-lg bg-gradient-to-r from-cyber-neonCyan via-indigo-400 to-cyber-neonPink bg-clip-text text-transparent hover:brightness-125 transition"
+          >
             NETRUNNER // PROTOCOL
-          </span>
+          </button>
           <div className="flex items-center gap-1.5">
             <span className="text-xs bg-slate-900 border border-slate-700 px-2.5 py-1 rounded text-slate-300 font-bold hidden sm:inline">
               TURN {gameState.turnNumber} • {activePlayer.toUpperCase()}'S TURN
@@ -415,7 +435,7 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
             {sound ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
           <button
-            onClick={resetGame}
+            onClick={leaveGame}
             className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg border border-slate-800 transition-colors"
             title="New game (pick decks)"
           >
