@@ -140,7 +140,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
         </div>
       </div>
       {/* Protecting Ice, on the Runner's side of the root: innermost at the top, outermost at the bottom */}
-      <div className="flex flex-col gap-2.5 mt-auto mb-1 w-full items-center min-h-[140px] border border-dashed border-slate-800/90 rounded-xl p-2 bg-black/40">
+      <div className="flex flex-col gap-2.5 mt-auto mb-1 w-full items-center min-h-[90px] border border-dashed border-slate-800/90 rounded-xl p-2 bg-black/40">
         <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider mb-0.5 font-bold">
           Ice Wall ({server.ice.length})
         </div>

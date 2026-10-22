@@ -4,9 +4,11 @@ import { Terminal } from 'lucide-react';
 
 interface LogFeedProps {
   logs: LogEntry[];
+  /** Height classes (default h-48). */
+  className?: string;
 }
 
-export const LogFeed: React.FC<LogFeedProps> = ({ logs }) => {
+export const LogFeed: React.FC<LogFeedProps> = ({ logs, className = 'h-48' }) => {
   const listRef = useRef<HTMLDivElement>(null);
 
   // Keep the newest entry in view by scrolling the log box itself.
@@ -17,7 +19,7 @@ export const LogFeed: React.FC<LogFeedProps> = ({ logs }) => {
   }, [logs.length]);
 
   return (
-    <div className="flex flex-col h-48 bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden font-mono text-xs shadow-inner">
+    <div className={`flex flex-col ${className} bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden font-mono text-xs shadow-inner`}>
       <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border-b border-slate-800 text-[11px] text-slate-400">
         <Terminal className="w-3.5 h-3.5 text-cyber-neonCyan" />
         <span className="font-bold tracking-wider uppercase text-slate-300">Terminal Log</span>

@@ -111,7 +111,7 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
   );
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-  const [cardScale, setCardScale] = useState<'normal' | 'large' | 'huge'>('large');
+  const [cardScale, setCardScale] = useState<'normal' | 'large' | 'huge'>('normal');
   const [inspectedCard, setInspectedCard] = useState<CardInstance | null>(null);
   const [zone, setZone] = useState<'archives' | 'heap' | 'corp-score' | 'runner-score' | 'removed' | null>(null);
   const [sound, setSound] = useState(soundEnabled);
@@ -222,7 +222,7 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
       : undefined;
 
   // Determine size classes according to selected scale
-  const handCardSize = cardScale === 'huge' ? 'xl' : cardScale === 'large' ? 'lg' : 'md';
+  const handCardSize = cardScale === 'huge' ? 'lg' : cardScale === 'large' ? 'md' : 'sm';
   const boardCardSize = cardScale === 'huge' ? 'lg' : cardScale === 'large' ? 'md' : 'sm';
 
   return (
@@ -353,7 +353,8 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
       </header>
 
       {/* Main Tabletop */}
-      <main className="flex-1 p-4 sm:p-6 max-w-7xl mx-auto w-full flex flex-col gap-6 overflow-hidden">
+      <div className="flex-1 w-full flex flex-col xl:flex-row gap-3 p-3">
+      <main className="flex-1 min-w-0 flex flex-col gap-3 overflow-hidden">
         {/* Victory Banner */}
         {winner && (
           <div className="p-5 bg-gradient-to-r from-amber-950/80 to-purple-950/80 border-2 border-amber-500 rounded-2xl flex items-center justify-between shadow-2xl">
@@ -373,8 +374,8 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
         )}
 
         {/* CORP SECTOR (TOP HALF) */}
-        <section id="corp-board" className="bg-slate-950/60 border border-cyan-950/80 rounded-3xl p-4 sm:p-6 shadow-xl relative backdrop-blur-sm w-full min-w-0">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5 pb-3 border-b border-cyan-950">
+        <section id="corp-board" className="bg-slate-950/60 border border-cyan-950/80 rounded-3xl p-3 sm:p-4 shadow-xl relative backdrop-blur-sm w-full min-w-0">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-2 pb-2 border-b border-cyan-950">
             {/* Identity & Header */}
             <div className="flex items-center gap-3">
               <span className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_10px_#00f0ff]" />
@@ -421,64 +422,6 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
               {gameState.removedFromGame.length > 0 &&
                 zoneButton('removed', 'Removed', gameState.removedFromGame.length, <Ban className="w-4 h-4 text-slate-500" />)}
             </div>
-          </div>
-
-          {/* Servers Grid */}
-          <div className="flex flex-wrap items-stretch gap-4 mb-5 pb-2 min-w-0">
-            {Object.values(corp.servers).map((server) => (
-              <ServerColumn
-                key={server.id}
-                server={server}
-                activePlayer={activePlayer}
-                perspective={viewer}
-                cardSize={boardCardSize}
-                onInitiateRun={
-                  runnerCanAct
-                    ? (sId) => handleAction({ type: 'INITIATE_RUN', player: 'runner', targetServerId: sId })
-                    : undefined
-                }
-                onRezCard={(cId) =>
-                  handleAction({ type: 'REZ_CARD', player: 'corp', cardInstanceId: cId })
-                }
-                onAdvanceCard={(cId, sId) =>
-                  handleAction({ type: 'ADVANCE_CARD', player: 'corp', cardInstanceId: cId, serverId: sId })
-                }
-                onScoreCard={(cId) =>
-                  handleAction({ type: 'SCORE_AGENDA', player: 'corp', cardInstanceId: cId })
-                }
-                canRez={(card) => corpCanAct && isLegalAction(gameState, rezAction(card))}
-                canAdvance={(card) =>
-                  corpCanAct &&
-                  isLegalAction(gameState, { type: 'ADVANCE_CARD', player: 'corp', cardInstanceId: card.instanceId, serverId: server.id })
-                }
-                canScore={(card) =>
-                  corpCanAct && isLegalAction(gameState, { type: 'SCORE_AGENDA', player: 'corp', cardInstanceId: card.instanceId })
-                }
-                onInspectCard={(card) => setInspectedCard(card)}
-                anchor={
-                  server.id === 'hq' ? (
-                    <div className="flex flex-col items-center gap-1 shrink-0">
-                      <CardView card={corp.identity} size={boardCardSize} notInstalled onInspect={setInspectedCard} />
-                      <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
-                        Identity · {corp.hq.length} in HQ
-                      </span>
-                    </div>
-                  ) : server.id === 'rd' ? (
-                    <Pile label="R&D" count={corp.rd.length} side="corp" size={boardCardSize} testId="pile-rd" />
-                  ) : server.id === 'archives' ? (
-                    <Pile
-                      label="Archives"
-                      count={corp.archives.faceUp.length + corp.archives.faceDown.length}
-                      side="corp"
-                      topCard={corp.archives.faceUp[corp.archives.faceUp.length - 1]}
-                      size={boardCardSize}
-                      onClick={() => setZone('archives')}
-                      testId="pile-archives"
-                    />
-                  ) : undefined
-                }
-              />
-            ))}
           </div>
 
           {/* Dedicated Corp Action Bar (Always fully on-screen) */}
@@ -544,16 +487,74 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
 
           {corpCanAct && <AbilityBar state={gameState} side="corp" onAction={handleAction} />}
 
-          {/* Corp HQ Hand (Full Width with min-w-0 for safe scrolling) */}
-          <div className="w-full min-w-0 pt-3 border-t border-slate-900">
+          <div className="flex flex-col xl:flex-row gap-3 mt-3 min-w-0">
+          {/* Servers Grid */}
+          <div className="flex flex-wrap items-start gap-3 flex-1 min-w-0">
+            {Object.values(corp.servers).map((server) => (
+              <ServerColumn
+                key={server.id}
+                server={server}
+                activePlayer={activePlayer}
+                perspective={viewer}
+                cardSize={boardCardSize}
+                onInitiateRun={
+                  runnerCanAct
+                    ? (sId) => handleAction({ type: 'INITIATE_RUN', player: 'runner', targetServerId: sId })
+                    : undefined
+                }
+                onRezCard={(cId) =>
+                  handleAction({ type: 'REZ_CARD', player: 'corp', cardInstanceId: cId })
+                }
+                onAdvanceCard={(cId, sId) =>
+                  handleAction({ type: 'ADVANCE_CARD', player: 'corp', cardInstanceId: cId, serverId: sId })
+                }
+                onScoreCard={(cId) =>
+                  handleAction({ type: 'SCORE_AGENDA', player: 'corp', cardInstanceId: cId })
+                }
+                canRez={(card) => corpCanAct && isLegalAction(gameState, rezAction(card))}
+                canAdvance={(card) =>
+                  corpCanAct &&
+                  isLegalAction(gameState, { type: 'ADVANCE_CARD', player: 'corp', cardInstanceId: card.instanceId, serverId: server.id })
+                }
+                canScore={(card) =>
+                  corpCanAct && isLegalAction(gameState, { type: 'SCORE_AGENDA', player: 'corp', cardInstanceId: card.instanceId })
+                }
+                onInspectCard={(card) => setInspectedCard(card)}
+                anchor={
+                  server.id === 'hq' ? (
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                      <CardView card={corp.identity} size={boardCardSize} notInstalled onInspect={setInspectedCard} />
+                      <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                        Identity · {corp.hq.length} in HQ
+                      </span>
+                    </div>
+                  ) : server.id === 'rd' ? (
+                    <Pile label="R&D" count={corp.rd.length} side="corp" size={boardCardSize} testId="pile-rd" />
+                  ) : server.id === 'archives' ? (
+                    <Pile
+                      label="Archives"
+                      count={corp.archives.faceUp.length + corp.archives.faceDown.length}
+                      side="corp"
+                      topCard={corp.archives.faceUp[corp.archives.faceUp.length - 1]}
+                      size={boardCardSize}
+                      onClick={() => setZone('archives')}
+                      testId="pile-archives"
+                    />
+                  ) : undefined
+                }
+              />
+            ))}
+          </div>
+          {/* Corp HQ Hand: beside the servers on wide screens */}
+          <div className="w-full min-w-0 xl:w-[24rem] 2xl:w-[26rem] xl:shrink-0">
             <div className="text-xs text-cyan-400 font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
               <span>HQ Hand ({corp.hq.length} / {corp.handSizeLimit})</span>
-              <span className="text-[10px] text-slate-500 lowercase">hover to preview • double-click to inspect</span>
+              <span className="text-[10px] text-slate-500 lowercase">hover to preview</span>
             </div>
-            <div className="flex gap-3 overflow-x-auto min-w-0 py-2 w-full">
+            <div className="flex gap-2 xl:gap-x-0 overflow-x-auto xl:overflow-x-visible xl:flex-wrap min-w-0 py-1 xl:pl-1 w-full">
               {corp.hq.map((card) => (
+                <div key={card.instanceId} className="relative shrink-0 hover:z-10 xl:[&:not(:first-child)]:-ml-10">
                 <CardView
-                  key={card.instanceId}
                   card={card}
                   size={handCardSize}
                   notInstalled
@@ -564,75 +565,18 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
                   onClick={() => setSelectedCardId(card.instanceId)}
                   onInspect={canSeeCorpSecrets(viewer) ? setInspectedCard : undefined}
                 />
+                </div>
               ))}
             </div>
+          </div>
           </div>
         </section>
 
         {/* RUNNER SECTOR (BOTTOM HALF) */}
-        <section id="runner-board" className="bg-slate-950/60 border border-pink-950/80 rounded-3xl p-4 sm:p-6 shadow-xl relative backdrop-blur-sm w-full min-w-0">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5 pb-3 border-b border-pink-950">
-            {/* Identity & Header */}
-            <div className="flex items-center gap-3">
-              <span className="w-3 h-3 rounded-full bg-pink-400 shadow-[0_0_10px_#ff0055]" />
-              <div>
-                <h2 className="font-cyber font-bold text-sm tracking-wider text-pink-400">
-                  RUNNER TERMINAL
-                </h2>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-slate-300 font-mono font-bold">
-                    {cardDef(runner.identity).title}
-                  </span>
-                  <button
-                    onClick={() => setInspectedCard(runner.identity)}
-                    className="text-[10px] text-pink-400 hover:text-pink-200 border border-pink-800/80 bg-pink-950/40 px-1.5 py-0.5 rounded flex items-center gap-1 transition-colors"
-                    title="Inspect Runner Identity card"
-                  >
-                    <Eye className="w-2.5 h-2.5" /> View ID
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Runner Stats */}
-            <div className="flex items-center gap-3 text-xs font-mono flex-wrap">
-              <div className="flex items-center gap-1.5 bg-pink-950/80 border border-pink-800 px-3 py-1.5 rounded-xl text-pink-300 shadow">
-                <CreditIcon className="w-4 h-4 text-amber-400" />
-                <span className="font-bold">{runner.credits}</span> Credits
-              </div>
-              <div className="flex items-center gap-1.5 bg-pink-950/80 border border-pink-800 px-3 py-1.5 rounded-xl text-pink-300 shadow">
-                <Clock className="w-4 h-4 text-red-400" />
-                <span className="font-bold">{runner.clicks}</span> / {runner.maxClicks} Clicks
-              </div>
-              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-400 shadow">
-                <Zap className="w-4 h-4 text-cyan-400" />
-                <span>MU: {runner.memoryUnitsUsed} / {runner.memoryUnitsTotal}</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-400 shadow">
-                <Layers className="w-4 h-4 text-slate-500" />
-                <span>Stack: {runner.stack.length}</span>
-              </div>
-              {zoneButton('heap', 'Heap', runner.heap.length, <Trash2 className="w-4 h-4 text-slate-500" />)}
-              {zoneButton('runner-score', 'Stolen', runner.scoreArea.length, <Award className="w-4 h-4 text-pink-400" />)}
-              <div
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl shadow border ${
-                  runner.tags > 0 ? 'bg-red-950 border-red-700 text-red-300' : 'bg-slate-900 border-slate-800 text-slate-400'
-                }`}
-                data-testid="runner-tags"
-              >
-                <Tag className="w-4 h-4" />
-                <span className="font-bold">{runner.tags}</span> Tag{runner.tags === 1 ? '' : 's'}
-              </div>
-              {runner.coreDamage > 0 && (
-                <div className="flex items-center gap-1.5 bg-red-950 border border-red-800 px-3 py-1.5 rounded-xl text-red-300 shadow">
-                  <span className="font-bold">{runner.coreDamage}</span> Core damage
-                </div>
-              )}
-            </div>
-          </div>
-
+        <section id="runner-board" className="bg-slate-950/60 border border-pink-950/80 rounded-3xl p-3 sm:p-4 shadow-xl relative backdrop-blur-sm w-full min-w-0">
+          <div className="flex flex-col xl:flex-row gap-3 mb-3 min-w-0">
           {/* Runner Rig (Installed Programs, Hardware, Resources) */}
-          <div className="mb-5 min-w-0">
+          <div className="flex-1 min-w-0">
             <RigView
               rig={runner.rig}
               cardSize={boardCardSize}
@@ -656,6 +600,31 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
                 </>
               }
             />
+          </div>
+          {/* Runner Grip Hand: beside the rig on wide screens */}
+          <div className="w-full min-w-0 xl:w-[24rem] 2xl:w-[26rem] xl:shrink-0">
+            <div className="text-xs text-pink-400 font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>Grip Hand ({runner.grip.length} / {runner.handSizeLimit})</span>
+              <span className="text-[10px] text-slate-500 lowercase">hover to preview</span>
+            </div>
+            <div className="flex gap-2 xl:gap-x-0 overflow-x-auto xl:overflow-x-visible xl:flex-wrap min-w-0 py-1 xl:pl-1 w-full">
+              {runner.grip.map((card) => (
+                <div key={card.instanceId} className="relative shrink-0 hover:z-10 xl:[&:not(:first-child)]:-ml-10">
+                <CardView
+                  card={card}
+                  size={handCardSize}
+                  notInstalled
+                  isFaceDown={!canSeeRunnerSecrets(viewer)}
+                  canPeek={canSeeRunnerSecrets(viewer)}
+                  isSelectable={activePlayer === 'runner' && runnerCanAct}
+                  isSelected={selectedCardId === card.instanceId}
+                  onClick={() => setSelectedCardId(card.instanceId)}
+                  onInspect={canSeeRunnerSecrets(viewer) ? setInspectedCard : undefined}
+                />
+                </div>
+              ))}
+            </div>
+          </div>
           </div>
 
           {/* Dedicated Runner Action Bar (Always fully on-screen) */}
@@ -737,36 +706,75 @@ function Game({ config, onNewGame }: { config: GameConfig; onNewGame: () => void
 
           {runnerCanAct && <AbilityBar state={gameState} side="runner" onAction={handleAction} />}
 
-          {/* Runner Grip Hand (Full Width with min-w-0 for safe scrolling) */}
-          <div className="w-full min-w-0 pt-3 border-t border-slate-900">
-            <div className="text-xs text-pink-400 font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
-              <span>Grip Hand ({runner.grip.length} / {runner.handSizeLimit})</span>
-              <span className="text-[10px] text-slate-500 lowercase">hover to preview • double-click to inspect</span>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-2 pt-2 border-t border-pink-950">
+            {/* Identity & Header */}
+            <div className="flex items-center gap-3">
+              <span className="w-3 h-3 rounded-full bg-pink-400 shadow-[0_0_10px_#ff0055]" />
+              <div>
+                <h2 className="font-cyber font-bold text-sm tracking-wider text-pink-400">
+                  RUNNER TERMINAL
+                </h2>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-slate-300 font-mono font-bold">
+                    {cardDef(runner.identity).title}
+                  </span>
+                  <button
+                    onClick={() => setInspectedCard(runner.identity)}
+                    className="text-[10px] text-pink-400 hover:text-pink-200 border border-pink-800/80 bg-pink-950/40 px-1.5 py-0.5 rounded flex items-center gap-1 transition-colors"
+                    title="Inspect Runner Identity card"
+                  >
+                    <Eye className="w-2.5 h-2.5" /> View ID
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="flex gap-3 overflow-x-auto min-w-0 py-2 w-full">
-              {runner.grip.map((card) => (
-                <CardView
-                  key={card.instanceId}
-                  card={card}
-                  size={handCardSize}
-                  notInstalled
-                  isFaceDown={!canSeeRunnerSecrets(viewer)}
-                  canPeek={canSeeRunnerSecrets(viewer)}
-                  isSelectable={activePlayer === 'runner' && runnerCanAct}
-                  isSelected={selectedCardId === card.instanceId}
-                  onClick={() => setSelectedCardId(card.instanceId)}
-                  onInspect={canSeeRunnerSecrets(viewer) ? setInspectedCard : undefined}
-                />
-              ))}
+
+            {/* Runner Stats */}
+            <div className="flex items-center gap-3 text-xs font-mono flex-wrap">
+              <div className="flex items-center gap-1.5 bg-pink-950/80 border border-pink-800 px-3 py-1.5 rounded-xl text-pink-300 shadow">
+                <CreditIcon className="w-4 h-4 text-amber-400" />
+                <span className="font-bold">{runner.credits}</span> Credits
+              </div>
+              <div className="flex items-center gap-1.5 bg-pink-950/80 border border-pink-800 px-3 py-1.5 rounded-xl text-pink-300 shadow">
+                <Clock className="w-4 h-4 text-red-400" />
+                <span className="font-bold">{runner.clicks}</span> / {runner.maxClicks} Clicks
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-400 shadow">
+                <Zap className="w-4 h-4 text-cyan-400" />
+                <span>MU: {runner.memoryUnitsUsed} / {runner.memoryUnitsTotal}</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-400 shadow">
+                <Layers className="w-4 h-4 text-slate-500" />
+                <span>Stack: {runner.stack.length}</span>
+              </div>
+              {zoneButton('heap', 'Heap', runner.heap.length, <Trash2 className="w-4 h-4 text-slate-500" />)}
+              {zoneButton('runner-score', 'Stolen', runner.scoreArea.length, <Award className="w-4 h-4 text-pink-400" />)}
+              <div
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl shadow border ${
+                  runner.tags > 0 ? 'bg-red-950 border-red-700 text-red-300' : 'bg-slate-900 border-slate-800 text-slate-400'
+                }`}
+                data-testid="runner-tags"
+              >
+                <Tag className="w-4 h-4" />
+                <span className="font-bold">{runner.tags}</span> Tag{runner.tags === 1 ? '' : 's'}
+              </div>
+              {runner.coreDamage > 0 && (
+                <div className="flex items-center gap-1.5 bg-red-950 border border-red-800 px-3 py-1.5 rounded-xl text-red-300 shadow">
+                  <span className="font-bold">{runner.coreDamage}</span> Core damage
+                </div>
+              )}
             </div>
           </div>
+
         </section>
 
-        {/* Live Action Terminal Log */}
-        <section className="min-w-0">
-          <LogFeed logs={gameState.log} />
-        </section>
       </main>
+
+      {/* Log in a side bar on wide screens, below the board otherwise */}
+      <aside className="xl:w-80 2xl:w-96 shrink-0 xl:sticky xl:top-[4.75rem] xl:self-start xl:h-[calc(100vh-5.5rem)]">
+        <LogFeed logs={gameState.log} className="h-56 xl:h-full" />
+      </aside>
+      </div>
 
       {/* Active Run Overlay */}
       <RunOverlay
