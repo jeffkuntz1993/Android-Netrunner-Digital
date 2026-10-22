@@ -5,7 +5,7 @@ import { shuffleInPlace } from '../rng';
 import { addLog } from '../engine/log';
 import { findInstalledCorpCard, removeCard } from '../engine/helpers';
 import { rezForFree } from '../engine/actions/corp';
-import { giveTags } from '../engine/damage';
+import { dealMeatDamage, dealNetDamage, giveTags } from '../engine/damage';
 import { endTheRun } from '../engine/runEnd';
 import {
   availableCredits,
@@ -213,6 +213,18 @@ const sendAMessage: CardScript = {
   },
 };
 
+// Orbital Superiority: When you score this agenda, if the Runner is tagged, do
+// 4 meat damage; otherwise, give the Runner 1 tag.
+const orbitalSuperiority: CardScript = {
+  triggers: {
+    agenda_scored: (ctx, e) => {
+      if (!isSelf(ctx, e.card)) return;
+      if (ctx.state.runner.tags > 0) dealMeatDamage(ctx.state, 4);
+      else giveTags(ctx.state, 1);
+    },
+  },
+};
+
 // Superconducting Hub: When you score this agenda, you may draw 2 cards. You get +2 maximum hand size.
 const superconductingHub: CardScript = {
   modifiers: { handSize: 2 },
@@ -269,6 +281,35 @@ const regolithMiningLicense: CardScript = {
   trashWhenEmpty: true,
   triggers: { rezzed: (ctx, e) => isSelf(ctx, e.card) && loadCredits(ctx.state, ctx.card, 15) },
   abilities: [{ label: 'Take 3 credits from this asset.', clicks: 1, resolve: ({ state, card }) => void takeHostedCredits(state, card, 3) }],
+};
+
+// Urtica Cipher: You can advance this asset. When the Runner accesses this
+// asset while it is installed, do 2 net damage plus 1 net damage for each
+// hosted advancement counter. (Works while unrezzed: it triggers on access.)
+const urticaCipher: CardScript = {
+  onAccessed: ({ state, card }) => void dealNetDamage(state, 2 + card.advancementCounters),
+};
+
+// Clearinghouse: You can advance this asset. When your turn begins, you may
+// trash this asset to do 1 meat damage for each hosted advancement counter.
+const clearinghouse: CardScript = {
+  triggers: {
+    turn_begins: (ctx, e) => {
+      if (e.side !== 'corp' || ctx.card.advancementCounters === 0) return;
+      const n = ctx.card.advancementCounters;
+      askChoice(ctx, 'corp', `Clearinghouse: trash it to do ${n} meat damage?`, [
+        { id: 'yes', label: `Trash it: ${n} meat damage` },
+        { id: 'no', label: 'Keep it' },
+      ], 'trash');
+    },
+  },
+  onPromptAnswer: ({ state, card }, _source, answer) => {
+    if (answer.kind !== 'effect_choice' || answer.optionId !== 'yes') return;
+    if (!serverOf(state, card)) return; // no longer installed
+    const damage = card.advancementCounters;
+    trashInstalledCard(state, card);
+    dealMeatDamage(state, damage);
+  },
 };
 
 // --- Upgrades ---------------------------------------------------------------
@@ -370,6 +411,7 @@ export const corpCardScripts: Record<string, CardScript> = {
   '30042': manegarmSkunkworks,
   '30043': restoringHumanity,
   '30044': longevitySerum,
+  '30045': urticaCipher,
   '30050': anoeticVoid,
   '30051': realityPlus,
   '30052': tomorrowsHeadline,
@@ -377,8 +419,10 @@ export const corpCardScripts: Record<string, CardScript> = {
   '30058': amazeAmusements,
   '30059': builtToLast,
   '30060': aboveTheLaw,
+  '30061': clearinghouse,
   '30066': malapertDataVault,
   '30067': offworldOffice,
+  '30068': orbitalSuperiority,
   '30069': sendAMessage,
   '30070': superconductingHub,
   '30071': regolithMiningLicense,

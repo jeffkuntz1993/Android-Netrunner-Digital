@@ -1,7 +1,7 @@
 import { GameAction, GameActionType } from '../types/actions';
 import { GameState } from '../types/state';
 import { IllegalActionError, NotImplementedError } from './errors';
-import { drawCard, gainCredit } from './actions/basic';
+import { drawCard, gainCredit, purgeVirus, removeTag, trashResource } from './actions/basic';
 import { installCard } from './actions/install';
 import { advanceCard, rezCard, scoreAgenda } from './actions/corp';
 import { continueRun, initiateRun, jackOut } from './actions/run';
@@ -40,13 +40,13 @@ const handlers: ActionHandlers = {
   END_TURN: endTurn,
   RESOLVE_PROMPT: resolvePrompt,
   PLAY_OPERATION_OR_EVENT: playOperationOrEvent,
-  PURGE_VIRUS: notImplemented,
+  PURGE_VIRUS: purgeVirus,
   BREAK_SUBROUTINE: breakSubroutine,
   BOOST_BREAKER: boostBreaker,
   BIOROID_BREAK: bioroidBreak,
   USE_ABILITY: useAbility,
-  REMOVE_TAG: notImplemented,
-  TRASH_RESOURCE: notImplemented,
+  REMOVE_TAG: removeTag,
+  TRASH_RESOURCE: trashResource,
   ACCESS_CARD: notImplemented,
   PASS_PRIORITY: notImplemented,
 };

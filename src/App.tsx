@@ -30,6 +30,9 @@ import {
   ZoomIn,
   Eye,
   ArrowRight,
+  Tag,
+  Trash2,
+  Biohazard,
 } from 'lucide-react';
 
 /** Seed from `?seed=123` in the URL (to reproduce a game), otherwise random. */
@@ -311,6 +314,29 @@ export default function App() {
                 >
                   <Layers className="w-3.5 h-3.5 text-cyan-400" /> Draw Card
                 </button>
+                <button
+                  onClick={() => handleAction({ type: 'PURGE_VIRUS', player: 'corp' })}
+                  disabled={!isLegalAction(gameState, { type: 'PURGE_VIRUS', player: 'corp' })}
+                  className="px-3.5 py-1.5 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700 text-cyan-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
+                  title="Spend 3 clicks to remove every virus counter"
+                >
+                  <Biohazard className="w-3.5 h-3.5 text-lime-400" /> Purge (3 clicks)
+                </button>
+                {getLegalActions(gameState, 'corp')
+                  .filter(a => a.type === 'TRASH_RESOURCE')
+                  .map(a => {
+                    const res = a.type === 'TRASH_RESOURCE' ? findCardAnywhere(gameState, a.cardInstanceId) : undefined;
+                    return (
+                      <button
+                        key={a.type === 'TRASH_RESOURCE' ? a.cardInstanceId : ''}
+                        onClick={() => handleAction(a)}
+                        className="px-3.5 py-1.5 bg-red-950 hover:bg-red-900 border border-red-700 text-red-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow"
+                        title="The Runner is tagged: spend a click and 2 credits to trash this resource"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Trash {res ? cardDef(res).title : 'resource'} (2c)
+                      </button>
+                    );
+                  })}
                 {playButton('corp')}
                 {selectedCardId && !selectedIsPlayable && (
                   <button
@@ -403,6 +429,20 @@ export default function App() {
                 <Zap className="w-4 h-4 text-cyan-400" />
                 <span>MU: {runner.memoryUnitsUsed} / {runner.memoryUnitsTotal}</span>
               </div>
+              <div
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl shadow border ${
+                  runner.tags > 0 ? 'bg-red-950 border-red-700 text-red-300' : 'bg-slate-900 border-slate-800 text-slate-400'
+                }`}
+                data-testid="runner-tags"
+              >
+                <Tag className="w-4 h-4" />
+                <span className="font-bold">{runner.tags}</span> Tag{runner.tags === 1 ? '' : 's'}
+              </div>
+              {runner.coreDamage > 0 && (
+                <div className="flex items-center gap-1.5 bg-red-950 border border-red-800 px-3 py-1.5 rounded-xl text-red-300 shadow">
+                  <span className="font-bold">{runner.coreDamage}</span> Core damage
+                </div>
+              )}
             </div>
           </div>
 
@@ -436,6 +476,15 @@ export default function App() {
                 >
                   <Layers className="w-3.5 h-3.5 text-pink-400" /> Draw Card
                 </button>
+                {runner.tags > 0 && (
+                  <button
+                    onClick={() => handleAction({ type: 'REMOVE_TAG', player: 'runner' })}
+                    disabled={!isLegalAction(gameState, { type: 'REMOVE_TAG', player: 'runner' })}
+                    className="px-3.5 py-1.5 bg-pink-950 hover:bg-pink-900 border border-pink-700 text-pink-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
+                  >
+                    <Tag className="w-3.5 h-3.5 text-red-400" /> Remove Tag (2c)
+                  </button>
+                )}
                 {playButton('runner')}
                 {selectedCardId &&
                   !selectedIsPlayable &&

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cardDef, executeAction, getLegalActions, IllegalActionError, NotImplementedError, GameState } from '../src/core';
+import { cardDef, executeAction, getLegalActions, IllegalActionError, GameState } from '../src/core';
 import { answer, giveCard, installForTest, newGame, play, putInHand, startRunnerTurn } from './helpers';
 
 const SURE_GAMBLE = '30030';
@@ -13,7 +13,7 @@ const HANSEI_REVIEW = '30048';
 const SPRINT = '30041';
 const PREDICTIVE_PLANOGRAM = '30056';
 const SEAMLESS_LAUNCH = '30040';
-const NEUROSPIKE = '30049';
+const PUBLIC_TRAIL = '30057';
 
 const runnerTurn = (credits = 5) => {
   const state = newGame();
@@ -39,12 +39,10 @@ describe('Playing operations and events', () => {
     expect(() => play(state, 'corp', id)).toThrow(/Need 10 credits/);
   });
 
-  it('rejects playing installable cards, and cards whose effects are not implemented', () => {
+  it('rejects playing installable cards', () => {
     const state = newGame();
     const ice = putInHand(state, 'corp', 'ice');
     expect(() => play(state, 'corp', ice)).toThrow(/Only operations/);
-    const neuro = giveCard(state, 'corp', NEUROSPIKE);
-    expect(() => play(state, 'corp', neuro)).toThrow(NotImplementedError);
   });
 
   it('only allows playing on your own turn', () => {
@@ -53,13 +51,13 @@ describe('Playing operations and events', () => {
     expect(() => play(state, 'runner', id)).toThrow(IllegalActionError);
   });
 
-  it('lists playable cards in getLegalActions, but not unimplemented ones', () => {
+  it('lists playable cards in getLegalActions, but not ones whose play condition fails', () => {
     const state = newGame();
     const hedge = giveCard(state, 'corp', HEDGE_FUND);
-    const neuro = giveCard(state, 'corp', NEUROSPIKE);
+    const trail = giveCard(state, 'corp', PUBLIC_TRAIL);
     const plays = getLegalActions(state, 'corp').filter(a => a.type === 'PLAY_OPERATION_OR_EVENT');
     expect(plays.map(a => (a as { cardInstanceId: string }).cardInstanceId)).toContain(hedge);
-    expect(plays.map(a => (a as { cardInstanceId: string }).cardInstanceId)).not.toContain(neuro);
+    expect(plays.map(a => (a as { cardInstanceId: string }).cardInstanceId)).not.toContain(trail);
   });
 });
 

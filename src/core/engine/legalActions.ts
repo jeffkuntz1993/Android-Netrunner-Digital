@@ -37,6 +37,13 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
       { type: 'DRAW_CARD', player: side },
       { type: 'END_TURN', player: side }
     );
+    if (side === 'runner') candidates.push({ type: 'REMOVE_TAG', player: 'runner' });
+    if (side === 'corp') {
+      candidates.push({ type: 'PURGE_VIRUS', player: 'corp' });
+      for (const card of state.runner.rig.resources) {
+        candidates.push({ type: 'TRASH_RESOURCE', player: 'corp', cardInstanceId: card.instanceId });
+      }
+    }
   }
 
   const servers = Object.values(state.corp.servers);

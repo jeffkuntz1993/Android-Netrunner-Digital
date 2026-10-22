@@ -7,19 +7,20 @@ import { findCardAnywhere, removeCard } from './helpers';
 import { bumpTurnFlag, TurnFlag } from './cardEffects';
 import { fireTrigger } from './triggers';
 
+export type DamageType = 'net' | 'meat' | 'core';
+
 /**
- * Net damage: trash cards at random from the grip, one per point. If the
- * damage is more than the grip holds, the Runner is flatlined and the Corp
- * wins. Returns the trashed cards.
- * TODO (roadmap M4): meat and core damage, damage prevention.
+ * Deals damage to the Runner: each point trashes a random card from the
+ * grip. Core damage also lowers the Runner's maximum hand size by 1 per
+ * point. Taking more damage than the grip holds flatlines the Runner and the
+ * Corp wins. Returns the trashed cards. (No Gateway card prevents damage.)
  */
-export function dealNetDamage(state: GameState, amount: number): CardInstance[] {
+export function dealDamage(state: GameState, type: DamageType, amount: number): CardInstance[] {
   const trashed: CardInstance[] = [];
+  if (type === 'core') state.runner.coreDamage += amount;
   for (let i = 0; i < amount; i++) {
     if (state.runner.grip.length === 0) {
-      state.winner = 'corp';
-      state.winReason = 'Runner flatlined';
-      addLog(state, 'system', 'Corp wins: the Runner was flatlined.');
+      flatline(state);
       break;
     }
     const card = state.runner.grip[nextInt(state.rng, state.runner.grip.length)];
@@ -27,10 +28,21 @@ export function dealNetDamage(state: GameState, amount: number): CardInstance[] 
     state.runner.heap.push(card);
     trashed.push(card);
   }
-  if (trashed.length > 0) {
-    addLog(state, 'corp', `Corp did ${amount} net damage, trashing ${trashed.map(c => cardDef(c).title).join(', ')}.`);
-  }
+  const what = trashed.length > 0 ? `, trashing ${trashed.map(c => cardDef(c).title).join(', ')}` : '';
+  addLog(state, 'corp', `Corp did ${amount} ${type} damage${what}.`);
   return trashed;
+}
+
+export const dealNetDamage = (state: GameState, amount: number) => dealDamage(state, 'net', amount);
+export const dealMeatDamage = (state: GameState, amount: number) => dealDamage(state, 'meat', amount);
+export const dealCoreDamage = (state: GameState, amount: number) => dealDamage(state, 'core', amount);
+
+/** The Runner is flatlined: the Corp wins. */
+export function flatline(state: GameState): void {
+  if (state.winner) return;
+  state.winner = 'corp';
+  state.winReason = 'Runner flatlined';
+  addLog(state, 'system', 'Corp wins: the Runner was flatlined.');
 }
 
 /** Gives the Runner tags and fires "whenever the Runner takes a tag" abilities. */

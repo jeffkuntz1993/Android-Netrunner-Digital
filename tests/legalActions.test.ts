@@ -42,7 +42,7 @@ describe('Legal actions', () => {
     const state = newGame(3);
     state.corp.clicks = 0;
     expect(() => executeAction(state, { type: 'GAIN_CREDIT', player: 'corp' })).toThrow(IllegalActionError);
-    expect(() => executeAction(state, { type: 'PURGE_VIRUS', player: 'corp' })).toThrow(NotImplementedError);
+    expect(() => executeAction(state, { type: 'ACCESS_CARD', player: 'runner', cardInstanceId: 'x' })).toThrow(NotImplementedError);
     expect(isLegalAction(state, { type: 'GAIN_CREDIT', player: 'corp' })).toBe(false);
   });
 

@@ -1,11 +1,12 @@
-import { DrawCardAction, GainCreditAction } from '../../types/actions';
+import { DrawCardAction, GainCreditAction, PurgeVirusAction, RemoveTagAction, TrashResourceAction } from '../../types/actions';
 import { GameState } from '../../types/state';
 import { cardDef } from '../../cards';
 import { addLog } from '../log';
 import { drawCards, illegal, requireActionPhase, requireClicks } from '../helpers';
 import { getCardScript } from '../../scripts';
 import { activeCards } from '../triggers';
-import { bumpTurnFlag, TurnFlag } from '../cardEffects';
+import { bumpTurnFlag, purgeVirusCounters, TurnFlag } from '../cardEffects';
+import { trashInstalledRunnerCard } from '../damage';
 
 export function gainCredit(state: GameState, action: GainCreditAction): void {
   const side = action.player;
@@ -44,4 +45,42 @@ export function drawCard(state: GameState, action: DrawCardAction): void {
     const drawn = state.runner.grip.slice(before);
     addLog(state, 'runner', `Runner spent [click] to draw ${drawn.length} card(s) (${drawn.map(c => cardDef(c).title).join(', ')}).`);
   }
+}
+
+/** Runner basic action: [click] + 2 credits: remove 1 tag. */
+export function removeTag(state: GameState, action: RemoveTagAction): void {
+  if (action.player !== 'runner') illegal('Only the Runner can remove tags');
+  requireActionPhase(state, 'runner');
+  requireClicks(state, 'runner');
+  if (state.runner.tags === 0) illegal('The Runner has no tags');
+  if (state.runner.credits < 2) illegal('Need 2 credits to remove a tag');
+  state.runner.clicks -= 1;
+  state.runner.credits -= 2;
+  state.runner.tags -= 1;
+  addLog(state, 'runner', `Runner spent [click] and 2 [credit] to remove 1 tag (now ${state.runner.tags}).`);
+}
+
+/** Corp basic action: [click] + 2 credits: trash 1 installed resource, if the Runner is tagged. */
+export function trashResource(state: GameState, action: TrashResourceAction): void {
+  if (action.player !== 'corp') illegal('Only the Corp can trash resources this way');
+  requireActionPhase(state, 'corp');
+  requireClicks(state, 'corp');
+  if (state.runner.tags === 0) illegal('The Runner must be tagged');
+  if (state.corp.credits < 2) illegal('Need 2 credits to trash a resource');
+  const card = state.runner.rig.resources.find(c => c.instanceId === action.cardInstanceId);
+  if (!card) illegal('Not an installed resource');
+  state.corp.clicks -= 1;
+  state.corp.credits -= 2;
+  trashInstalledRunnerCard(state, card);
+  addLog(state, 'corp', `Corp spent [click] and 2 [credit] to trash ${cardDef(card).title}.`);
+}
+
+/** Corp basic action: [click][click][click]: purge virus counters. */
+export function purgeVirus(state: GameState, action: PurgeVirusAction): void {
+  if (action.player !== 'corp') illegal('Only the Corp can purge virus counters');
+  requireActionPhase(state, 'corp');
+  requireClicks(state, 'corp', 3);
+  state.corp.clicks -= 3;
+  const removed = purgeVirusCounters(state);
+  addLog(state, 'corp', `Corp spent [click][click][click] to purge virus counters (${removed} removed).`);
 }

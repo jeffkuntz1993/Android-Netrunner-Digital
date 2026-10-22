@@ -1,5 +1,8 @@
 import { GameState } from '../types/state';
 import { addLog } from '../engine/log';
+import { cardDef } from '../cards';
+import { dealNetDamage, giveTags, trashInstalledRunnerCard } from '../engine/damage';
+import { turnFlag, TurnFlag } from '../engine/cardEffects';
 import { drawCards, removeCard, turnKey } from '../engine/helpers';
 import { shuffleInPlace } from '../rng';
 import { CardScript } from './types';
@@ -115,12 +118,65 @@ const seamlessLaunch: CardScript = {
   },
 };
 
+// Neurospike: Do X net damage, where X is equal to the sum of the printed
+// agenda points on agendas you scored this turn.
+const neurospike: CardScript = {
+  onPlay: ({ state }) => {
+    const x = turnFlag(state, TurnFlag.agendaPointsScored);
+    if (x > 0) dealNetDamage(state, x);
+    else addLog(state, 'corp', 'Neurospike: no agenda points scored this turn, so no damage.');
+  },
+};
+
+// Public Trail: Play only if the Runner made a successful run during their last
+// turn. Give the Runner 1 tag unless they pay 8 credits.
+const publicTrail: CardScript = {
+  canPlay: ({ state }) =>
+    state.runnerLastTurnRuns.some(r => r.successful) ? null : 'The Runner did not make a successful run during their last turn',
+  onPlay: ctx => {
+    if (ctx.state.runner.credits < 8) return giveTags(ctx.state, 1);
+    askChoice(ctx, 'runner', 'Public Trail: pay 8 credits or take 1 tag?', [
+      { id: 'pay', label: 'Pay 8 credits' },
+      { id: 'tag', label: 'Take 1 tag' },
+    ], 'choice');
+  },
+  onPromptAnswer: ({ state }, _source, answer) => {
+    if (answer.kind !== 'effect_choice') return;
+    if (answer.optionId === 'pay') {
+      state.runner.credits -= 8;
+      addLog(state, 'runner', 'Runner paid 8 [credit] to avoid the tag (Public Trail).');
+    } else {
+      giveTags(state, 1);
+    }
+  },
+};
+
+// Retribution: Play only if the Runner is tagged. Trash 1 installed program or piece of hardware.
+const programsAndHardware = (state: GameState) => [...state.runner.rig.programs, ...state.runner.rig.hardware];
+const retribution: CardScript = {
+  canPlay: ({ state }) => {
+    if (state.runner.tags === 0) return 'The Runner must be tagged';
+    return programsAndHardware(state).length > 0 ? null : 'The Runner has no installed program or hardware';
+  },
+  onPlay: ctx =>
+    askCards(ctx, 'corp', 'Retribution: trash 1 installed program or piece of hardware.', programsAndHardware(ctx.state).map(c => c.instanceId), 1, 1, 'trash'),
+  onPromptAnswer: ({ state }, _source, answer) => {
+    if (answer.kind !== 'effect_cards') return;
+    const card = programsAndHardware(state).find(c => c.instanceId === answer.cardInstanceIds[0])!;
+    trashInstalledRunnerCard(state, card);
+    addLog(state, 'corp', `Corp trashed ${cardDef(card).title} (Retribution).`);
+  },
+};
+
 export const operationScripts: Record<string, CardScript> = {
   '30040': seamlessLaunch,
   '30041': sprint,
   '30048': hanseiReview,
+  '30049': neurospike,
   '30056': predictivePlanogram,
+  '30057': publicTrail,
   '30064': governmentSubsidy,
+  '30065': retribution,
   '30075': hedgeFund,
 };
 

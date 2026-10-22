@@ -6,6 +6,7 @@ import { requireActionPhase, illegal } from '../helpers';
 import { pushPrompt, sideName } from '../prompts';
 import { fireTrigger } from '../triggers';
 import { maxHandSize } from '../cardEffects';
+import { flatline } from '../damage';
 
 export function handSize(state: GameState, side: SideCode): number {
   return side === 'corp' ? state.corp.hq.length : state.runner.grip.length;
@@ -17,6 +18,11 @@ export function endTurn(state: GameState, action: EndTurnAction): void {
   if (state[side].clicks > 0) illegal('You must spend all clicks before ending your turn');
 
   const limit = maxHandSize(state, side);
+  if (side === 'runner' && limit < 0) {
+    // Core damage can push the maximum hand size below 0: the Runner is flatlined.
+    flatline(state);
+    return;
+  }
   const excess = handSize(state, side) - Math.max(0, limit);
   if (excess > 0) {
     // The turn finishes once the discard prompt is resolved.
