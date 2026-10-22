@@ -21,11 +21,14 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
   const [imgSrc, setImgSrc] = useState(() => getCardImageUrl(card.cardCode));
   const def = cardDef(card);
 
+  const isHiddenSecured = isFaceDown && !canPeek;
+  // Visible cards show the whole card image beside the details, so nothing is cropped
+  const popoutWidth = isHiddenSecured ? 330 : Math.min(620, window.innerWidth - 24);
+
   useLayoutEffect(() => {
     if (!targetRect) return;
 
-    const popoutWidth = 330;
-    const popoutHeight = 460;
+    const popoutHeight = isHiddenSecured ? 300 : 420;
     const padding = 12;
 
     // Determine horizontal position: prefer right, fallback to left
@@ -44,12 +47,11 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
     top = Math.max(padding, top);
 
     setCoords({ top, left });
-  }, [targetRect]);
+  }, [targetRect, popoutWidth, isHiddenSecured]);
 
   if (!targetRect) return null;
 
   const isCorp = def.side_code === 'corp';
-  const isHiddenSecured = isFaceDown && !canPeek;
 
   const popoutContent = (
     <div
@@ -58,7 +60,7 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
         top: `${coords.top}px`,
         left: `${coords.left}px`,
         zIndex: 9999,
-        width: '330px',
+        width: `${popoutWidth}px`,
         maxHeight: '90vh',
       }}
       className={`pointer-events-none rounded-2xl p-4 font-mono shadow-2xl backdrop-blur-xl border-2 transition-opacity duration-150 animate-in fade-in zoom-in-95 overflow-y-auto ${
@@ -90,7 +92,25 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
           )}
         </div>
       ) : (
-        <>
+        <div className="flex gap-4 items-start">
+          {/* The whole card, uncropped (some cards have their art at the bottom) */}
+          <div className="relative w-[44%] max-w-[260px] shrink-0">
+            <img
+              src={imgSrc}
+              alt={def.title}
+              className="w-full h-auto rounded-xl border border-slate-800 shadow-inner bg-black/60"
+              onError={() => {
+                // Fallback to NetrunnerDB large CDN image
+                setImgSrc(`https://card-images.netrunnerdb.com/v2/large/${card.cardCode}.jpg`);
+              }}
+            />
+            {card.advancementCounters > 0 && (
+              <div className="absolute top-2 right-2 bg-amber-400 text-black font-black text-xs px-2 py-0.5 rounded-full shadow-lg border border-amber-200">
+                ★ {card.advancementCounters} ADVANCED
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
           {/* Top Pill / Badge Header */}
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800 text-[11px]">
             <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider">
@@ -108,24 +128,6 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950/80 text-amber-400 border border-amber-600 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" /> UNREZZED
               </span>
-            )}
-          </div>
-
-          {/* High-Resolution Card Art Thumbnail */}
-          <div className="relative w-full h-44 rounded-xl overflow-hidden border border-slate-800 bg-black/60 mb-3 shadow-inner">
-            <img
-              src={imgSrc}
-              alt={def.title}
-              className="w-full h-full object-cover object-top"
-              onError={() => {
-                // Fallback to NetrunnerDB large CDN image
-                setImgSrc(`https://card-images.netrunnerdb.com/v2/large/${card.cardCode}.jpg`);
-              }}
-            />
-            {card.advancementCounters > 0 && (
-              <div className="absolute top-2 right-2 bg-amber-400 text-black font-black text-xs px-2 py-0.5 rounded-full shadow-lg border border-amber-200">
-                ★ {card.advancementCounters} ADVANCED
-              </div>
             )}
           </div>
 
@@ -213,7 +215,8 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
               "{def.flavor}"
             </div>
           )}
-        </>
+          </div>
+        </div>
       )}
     </div>
   );
