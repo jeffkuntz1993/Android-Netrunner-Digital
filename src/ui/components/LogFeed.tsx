@@ -7,10 +7,13 @@ interface LogFeedProps {
 }
 
 export const LogFeed: React.FC<LogFeedProps> = ({ logs }) => {
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
+  // Keep the newest entry in view by scrolling the log box itself.
+  // (scrollIntoView would also scroll the whole page down to the log.)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const list = listRef.current;
+    if (list) list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
   }, [logs.length]);
 
   return (
@@ -20,7 +23,7 @@ export const LogFeed: React.FC<LogFeedProps> = ({ logs }) => {
         <span className="font-bold tracking-wider uppercase text-slate-300">Terminal Log</span>
         <span className="ml-auto text-[10px] text-slate-500">{logs.length} entries</span>
       </div>
-      <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5">
+      <div ref={listRef} className="flex-1 overflow-y-auto p-2.5 space-y-1.5">
         {logs.map((log) => {
           const colorClass =
             log.player === 'corp'
@@ -38,7 +41,6 @@ export const LogFeed: React.FC<LogFeedProps> = ({ logs }) => {
             </div>
           );
         })}
-        <div ref={bottomRef} />
       </div>
     </div>
   );
