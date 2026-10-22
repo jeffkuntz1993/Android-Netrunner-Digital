@@ -23,6 +23,10 @@ interface ServerColumnProps {
   onInspectCard?: (card: CardInstance) => void;
 }
 
+/** Ice is drawn one size down, turned sideways, in a box with the card's height as its width. */
+const ICE_SIZE = { sm: 'xs', md: 'sm', lg: 'md' } as const;
+const SIDEWAYS_BOX = { sm: 'w-28 h-20', md: 'w-40 h-28', lg: 'w-52 h-36' } as const;
+
 const smallButton =
   'mt-1 px-2 py-0.5 w-full bg-cyan-950 hover:bg-cyan-800 text-cyan-300 text-[11px] font-mono font-bold rounded border border-cyan-600 shadow flex items-center justify-center gap-1 transition-all';
 
@@ -83,13 +87,18 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
         ) : (
           server.ice.map((iceCard) => (
             <div key={iceCard.instanceId} className="flex flex-col items-center w-full">
-              <CardView
-                card={iceCard}
-                isFaceDown={!iceCard.isRezzed}
-                canPeek={canCorpPeek}
-                size={cardSize}
-                onInspect={onInspectCard}
-              />
+              {/* Ice lies sideways, as on the table; the hover popout shows it upright */}
+              <div className={`relative ${SIDEWAYS_BOX[cardSize]}`}>
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90">
+                  <CardView
+                    card={iceCard}
+                    isFaceDown={!iceCard.isRezzed}
+                    canPeek={canCorpPeek}
+                    size={ICE_SIZE[cardSize]}
+                    onInspect={onInspectCard}
+                  />
+                </div>
+              </div>
               {canRez(iceCard) && onRezCard && (
                 <button
                   onClick={(e) => {
