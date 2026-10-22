@@ -7,16 +7,25 @@ interface PromptPanelProps {
   state: GameState;
   onAnswer: (choice: PromptChoice) => void;
   onInspectCard?: (card: CardInstance) => void;
+  /** False when the decision belongs to the side not at the screen: show a waiting note instead. */
+  canAnswer?: boolean;
 }
 
 /**
- * Shows the decision the game is waiting on. Hot-seat for now: whichever
- * side the prompt is for answers it here.
+ * Shows the decision the game is waiting on, to the side it belongs to.
+ * It sits below the header so New game and the view switch stay usable.
  */
-export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onInspectCard }) => {
+export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onInspectCard, canAnswer = true }) => {
   const prompt = activePrompt(state);
   const [selected, setSelected] = useState<string[]>([]);
   if (!prompt) return null;
+  if (!canAnswer) {
+    return (
+      <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 bg-slate-950/95 border border-slate-700 rounded-xl px-4 py-2 text-xs font-mono text-slate-300 shadow-xl">
+        Waiting on the {prompt.side === 'corp' ? 'Corp' : 'Runner'} to decide…
+      </div>
+    );
+  }
 
   const isCorp = prompt.side === 'corp';
   const hand = isCorp ? state.corp.hq : state.runner.grip;
@@ -31,7 +40,7 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
   const button = 'px-4 py-2 text-xs font-bold rounded-xl border flex items-center gap-1.5 transition-colors disabled:opacity-40';
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-x-0 bottom-0 top-16 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
       <div className={`w-full max-w-4xl bg-slate-950 border-2 rounded-2xl p-5 shadow-2xl font-mono ${accent}`}>
         <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${isCorp ? 'text-cyan-400' : 'text-pink-400'}`}>
           {isCorp ? 'Corp' : 'Runner'} decision

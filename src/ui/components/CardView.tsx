@@ -3,6 +3,7 @@ import { CardInstance } from '../../core/types/card';
 import { cardDef, getCardImageUrl, getCardBackUrl } from '../../data/cards';
 import { Layers, Lock, Eye, AlertCircle } from 'lucide-react';
 import { CardPopout } from './CardPopout';
+import { motion } from 'framer-motion';
 
 export interface CardViewProps {
   card: CardInstance;
@@ -13,9 +14,11 @@ export interface CardViewProps {
   onClick?: () => void;
   onInspect?: (card: CardInstance) => void;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  /** Only installed cards are rezzed or unrezzed; hide the badge for cards in hand or in a pile. */
+  notInstalled?: boolean;
 }
 
-export const CardView: React.FC<CardViewProps> = ({
+const CardFace: React.FC<CardViewProps> = ({
   card,
   isFaceDown = false,
   canPeek = true,
@@ -24,6 +27,7 @@ export const CardView: React.FC<CardViewProps> = ({
   onClick,
   onInspect,
   size = 'md',
+  notInstalled = false,
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -98,7 +102,7 @@ export const CardView: React.FC<CardViewProps> = ({
 
   // Card is visible (or Corp is peeking at their own unrezzed card!)
   const isCorp = def.side_code === 'corp';
-  const isUnrezzed = isFaceDown || !card.isRezzed;
+  const isUnrezzed = !notInstalled && (isFaceDown || !card.isRezzed);
   const imageUrl = getCardImageUrl(card.cardCode);
 
   return (
@@ -201,5 +205,26 @@ export const CardView: React.FC<CardViewProps> = ({
         />
       )}
     </div>
+  );
+};
+
+/**
+ * A card that flips when it turns over: dealt face down or face up, rezzed,
+ * or revealed. The key changes with what the viewer sees, which replays the flip.
+ */
+export const CardView: React.FC<CardViewProps> = props => {
+  const showsBack = Boolean(props.isFaceDown) && props.canPeek === false;
+  const face = showsBack ? 'back' : props.card.isRezzed ? 'rezzed' : 'face';
+  return (
+    <motion.div
+      key={face}
+      className="shrink-0"
+      initial={{ rotateY: 90, opacity: 0.3 }}
+      animate={{ rotateY: 0, opacity: 1 }}
+      transition={{ duration: 0.28, ease: 'easeOut' }}
+      style={{ transformPerspective: 700 }}
+    >
+      <CardFace {...props} />
+    </motion.div>
   );
 };

@@ -18,19 +18,21 @@ import { Scissors, TrendingUp, Clock, Sparkles } from 'lucide-react';
 interface EncounterPanelProps {
   state: GameState;
   onAction: (action: GameAction) => void;
+  /** Show the encounter without the Runner's buttons (the Corp is watching). */
+  readOnly?: boolean;
 }
 
 /**
  * Break window for the ice being encountered: shows each subroutine and offers
  * the BREAK / BOOST / BIOROID_BREAK actions the engine reports as legal.
  */
-export const EncounterPanel: React.FC<EncounterPanelProps> = ({ state, onAction }) => {
+export const EncounterPanel: React.FC<EncounterPanelProps> = ({ state, onAction, readOnly = false }) => {
   const encounter = state.activeRun?.encounter;
   const ice = encounteredIce(state);
   if (!encounter || !ice) return null;
 
   const subs = iceScript(ice)?.subroutines ?? [];
-  const legal = getLegalActions(state, 'runner');
+  const legal = readOnly ? [] : getLegalActions(state, 'runner');
   const titleOf = (id: string) => {
     const card = state.runner.rig.programs.find(c => c.instanceId === id);
     return card ? cardDef(card).title : id;

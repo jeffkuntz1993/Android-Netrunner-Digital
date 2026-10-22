@@ -11,8 +11,15 @@ interface RunOverlayProps {
   state: GameState;
   onContinueRun: () => void;
   onJackOut: () => void;
-  /** Present when the Corp may rez the approached ice (hot-seat rez window). */
-  onRezApproachedIce?: () => void;
+  /** Cards the Corp may rez right now (the approached ice, or the server's root), when the viewer is the Corp. */
+  rezCards?: CardInstance[];
+  onRez?: (card: CardInstance) => void;
+  /** Pass and play: the Corp is done rezzing and hands the screen back. */
+  onDoneRezzing?: () => void;
+  /** Show Continue, Jack Out and the break buttons (the viewer is the Runner and it is their move). */
+  runnerControls: boolean;
+  /** May the viewer see unrezzed Corp cards? */
+  canPeekCorp: boolean;
   onInspectCard?: (card: CardInstance) => void;
   /** Dispatches break / boost / bioroid actions from the encounter panel. */
   onAction: (action: GameAction) => void;
@@ -22,7 +29,11 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
   state,
   onContinueRun,
   onJackOut,
-  onRezApproachedIce,
+  rezCards = [],
+  onRez,
+  onDoneRezzing,
+  runnerControls,
+  canPeekCorp,
   onInspectCard,
   onAction,
 }) => {
@@ -66,9 +77,9 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
               <CardView
                 card={currentIce}
                 isFaceDown={!currentIce.isRezzed}
-                canPeek={true}
+                canPeek={canPeekCorp}
                 size="md"
-                onInspect={onInspectCard}
+                onInspect={currentIce.isRezzed || canPeekCorp ? onInspectCard : undefined}
               />
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
@@ -102,15 +113,29 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
 
           {/* Action buttons */}
           <div className="flex flex-col gap-2 shrink-0">
-            {currentIce && onRezApproachedIce && (
+            {onRez &&
+              rezCards.map(card => (
+                <button
+                  key={card.instanceId}
+                  onClick={() => onRez(card)}
+                  data-testid={`rez-${card.instanceId}`}
+                  className="px-5 py-2 bg-cyan-700 hover:bg-cyan-600 text-white font-mono text-xs font-bold rounded-xl border border-cyan-400 flex items-center justify-center gap-1.5 transition-colors"
+                  title="Corp rez window: rez this card before the Runner continues"
+                >
+                  <ShieldAlert className="w-4 h-4" /> Rez {cardDef(card).title} ({cardDef(card).cost || 0}c)
+                </button>
+              ))}
+            {onDoneRezzing && (
               <button
-                onClick={onRezApproachedIce}
-                className="px-5 py-2 bg-cyan-700 hover:bg-cyan-600 text-white font-mono text-xs font-bold rounded-xl border border-cyan-400 flex items-center justify-center gap-1.5 transition-colors"
-                title="Corp rez window: rez this ice before the Runner continues"
+                onClick={onDoneRezzing}
+                data-testid="done-rezzing"
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs font-bold rounded-xl border border-slate-600 flex items-center justify-center gap-1.5 transition-colors"
               >
-                <ShieldAlert className="w-4 h-4" /> Corp: Rez ({cardDef(currentIce).cost || 0}c)
+                {rezCards.length > 0 ? "Don't rez" : 'Done'} <ArrowRight className="w-4 h-4" />
               </button>
             )}
+            {runnerControls && (
+            <>
             <button
               onClick={onContinueRun}
               className="px-5 py-2.5 bg-cyber-neonPink hover:bg-pink-600 text-white font-mono text-xs font-bold rounded-xl shadow-lg flex items-center justify-center gap-1.5 transition-all hover:scale-105"
@@ -125,10 +150,15 @@ export const RunOverlay: React.FC<RunOverlayProps> = ({
             >
               <LogOut className="w-4 h-4" /> Jack Out
             </button>
+            </>
+            )}
+            {!runnerControls && !onDoneRezzing && (
+              <span className="text-xs text-slate-400 font-mono max-w-[10rem]">Waiting on the Runner…</span>
+            )}
           </div>
         </div>
 
-        <EncounterPanel state={state} onAction={onAction} />
+        <EncounterPanel state={state} onAction={onAction} readOnly={!runnerControls} />
       </div>
     </div>
   );

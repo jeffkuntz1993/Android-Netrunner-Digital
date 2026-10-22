@@ -43,7 +43,7 @@ export function drawCard(state: GameState, action: DrawCardAction): void {
     const before = state.runner.grip.length;
     drawCards(state, 'runner', count);
     const drawn = state.runner.grip.slice(before);
-    addLog(state, 'runner', `Runner spent [click] to draw ${drawn.length} card(s) (${drawn.map(c => cardDef(c).title).join(', ')}).`);
+    addLog(state, 'runner', `Runner spent [click] to draw ${drawn.length} card(s).`);
   }
 }
 

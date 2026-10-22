@@ -75,11 +75,13 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
           <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center mb-3 text-cyan-400">
             <Lock className="w-7 h-7" />
           </div>
-          <h4 className="font-bold text-sm text-cyan-400 tracking-wider uppercase mb-1">
-            [SECURED CORP NODE]
+          <h4 className={`font-bold text-sm tracking-wider uppercase mb-1 ${def.side_code === 'runner' ? 'text-pink-400' : 'text-cyan-400'}`}>
+            {def.side_code === 'runner' ? '[HIDDEN RUNNER CARD]' : '[SECURED CORP NODE]'}
           </h4>
           <p className="text-xs text-slate-400 max-w-[240px] leading-relaxed">
-            Encrypted infrastructure. Identity and subroutines remain masked until rezzed by Corp or breached during a run.
+            {def.side_code === 'runner'
+              ? 'In the Runner\'s grip. Only the Runner can see it.'
+              : 'Hidden from the Runner until it is rezzed or accessed.'}
           </p>
           {card.advancementCounters > 0 && (
             <div className="mt-3 px-3 py-1 bg-amber-500/20 border border-amber-500/40 rounded-full text-amber-300 text-xs font-bold">
