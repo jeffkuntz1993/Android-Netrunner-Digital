@@ -1,5 +1,6 @@
 import { CardInstance, GameState, cardDef } from '../core';
 import {
+  boostCostOf,
   breakerScript,
   breakerStrength,
   iceScript,
@@ -54,7 +55,7 @@ export interface BreakPlan {
  */
 export function bestBreakPlan(state: GameState, ice: CardInstance, subCount: number): BreakPlan | null {
   if (subCount === 0) return null;
-  const types = iceSubtypes(ice);
+  const types = iceSubtypes(ice, state);
   const iceStr = iceStrength(state, ice);
   let best: BreakPlan | null = null;
   for (const breaker of installedIcebreakers(state)) {
@@ -65,7 +66,7 @@ export function bestBreakPlan(state: GameState, ice: CardInstance, subCount: num
     if (strength < iceStr && amount <= 0) continue;
     const boostsNeeded = Math.max(0, Math.ceil((iceStr - strength) / Math.max(amount, 1)));
     const credits =
-      boostsNeeded * script.boostCost +
+      boostsNeeded * boostCostOf(state, breaker) +
       Math.ceil(subCount / script.breakMax) * script.breakCost(state, breaker) +
       (breaker.cardCode === MAYFLY ? 2 : 0); // Mayfly is trashed after the run
     if (!best || credits < best.credits) best = { breaker, credits, boostsNeeded };

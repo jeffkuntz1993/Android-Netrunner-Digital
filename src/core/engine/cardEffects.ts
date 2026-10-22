@@ -2,10 +2,10 @@ import { CardInstance, SideCode } from '../types/card';
 import { GameState } from '../types/state';
 import { cardDef } from '../cards';
 import { getCardScript } from '../scripts';
-import { CounterType } from '../scripts/types';
+import { CounterType, PaymentPurpose } from '../scripts/types';
 import { addLog } from './log';
-import { drawCards, findInstalledCorpCard, removeCard, trashInstalledCorpCard } from './helpers';
-import { activeCards } from './triggers';
+import { drawCards, findCardAnywhere, findInstalledCorpCard, removeCard, trashInstalledCorpCard } from './helpers';
+import { activeCards, fireTrigger } from './triggers';
 import { trashInstalledRunnerCard } from './damage';
 
 /**
@@ -25,6 +25,11 @@ export const TurnFlag = {
   hqBreaches: 'hq_breaches',
   agendaPointsScored: 'agenda_points_scored',
   cannotScore: 'cannot_score',
+  /** Click actions the active player has finished this turn (Petty Cash). */
+  actionsFinished: 'actions_finished',
+  operationsPlayed: 'operations_played',
+  tagsRemoved: 'tags_removed',
+  runnerTrashedCorpCards: 'runner_trashed_corp_cards',
 } as const;
 
 export function turnFlag(state: GameState, key: string): number {
@@ -47,6 +52,14 @@ export function useOncePerTurn(state: GameState, key: string): boolean {
 
 export function counters(card: CardInstance, type: CounterType): number {
   return card.tokens[type] ?? 0;
+}
+
+/** "Dividends N": when scored, N agenda counters for each advancement counter beyond the requirement. */
+export function placeDividends(state: GameState, agenda: CardInstance, perExcess: number): void {
+  const excess = agenda.advancementCounters - (cardDef(agenda).advancement_cost ?? 0);
+  if (excess <= 0) return;
+  addCounters(agenda, 'agenda', excess * perExcess);
+  addLog(state, 'corp', `${cardDef(agenda).title}: dividends, ${excess * perExcess} agenda counter(s).`);
 }
 
 export function addCounters(card: CardInstance, type: CounterType, count: number): void {
@@ -95,15 +108,44 @@ export function purgeVirusCounters(state: GameState): number {
 
 // --- Credits ----------------------------------------------------------------
 
-/** Credits a side can spend right now, including run-only credits (Overclock). */
-export function availableCredits(state: GameState, side: SideCode): number {
-  const bonus = side === 'runner' ? state.activeRun?.bonusCredits ?? 0 : 0;
-  return state[side].credits + bonus;
+/**
+ * Cards whose hosted credits can pay for this: recurring credits (Azimat,
+ * Mahkota Langit Grid) and restricted loaded credits (Open Market).
+ */
+export function creditSources(state: GameState, side: SideCode, purpose: PaymentPurpose): CardInstance[] {
+  if (purpose.kind === 'other') return [];
+  return activeCards(state, side).filter(c => counters(c, 'credit') > 0 && getCardScript(c.cardCode)?.paysFor?.(state, c, purpose));
 }
 
-/** Pays credits, using run-only credits first. Callers check availableCredits beforehand. */
-export function spendCredits(state: GameState, side: SideCode, amount: number): void {
+/**
+ * Credits a side can spend right now: its pool, run-only credits (Overclock)
+ * and hosted credits that may pay for `purpose`.
+ */
+export function availableCredits(state: GameState, side: SideCode, purpose: PaymentPurpose = { kind: 'other' }): number {
+  const bonus = side === 'runner' ? state.activeRun?.bonusCredits ?? 0 : 0;
+  const hosted = creditSources(state, side, purpose).reduce((n, c) => n + counters(c, 'credit'), 0);
+  return state[side].credits + bonus + hosted;
+}
+
+/**
+ * Pays credits: restricted hosted credits first, then run-only credits, then
+ * the credit pool. Callers check availableCredits beforehand.
+ */
+export function spendCredits(state: GameState, side: SideCode, amount: number, purpose: PaymentPurpose = { kind: 'other' }): void {
   let remaining = amount;
+  for (const source of creditSources(state, side, purpose)) {
+    if (remaining === 0) break;
+    const used = Math.min(remaining, counters(source, 'credit'));
+    removeCounters(source, 'credit', used);
+    remaining -= used;
+    addLog(state, side, `${used} [credit] paid from ${cardDef(source).title}.`);
+    const script = getCardScript(source.cardCode);
+    if (counters(source, 'credit') === 0 && script?.trashWhenEmpty) {
+      trashInstalledCard(state, source);
+      addLog(state, side, `${cardDef(source).title} is empty and was trashed.`);
+      script.onEmptied?.({ state, card: source, side });
+    }
+  }
   const run = state.activeRun;
   if (side === 'runner' && run && run.bonusCredits > 0) {
     const fromBonus = Math.min(run.bonusCredits, remaining);
@@ -111,6 +153,109 @@ export function spendCredits(state: GameState, side: SideCode, amount: number): 
     remaining -= fromBonus;
   }
   state[side].credits -= remaining;
+}
+
+/** Refills recurring credits on a side's active cards ("before your turn begins"). */
+export function refillRecurringCredits(state: GameState, side: SideCode): void {
+  for (const card of activeCards(state, side)) refillRecurring(card);
+}
+
+/** Refills one card's recurring credits (also when it is installed or rezzed). */
+export function refillRecurring(card: CardInstance): void {
+  const amount = getCardScript(card.cardCode)?.recurringCredits;
+  if (amount !== undefined) card.tokens.credit = Math.max(counters(card, 'credit'), amount);
+}
+
+/**
+ * A player gains credits through an ability on `source` (an agenda,
+ * operation, asset...). Fires "credits_gained" for The Zwicky Group.
+ */
+export function gainFromCard(state: GameState, side: SideCode, amount: number, source: CardInstance): void {
+  if (amount <= 0) return;
+  state[side].credits += amount;
+  fireTrigger(state, { type: 'credits_gained', side, amount, source }, [source]);
+}
+
+/** The rez cost of a Corp card right now (Tread Lightly, Fransofia Ward). */
+export function rezCost(state: GameState, card: CardInstance): number {
+  const def = cardDef(card);
+  let cost = def.cost || 0;
+  if (def.type_code === 'ice') cost += state.activeRun?.iceRezCostIncrease ?? 0;
+  for (const c of activeCards(state)) cost += getCardScript(c.cardCode)?.modifiers?.rezCost?.(state, c, card) ?? 0;
+  return Math.max(0, cost);
+}
+
+/** The trash cost of a Corp card right now (Mahkota Langit Grid), or null if it has none. */
+export function trashCost(state: GameState, card: CardInstance): number | null {
+  const printed = cardDef(card).trash_cost;
+  if (printed == null) return null;
+  const serverId = findInstalledCorpCard(state, card.instanceId)?.server.id;
+  const run = state.activeRun;
+  const persistent = (run?.persistentIds ?? []).flatMap(id => findCardAnywhere(state, id) ?? []);
+  let cost = printed;
+  for (const c of [...activeCards(state, 'corp'), ...persistent]) {
+    const mod = getCardScript(c.cardCode)?.modifiers?.trashCost;
+    if (!mod) continue;
+    // A persistent card trashed this run still counts for the server it was in
+    const where = run?.persistentServers[c.instanceId];
+    if (where !== undefined && where !== serverId) continue;
+    cost += mod(state, c, card, serverId);
+  }
+  return Math.max(0, cost);
+}
+
+// --- Threat, flipping, forfeiting -----------------------------------------------
+
+/** The threat level: the highest number of agenda points either player has. */
+export function threatLevel(state: GameState): number {
+  return Math.max(state.corp.score, state.runner.score);
+}
+
+/** Turns an identity to its other side. */
+export function flipIdentity(state: GameState, side: SideCode): void {
+  const identity = state[side].identity;
+  identity.flipped = !identity.flipped;
+  addLog(state, side, `${cardDef(identity).title} flipped.`);
+}
+
+/** Forfeits an agenda from the Corp's score area: it is removed from the game and its points are lost. */
+export function forfeitAgenda(state: GameState, card: CardInstance): void {
+  if (!removeCard(state.corp.scoreArea, card)) return;
+  state.corp.score -= cardDef(card).agenda_points || 0;
+  state.removedFromGame.push(card);
+  addLog(state, 'corp', `Corp forfeited ${cardDef(card).title}.`);
+  fireTrigger(state, { type: 'agenda_forfeited', card }, [card]);
+}
+
+/** Removes tags from the Runner and fires "whenever a tag is removed" (Synapse Global). */
+export function removeTags(state: GameState, count: number): number {
+  const removed = Math.min(count, state.runner.tags);
+  if (removed <= 0) return 0;
+  state.runner.tags -= removed;
+  bumpTurnFlag(state, TurnFlag.tagsRemoved, removed);
+  fireTrigger(state, { type: 'tags_removed', count: removed });
+  return removed;
+}
+
+/** The Corp trashes cards from HQ (facedown into Archives) and fires "hq_trashed" (AU Co.). */
+export function corpTrashFromHQ(state: GameState, ids: string[]): CardInstance[] {
+  const trashed: CardInstance[] = [];
+  for (const id of ids) {
+    const card = state.corp.hq.find(c => c.instanceId === id);
+    if (!card) continue;
+    removeCard(state.corp.hq, card);
+    state.corp.archives.faceDown.push(card);
+    trashed.push(card);
+  }
+  if (trashed.length > 0) fireTrigger(state, { type: 'hq_trashed', count: trashed.length });
+  return trashed;
+}
+
+/** The Corp trashes the top `count` cards of R&D (sabotage). */
+export function corpTrashFromRD(state: GameState, count: number): number {
+  const trashed = state.corp.rd.splice(0, count);
+  state.corp.archives.faceDown.push(...trashed);
+  return trashed.length;
 }
 
 // --- Derived stats ----------------------------------------------------------

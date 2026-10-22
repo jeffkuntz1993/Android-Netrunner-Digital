@@ -10,7 +10,9 @@ import { resolvePrompt } from './actions/prompt';
 import { playOperationOrEvent } from './actions/play';
 import { bioroidBreak, boostBreaker, breakSubroutine } from './actions/breaking';
 import { useAbility } from './actions/ability';
-import { syncDerivedStats } from './cardEffects';
+import { bumpTurnFlag, syncDerivedStats, TurnFlag } from './cardEffects';
+import { findCardAnywhere } from './helpers';
+import { getCardScript } from '../scripts';
 
 export { addLog } from './log';
 
@@ -70,8 +72,31 @@ export function executeAction(prevState: GameState, action: GameAction): GameSta
     throw new IllegalActionError(`Unknown action type: ${(action as { type: string }).type}`);
   }
   handler(state, action);
+  // Petty Cash: "Play only if you have not finished an action yet this turn"
+  if (isClickAction(prevState, action) && state.activePlayer === prevState.activePlayer) bumpTurnFlag(state, TurnFlag.actionsFinished);
   syncDerivedStats(state);
   return state;
+}
+
+const CLICK_ACTIONS: GameActionType[] = [
+  'GAIN_CREDIT',
+  'DRAW_CARD',
+  'INSTALL_CARD',
+  'PLAY_OPERATION_OR_EVENT',
+  'ADVANCE_CARD',
+  'PURGE_VIRUS',
+  'INITIATE_RUN',
+  'REMOVE_TAG',
+  'TRASH_RESOURCE',
+];
+
+/** Is this one of the active player's actions (a basic action or a [click] ability)? */
+function isClickAction(state: GameState, action: GameAction): boolean {
+  if (action.player !== state.activePlayer || state.activeRun) return false;
+  if (CLICK_ACTIONS.includes(action.type)) return true;
+  if (action.type !== 'USE_ABILITY') return false;
+  const card = findCardAnywhere(state, action.cardInstanceId);
+  return !!card && (getCardScript(card.cardCode)?.abilities?.[action.abilityIndex]?.clicks ?? 0) > 0;
 }
 
 /** True if the action can be applied to the state without error. */

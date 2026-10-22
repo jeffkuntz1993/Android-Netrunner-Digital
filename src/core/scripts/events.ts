@@ -132,7 +132,7 @@ const runSource = (ctx: EffectContext) => ({ cardCode: ctx.card.cardCode, instan
 const treadLightly: CardScript = {
   onPlay: ctx => askRunTarget(ctx, Object.keys(ctx.state.corp.servers), 'Tread Lightly'),
   onPromptAnswer: ({ state }, _source, answer) => {
-    if (answer.kind === 'effect_choice') startRun(state, answer.optionId, { iceRezCostIncrease: 3 });
+    if (answer.kind === 'effect_choice') startRun(state, answer.optionId, { iceRezCostIncrease: 3, eventCode: '30012' });
   },
 };
 
@@ -141,7 +141,7 @@ const treadLightly: CardScript = {
 const jailbreak: CardScript = {
   onPlay: ctx => askRunTarget(ctx, ['hq', 'rd'], 'Jailbreak'),
   onPromptAnswer: (ctx, _source, answer) => {
-    if (answer.kind === 'effect_choice') startRun(ctx.state, answer.optionId, { source: runSource(ctx) });
+    if (answer.kind === 'effect_choice') startRun(ctx.state, answer.optionId, { source: runSource(ctx), eventCode: ctx.card.cardCode });
   },
   onRunSuccessful: ({ state }) => {
     drawForEffect(state, 'runner', 1, 'Jailbreak');
@@ -154,7 +154,7 @@ const jailbreak: CardScript = {
 const overclock: CardScript = {
   onPlay: ctx => askRunTarget(ctx, Object.keys(ctx.state.corp.servers), 'Overclock'),
   onPromptAnswer: ({ state }, _source, answer) => {
-    if (answer.kind === 'effect_choice') startRun(state, answer.optionId, { bonusCredits: 5 });
+    if (answer.kind === 'effect_choice') startRun(state, answer.optionId, { bonusCredits: 5, eventCode: '30029' });
   },
 };
 

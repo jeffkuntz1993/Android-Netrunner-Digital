@@ -5,6 +5,8 @@ import { iceScripts } from './ice';
 import { breakerScripts } from './breakers';
 import { corpCardScripts } from './corpCards';
 import { runnerCardScripts } from './runnerCards';
+import { elevationRunnerScripts } from './elevationRunner';
+import { elevationCorpScripts } from './elevationCorp';
 
 export type { CardScript, EffectContext, EffectAnswer } from './types';
 
@@ -15,6 +17,8 @@ const SCRIPTS: Record<string, CardScript> = {
   ...breakerScripts,
   ...corpCardScripts,
   ...runnerCardScripts,
+  ...elevationRunnerScripts,
+  ...elevationCorpScripts,
 };
 
 /** The script for a card code, if its abilities are implemented. */

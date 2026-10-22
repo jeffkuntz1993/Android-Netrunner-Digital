@@ -15,9 +15,32 @@ export function breakerScript(card: CardInstance): BreakerScript | undefined {
   return getCardScript(card.cardCode)?.breaker;
 }
 
-export function iceSubtypes(ice: CardInstance): IceSubtype[] {
+/** The ice's subtypes, including ones granted by programs hosted on it (Chromatophores) when `state` is given. */
+export function iceSubtypes(ice: CardInstance, state?: GameState): IceSubtype[] {
   const keywords = (cardDef(ice).keywords ?? '').toLowerCase();
-  return (['barrier', 'code gate', 'sentry'] as const).filter(t => keywords.includes(t));
+  const granted = state
+    ? state.runner.rig.programs.filter(p => p.hostedOnId === ice.instanceId).flatMap(p => getCardScript(p.cardCode)?.grantsIceSubtypes ?? [])
+    : [];
+  return (['barrier', 'code gate', 'sentry'] as const).filter(t => keywords.includes(t) || granted.includes(t));
+}
+
+/** The cost of one use of a breaker's strength ability (Sang Kancil's depends on the run). */
+export function boostCostOf(state: GameState, breaker: CardInstance): number {
+  const cost = breakerScript(breaker)?.boostCost ?? 0;
+  return typeof cost === 'function' ? cost(state, breaker) : cost;
+}
+
+export function isFracter(card: CardInstance): boolean {
+  return /fracter/i.test(cardDef(card).keywords ?? '');
+}
+
+/**
+ * Can a subroutine on this ice be broken by this breaker (null: by a card
+ * ability that is not an icebreaker's, like Botulus)? Semak-samun only allows fracters.
+ */
+export function canBreakSubroutinesWith(ice: CardInstance, breaker: CardInstance | null): boolean {
+  if (!iceScript(ice)?.fracterOnly) return true;
+  return breaker !== null && isFracter(breaker);
 }
 
 export function isBioroid(ice: CardInstance): boolean {
@@ -41,7 +64,26 @@ export function iceStrength(state: GameState, ice: CardInstance): number {
 /** Current breaker strength, including boosts for the encounter in progress. */
 export function breakerStrength(state: GameState, breaker: CardInstance): number {
   const base = (cardDef(breaker).strength ?? 0) + (breakerScript(breaker)?.strengthModifier?.(state, breaker) ?? 0);
-  return base + (state.activeRun?.encounter?.boosts[breaker.instanceId] ?? 0);
+  // Hosted hardware (GAMEDRAGON™ Pro) can change strength too
+  const hosted = state.runner.rig.hardware
+    .filter(h => h.hostedOnId === breaker.instanceId)
+    .reduce((n, h) => n + (getCardScript(h.cardCode)?.modifiers?.hostStrength ?? 0), 0);
+  const run = state.activeRun;
+  return base + hosted + (run?.encounter?.boosts[breaker.instanceId] ?? 0) + (run?.runBoosts?.[breaker.instanceId] ?? 0);
+}
+
+/**
+ * Adds strength to an icebreaker for this encounter, or for the rest of the
+ * run if it hosts a card that says so (GAMEDRAGON™ Pro).
+ */
+export function addBreakerStrength(state: GameState, breaker: CardInstance, amount: number): void {
+  const run = state.activeRun;
+  if (!run) return;
+  const forRun = state.runner.rig.hardware.some(
+    h => h.hostedOnId === breaker.instanceId && getCardScript(h.cardCode)?.modifiers?.boostsLastForRun
+  );
+  if (forRun) run.runBoosts[breaker.instanceId] = (run.runBoosts[breaker.instanceId] ?? 0) + amount;
+  else if (run.encounter) run.encounter.boosts[breaker.instanceId] = (run.encounter.boosts[breaker.instanceId] ?? 0) + amount;
 }
 
 /** The ice being encountered, if any. */
@@ -56,9 +98,35 @@ export function beginEncounter(state: GameState, ice: CardInstance): void {
   const run = state.activeRun!;
   const subs = iceScript(ice)?.subroutines ?? [];
   run.phase = 'encounter_ice';
-  run.encounter = { iceId: ice.instanceId, broken: subs.map(() => false), boosts: {}, resolvingIndex: null, iceStrengthModifier: 0 };
+  run.encounter = {
+    iceId: ice.instanceId,
+    broken: subs.map(() => false),
+    boosts: {},
+    resolvingIndex: null,
+    iceStrengthModifier: 0,
+    onEncounterPending: true,
+  };
   addLog(state, 'system', `Runner encounters ${cardDef(ice).title} (strength ${iceStrength(state, ice)}).`);
-  iceScript(ice)?.onEncounter?.({ state, card: ice, side: 'corp' });
+  // The Runner is the active player, so their "when you encounter" abilities resolve first (Fransofia Ward)
+  fireTrigger(state, { type: 'encounter_ice', ice });
+  resumeOnEncounter(state);
+}
+
+/** Resolves the encountered ice's own "when encountered" ability once nothing else is pending. */
+export function resumeOnEncounter(state: GameState): void {
+  const encounter = state.activeRun?.encounter;
+  if (!encounter?.onEncounterPending || state.pendingPrompts.length > 0 || state.winner) return;
+  encounter.onEncounterPending = false;
+  const ice = encounteredIce(state);
+  if (ice) iceScript(ice)?.onEncounter?.({ state, card: ice, side: 'corp' });
+}
+
+/** Bypass the encountered ice: pass it with no subroutines or further "when encountered" abilities. */
+export function bypassIce(state: GameState): void {
+  const ice = encounteredIce(state);
+  if (!ice) return;
+  addLog(state, 'runner', `Runner bypassed ${cardDef(ice).title}.`);
+  passIce(state);
 }
 
 /**
@@ -88,6 +156,7 @@ function continueSubroutines(state: GameState): void {
     if (!ice || i >= subs.length) break;
     encounter.resolvingIndex = i + 1;
     if (encounter.broken[i]) continue;
+    run.subroutineResolved = true;
     addLog(state, 'corp', `${cardDef(ice).title} subroutine fires: ${subs[i].label}`);
     subs[i].resolve({ state, card: ice, side: 'corp' });
     if (state.winner) return;
@@ -103,9 +172,37 @@ export function passIce(state: GameState): void {
   run.encounter = null;
   run.icePassed += 1;
   if (run.icePosition! > 0) {
-    run.icePosition! -= 1;
-    run.phase = 'approach_ice';
+    approachIce(state, run.icePosition! - 1);
   } else {
+    approachServer(state);
+  }
+}
+
+/** The Runner approaches the ice at this position of the attacked server ("whenever the Runner approaches"). */
+export function approachIce(state: GameState, position: number): void {
+  const run = state.activeRun!;
+  run.icePosition = position;
+  run.phase = 'approach_ice';
+  run.encounter = null;
+  const ice = state.corp.servers[run.server].ice[position];
+  if (ice) fireTrigger(state, { type: 'approach_ice', ice, server: run.server });
+}
+
+/**
+ * Moves the Runner to the outermost position of a server, approaching its
+ * outermost ice or, with no ice, the server (Proprionegation).
+ */
+export function moveRunnerTo(state: GameState, serverId: string): void {
+  const run = state.activeRun;
+  if (!run) return;
+  run.server = serverId;
+  const last = state.runsThisTurn[state.runsThisTurn.length - 1];
+  if (last) last.server = serverId;
+  const ice = state.corp.servers[serverId].ice;
+  addLog(state, 'corp', `The Runner moved to the outermost position of ${state.corp.servers[serverId].name}.`);
+  if (ice.length > 0) approachIce(state, ice.length - 1);
+  else {
+    run.encounter = null;
     approachServer(state);
   }
 }
@@ -113,6 +210,14 @@ export function passIce(state: GameState): void {
 /** The Runner approaches the attacked server ("whenever the Runner approaches this server"). */
 export function approachServer(state: GameState): void {
   const run = state.activeRun!;
+  if (run.redirectToHq && run.server === 'archives') {
+    // Maintenance Access: the attacked server becomes HQ
+    run.server = 'hq';
+    run.redirectToHq = false;
+    const last = state.runsThisTurn[state.runsThisTurn.length - 1];
+    if (last) last.server = 'hq';
+    addLog(state, 'runner', 'The attacked server changed to HQ.');
+  }
   run.phase = 'approach_server';
   run.icePosition = null;
   fireTrigger(state, { type: 'approach_server', server: run.server });

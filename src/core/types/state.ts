@@ -30,6 +30,8 @@ export interface CorpState {
   };
   servers: Record<string, ServerState>;
   remoteCounter: number;
+  /** Extra clicks for the Corp's next turn (Aggressive Trendsetting). */
+  bonusClicksNextTurn?: number;
 }
 
 export interface RunnerRig {
@@ -74,6 +76,8 @@ export interface EncounterState {
   boosts: Record<string, number>;
   /** Index of the next unbroken subroutine to resolve, once resolution has started. */
   resolvingIndex: number | null;
+  /** The ice's own "when encountered" ability still has to resolve (after the Runner's, e.g. Fransofia Ward). */
+  onEncounterPending?: boolean;
   /** Strength change to the encountered ice for this encounter only (e.g. Leech). */
   iceStrengthModifier: number;
 }
@@ -115,7 +119,30 @@ export interface RunState {
   bonusCredits: number;
   /** Persistent cards trashed during this run whose abilities still apply until it ends (AMAZE). */
   persistentIds: string[];
+  /** The server each persistent card was in when it was trashed. */
+  persistentServers: Record<string, string>;
+  /** Has a subroutine resolved during this run (Ryō "Phoenix" Ōno)? */
+  subroutineResolved: boolean;
+  /** Instance ids of the cards accessed this run, and where (Charm Offensive). */
+  accessed: { id: string; inArchives: boolean }[];
+  /** Has the breach queued its cards yet? (Breach abilities like Devadatta Drone resolve first.) */
+  breached: boolean;
+  /** The first time the Corp would end this run, it must trash cards from HQ or the run goes on (Shred). */
+  shredArmed: boolean;
+  /** At Archives, the Runner approaches HQ instead (Maintenance Access). */
+  redirectToHq: boolean;
+  /** The run event that started this run, if any (Sang Kancil). */
+  eventCode: string | null;
+  /** Strength added to icebreakers for the rest of the run, by instance id (GAMEDRAGON™ Pro). */
+  runBoosts: Record<string, number>;
+  /** Not a run: the Runner is only accessing cards (Detente). No run abilities apply. */
+  accessOnly: boolean;
 }
+
+/** The end of a turn or the Corp's draw, paused while players answer prompts (see engine/actions/turn.ts). */
+export type TurnStep =
+  | { kind: 'end_turn'; side: SideCode; stage: 'action_ended' | 'discarding' | 'discarded' | 'handover' }
+  | { kind: 'corp_draw' };
 
 export type TurnPlayer = SideCode;
 
@@ -154,6 +181,8 @@ export interface GameState {
   turnFlags: Record<string, number>;
   /** Cards removed from the game (Spin Doctor). */
   removedFromGame: CardInstance[];
+  /** A turn transition waiting on prompts (end of turn, Corp's mandatory draw). */
+  turnStep?: TurnStep | null;
   turnNumber: number;
   activePlayer: TurnPlayer;
   phase: GamePhase;

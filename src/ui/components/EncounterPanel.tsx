@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  boostCostOf,
   GameAction,
   GameState,
   breakerScript,
@@ -93,7 +94,7 @@ export const EncounterPanel: React.FC<EncounterPanelProps> = ({ state, onAction,
                     className={`${btn} bg-cyan-950 border-cyan-700 text-cyan-200 hover:bg-cyan-900`}
                   >
                     <TrendingUp className="inline w-3 h-3 mr-1" />
-                    Boost (<Credits amount={script?.boostCost ?? 0} />)
+                    Boost (<Credits amount={boostCostOf(state, breaker)} />)
                   </button>
                 ) : a.type === 'BREAK_SUBROUTINE' ? (
                   <button

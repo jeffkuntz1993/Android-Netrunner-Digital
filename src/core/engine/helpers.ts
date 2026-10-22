@@ -84,9 +84,9 @@ export function findCardAnywhere(state: GameState, instanceId: string): CardInst
   const corp = locateCorpCard(state, instanceId);
   if (corp) return corp.card;
   const r = state.runner;
-  return [r.grip, r.stack, r.heap, r.rig.programs, r.rig.hardware, r.rig.resources, r.scoreArea, state.corp.scoreArea, state.removedFromGame, [r.identity, state.corp.identity]]
-    .flat()
-    .find(c => c.instanceId === instanceId);
+  const zones = [r.grip, r.stack, r.heap, r.rig.programs, r.rig.hardware, r.rig.resources, r.scoreArea, state.corp.scoreArea, state.removedFromGame, [r.identity, state.corp.identity]];
+  const hosted = [...r.rig.programs, ...r.rig.hardware, ...r.rig.resources].flatMap(c => c.hostedCards ?? []);
+  return [...zones.flat(), ...hosted].find(c => c.instanceId === instanceId);
 }
 
 /**

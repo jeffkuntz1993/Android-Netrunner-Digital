@@ -7,14 +7,16 @@ import { addLog } from '../log';
 import { findCardAnywhere, illegal, locateCorpCard, removeCard } from '../helpers';
 import { getCardScript } from '../../scripts';
 import { activePrompt, sideName } from '../prompts';
-import { beginCorpTurn, finishEndTurn } from './turn';
+import { beginCorpTurn, finishDiscard, resumeTurn } from './turn';
 import { continueAccess, finishAccess, trashAccessedCard } from './run';
 import { availableCredits, spendCredits } from '../cardEffects';
-import { resumeEncounter } from '../ice';
+import { resumeEncounter, resumeOnEncounter } from '../ice';
+import { fireTrigger } from '../triggers';
 
 export function resolvePrompt(state: GameState, action: ResolvePromptAction): void {
   answerPrompt(state, action);
   resumeRun(state);
+  resumeTurn(state);
 }
 
 /**
@@ -25,7 +27,8 @@ export function resumeRun(state: GameState): void {
   if (state.pendingPrompts.length > 0 || state.winner) return;
   const run = state.activeRun;
   if (!run) return;
-  if (run.encounter?.resolvingIndex != null) resumeEncounter(state);
+  if (run.encounter?.onEncounterPending) resumeOnEncounter(state);
+  else if (run.encounter?.resolvingIndex != null) resumeEncounter(state);
   else if (run.phase === 'access') continueAccess(state);
 }
 
@@ -68,7 +71,8 @@ function answerPrompt(state: GameState, action: ResolvePromptAction): void {
           ? `Corp discarded ${chosen.length} card(s) to Archives.`
           : `Runner discarded ${chosen.map(c => cardDef(c).title).join(', ')}.`
       );
-      finishEndTurn(state, prompt.side);
+      finishDiscard(state);
+      fireTrigger(state, { type: 'discarded_to_hand_size', side: prompt.side, cards: chosen });
       return;
     }
 
@@ -106,8 +110,9 @@ function answerPrompt(state: GameState, action: ResolvePromptAction): void {
       }
       if (choice.trash) {
         if (prompt.trashCost === null) illegal('This card cannot be trashed by paying its trash cost');
-        if (availableCredits(state, 'runner') < prompt.trashCost) illegal('Not enough credits to trash');
-        spendCredits(state, 'runner', prompt.trashCost);
+        const purpose = { kind: 'trash' as const, card: found.card };
+        if (availableCredits(state, 'runner', purpose) < prompt.trashCost) illegal('Not enough credits to trash');
+        spendCredits(state, 'runner', prompt.trashCost, purpose);
         addLog(state, 'runner', `Runner paid ${prompt.trashCost} [credit] to trash ${cardDef(found.card).title}.`);
         trashAccessedCard(state, found.card);
         return;

@@ -15,7 +15,7 @@ export type DamageType = 'net' | 'meat' | 'core';
  * point. Taking more damage than the grip holds flatlines the Runner and the
  * Corp wins. Returns the trashed cards. (No Gateway card prevents damage.)
  */
-export function dealDamage(state: GameState, type: DamageType, amount: number): CardInstance[] {
+export function dealDamage(state: GameState, type: DamageType, amount: number, byCorp = true): CardInstance[] {
   const trashed: CardInstance[] = [];
   if (type === 'core') state.runner.coreDamage += amount;
   for (let i = 0; i < amount; i++) {
@@ -29,7 +29,8 @@ export function dealDamage(state: GameState, type: DamageType, amount: number): 
     trashed.push(card);
   }
   const what = trashed.length > 0 ? `, trashing ${trashed.map(c => cardDef(c).title).join(', ')}` : '';
-  addLog(state, 'corp', `Corp did ${amount} ${type} damage${what}.`);
+  addLog(state, byCorp ? 'corp' : 'runner', byCorp ? `Corp did ${amount} ${type} damage${what}.` : `Runner suffered ${amount} ${type} damage${what}.`);
+  if (amount > 0 && !state.winner) fireTrigger(state, { type: 'damage_dealt', damage: type, amount, byCorp });
   return trashed;
 }
 
@@ -75,4 +76,14 @@ export function trashInstalledRunnerCard(state: GameState, card: CardInstance): 
   }
   card.tokens = {};
   state.runner.heap.push(card);
+  // Cards hosted faceup on it (Bling, Madani, Detente) go to their owners' discard piles
+  for (const hosted of card.hostedCards ?? []) {
+    if (cardDef(hosted).side_code === 'corp') state.corp.archives.faceUp.push(hosted);
+    else state.runner.heap.push(hosted);
+  }
+  card.hostedCards = [];
+  // Installed cards hosted on it (GAMEDRAGON™ Pro on an icebreaker) are trashed too
+  for (const other of installedRunnerCards(state).filter(c => c.hostedOnId === card.instanceId)) {
+    trashInstalledRunnerCard(state, other);
+  }
 }

@@ -5,7 +5,7 @@ import { addLog } from '../log';
 import { drawCards, illegal, requireActionPhase, requireClicks } from '../helpers';
 import { getCardScript } from '../../scripts';
 import { activeCards } from '../triggers';
-import { bumpTurnFlag, purgeVirusCounters, TurnFlag } from '../cardEffects';
+import { bumpTurnFlag, purgeVirusCounters, removeTags, TurnFlag } from '../cardEffects';
 import { trashInstalledRunnerCard } from '../damage';
 
 export function gainCredit(state: GameState, action: GainCreditAction): void {
@@ -56,8 +56,8 @@ export function removeTag(state: GameState, action: RemoveTagAction): void {
   if (state.runner.credits < 2) illegal('Need 2 credits to remove a tag');
   state.runner.clicks -= 1;
   state.runner.credits -= 2;
-  state.runner.tags -= 1;
-  addLog(state, 'runner', `Runner spent [click] and 2 [credit] to remove 1 tag (now ${state.runner.tags}).`);
+  addLog(state, 'runner', `Runner spent [click] and 2 [credit] to remove 1 tag (now ${state.runner.tags - 1}).`);
+  removeTags(state, 1);
 }
 
 /** Corp basic action: [click] + 2 credits: trash 1 installed resource, if the Runner is tagged. */

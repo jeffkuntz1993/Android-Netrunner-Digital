@@ -104,6 +104,7 @@ export function createInitialGameState(setup: GameSetup): GameState {
     runnerLastTurnRuns: [],
     turnFlags: {},
     removedFromGame: [],
+    turnStep: null,
     turnNumber: 1,
     activePlayer: 'corp', // Corp always goes first in Netrunner
     phase: 'corp_turn',

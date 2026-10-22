@@ -5,7 +5,18 @@ import { cardDef } from '../../cards';
 import { addLog } from '../log';
 import { availableCredits, spendCredits } from '../cardEffects';
 import { illegal } from '../helpers';
-import { breakerScript, breakerStrength, encounteredIce, iceStrength, iceSubtypes, isBioroid } from '../ice';
+import {
+  addBreakerStrength,
+  boostCostOf,
+  breakerScript,
+  breakerStrength,
+  canBreakSubroutinesWith,
+  encounteredIce,
+  iceScript,
+  iceStrength,
+  iceSubtypes,
+  isBioroid,
+} from '../ice';
 
 /** The encounter in its break window (before subroutines start resolving). */
 function breakWindow(state: GameState, player: string): { encounter: EncounterState; ice: CardInstance } {
@@ -29,9 +40,10 @@ export function breakSubroutine(state: GameState, action: BreakSubroutineAction)
   const script = breakerScript(breaker)!;
   const name = cardDef(breaker).title;
 
-  if (script.breaks !== 'any' && !iceSubtypes(ice).includes(script.breaks)) {
+  if (script.breaks !== 'any' && !iceSubtypes(ice, state).includes(script.breaks)) {
     illegal(`${name} can only interface with ${script.breaks} ice`);
   }
+  if (!canBreakSubroutinesWith(ice, breaker)) illegal(`Only a fracter can break ${cardDef(ice).title}`);
   if (breakerStrength(state, breaker) < iceStrength(state, ice)) {
     illegal(`${name} needs strength ${iceStrength(state, ice)} (has ${breakerStrength(state, breaker)})`);
   }
@@ -55,25 +67,36 @@ export function breakSubroutine(state: GameState, action: BreakSubroutineAction)
 }
 
 export function boostBreaker(state: GameState, action: BoostBreakerAction): void {
-  const { encounter } = breakWindow(state, action.player);
+  breakWindow(state, action.player);
   const breaker = installedBreaker(state, action.breakerInstanceId);
   const script = breakerScript(breaker)!;
-  if (availableCredits(state, 'runner') < script.boostCost) illegal(`Need ${script.boostCost} credits`);
+  const cost = boostCostOf(state, breaker);
+  if (availableCredits(state, 'runner') < cost) illegal(`Need ${cost} credits`);
   const amount = script.boostAmount(state, breaker);
-  spendCredits(state, 'runner', script.boostCost);
-  encounter.boosts[breaker.instanceId] = (encounter.boosts[breaker.instanceId] ?? 0) + amount;
-  addLog(state, 'runner', `Runner paid ${script.boostCost} [credit]: ${cardDef(breaker).title} +${amount} strength (now ${breakerStrength(state, breaker)}).`);
+  spendCredits(state, 'runner', cost);
+  addBreakerStrength(state, breaker, amount);
+  addLog(state, 'runner', `Runner paid ${cost} [credit]: ${cardDef(breaker).title} +${amount} strength (now ${breakerStrength(state, breaker)}).`);
 }
 
-/** "[Lose click]: Break 1 subroutine on this ice. Only the Runner can use this ability." */
+/**
+ * An ability on the ice that only the Runner can use to break 1 of its
+ * subroutines: "[Lose click]" on bioroids, or a credit cost (N-Pot).
+ */
 export function bioroidBreak(state: GameState, action: BioroidBreakAction): void {
   const { encounter, ice } = breakWindow(state, action.player);
-  if (!isBioroid(ice)) illegal('Only bioroid ice can be broken by spending clicks');
-  if (state.runner.clicks < 1) illegal('No clicks left to lose');
+  const credits = iceScript(ice)?.runnerBreakCost;
+  if (credits === undefined && !isBioroid(ice)) illegal('This ice has no ability to break its subroutines');
   const i = action.subroutineIndex;
   if (i < 0 || i >= encounter.broken.length) illegal('No such subroutine');
   if (encounter.broken[i]) illegal('Subroutine already broken');
-  state.runner.clicks -= 1;
+  if (credits !== undefined) {
+    if (availableCredits(state, 'runner') < credits) illegal(`Need ${credits} credits`);
+    spendCredits(state, 'runner', credits);
+    addLog(state, 'runner', `Runner paid ${credits} [credit] to break a subroutine on ${cardDef(ice).title}.`);
+  } else {
+    if (state.runner.clicks < 1) illegal('No clicks left to lose');
+    state.runner.clicks -= 1;
+    addLog(state, 'runner', `Runner lost [click] to break a subroutine on ${cardDef(ice).title}.`);
+  }
   encounter.broken[i] = true;
-  addLog(state, 'runner', `Runner lost [click] to break a subroutine on ${cardDef(ice).title}.`);
 }

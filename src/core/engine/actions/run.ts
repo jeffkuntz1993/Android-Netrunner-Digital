@@ -7,10 +7,12 @@ import { nextInt } from '../../rng';
 import { addLog } from '../log';
 import { checkAgendaVictory, findCardAnywhere, illegal, locateCorpCard, removeCard, requireActionPhase, requireClicks } from '../helpers';
 import { pushPrompt } from '../prompts';
-import { approachServer, beginEncounter, passIce, startSubroutineResolution } from '../ice';
+import { approachIce, approachServer, beginEncounter, passIce, startSubroutineResolution } from '../ice';
 import { endRun } from '../runEnd';
 import { activeCards, fireTrigger } from '../triggers';
-import { availableCredits, bumpTurnFlag, TurnFlag } from '../cardEffects';
+import { AccessZone } from '../../scripts/types';
+import { availableCredits, bumpTurnFlag, trashCost, TurnFlag } from '../cardEffects';
+import { RunState } from '../../types/state';
 
 export function initiateRun(state: GameState, action: InitiateRunAction): void {
   if (action.player !== 'runner') illegal('Only Runner can initiate runs');
@@ -26,21 +28,19 @@ export interface RunOptions {
   source?: RunEffectSource;
   iceRezCostIncrease?: number;
   bonusCredits?: number;
+  /** The run event that starts this run (for "while a run event is active"). */
+  eventCode?: string;
+  /** Shred: the first time the Corp would end the run, they must trash cards from HQ. */
+  shred?: boolean;
+  /** Maintenance Access: at Archives, approach HQ instead. */
+  redirectToHq?: boolean;
 }
 
-/** Starts a run (no click spent here; the basic action or the card effect pays for it). */
-export function startRun(state: GameState, serverId: string, options: RunOptions = {}): void {
-  const targetServer = state.corp.servers[serverId];
-  if (!targetServer) illegal('Invalid target server');
-  const iceCount = targetServer.ice.length;
-
-  addLog(state, 'runner', `Runner initiated a run on ${targetServer.name}!`);
-
-  state.runsThisTurn.push({ server: targetServer.id, successful: false });
-  state.activeRun = {
-    server: targetServer.id,
-    phase: iceCount > 0 ? 'approach_ice' : 'approach_server',
-    icePosition: iceCount > 0 ? iceCount - 1 : null,
+function newRunState(serverId: string, options: RunOptions): RunState {
+  return {
+    server: serverId,
+    phase: 'initiation',
+    icePosition: null,
     isSuccessful: false,
     isJackedOut: false,
     cannotJackOut: false,
@@ -56,9 +56,33 @@ export function startRun(state: GameState, serverId: string, options: RunOptions
     iceRezCostIncrease: options.iceRezCostIncrease ?? 0,
     bonusCredits: options.bonusCredits ?? 0,
     persistentIds: [],
+    persistentServers: {},
+    subroutineResolved: false,
+    accessed: [],
+    breached: false,
+    shredArmed: options.shred ?? false,
+    redirectToHq: options.redirectToHq ?? false,
+    eventCode: options.eventCode ?? null,
+    runBoosts: {},
+    accessOnly: false,
   };
+}
+
+/** Starts a run (no click spent here; the basic action or the card effect pays for it). */
+export function startRun(state: GameState, serverId: string, options: RunOptions = {}): void {
+  const targetServer = state.corp.servers[serverId];
+  if (!targetServer) illegal('Invalid target server');
+  const iceCount = targetServer.ice.length;
+
+  addLog(state, 'runner', `Runner initiated a run on ${targetServer.name}!`);
+
+  state.runsThisTurn.push({ server: targetServer.id, successful: false });
+  state.activeRun = newRunState(targetServer.id, options);
   state.phase = 'run';
-  if (iceCount === 0) approachServer(state);
+  fireTrigger(state, { type: 'run_begins', server: targetServer.id });
+  if (!state.activeRun) return;
+  if (iceCount > 0) approachIce(state, iceCount - 1);
+  else approachServer(state);
 }
 
 export function continueRun(state: GameState, action: ContinueRunAction): void {
@@ -91,7 +115,10 @@ export function continueRun(state: GameState, action: ContinueRunAction): void {
       if (card) getCardScript(source.cardCode)?.onRunSuccessful?.({ state, card, side: 'runner' });
     }
     if (state.winner || !state.activeRun) return;
-    breachServer(state, server);
+    // "Whenever you breach" abilities (Devadatta Drone) resolve before cards are chosen
+    fireTrigger(state, { type: 'breach_server', server: server.id });
+    if (state.winner || !state.activeRun) return;
+    continueAccess(state);
   }
 }
 
@@ -127,6 +154,7 @@ function breachBonus(state: GameState, serverId: string): number {
  * pending; resumeRun() picks it up again.
  */
 function breachServer(state: GameState, server: ServerState): void {
+  state.activeRun!.breached = true;
   const ids = server.root.map(card => card.instanceId);
 
   if (server.id === 'hq') {
@@ -147,7 +175,6 @@ function breachServer(state: GameState, server: ServerState): void {
   }
 
   state.activeRun!.accessQueue = ids;
-  continueAccess(state);
 }
 
 /** Marks an access queue entry that continues an access paused by a "when accessed" prompt. */
@@ -155,6 +182,11 @@ const RESUME = 'resume:';
 
 /** Accesses queued cards until something needs a decision, then ends the run. */
 export function continueAccess(state: GameState): void {
+  const run = state.activeRun;
+  if (run && !run.breached) {
+    if (state.pendingPrompts.length > 0 || state.winner) return;
+    breachServer(state, state.corp.servers[run.server]);
+  }
   while (state.activeRun && state.activeRun.accessQueue.length > 0) {
     if (state.pendingPrompts.length > 0 || state.winner) return;
     const next = state.activeRun.accessQueue.shift()!;
@@ -180,10 +212,14 @@ function accessCard(state: GameState, card: CardInstance, zone: CardInstance[], 
   const def = cardDef(card);
   const run = state.activeRun!;
   run.accessedCount += 1;
+  run.accessed.push({ id: card.instanceId, inArchives });
   addLog(state, 'runner', `Runner accessed ${def.title}.`, card.cardCode);
 
   const installed = Object.values(state.corp.servers).some(s => s.root.includes(card) || s.ice.includes(card));
-  if (installed) getCardScript(card.cardCode)?.onAccessed?.({ state, card, side: 'corp' });
+  const where: AccessZone = installed ? 'installed' : inArchives ? 'archives' : zone === state.corp.hq ? 'hq' : 'rd';
+  getCardScript(card.cardCode)?.onAccessed?.({ state, card, side: 'corp' }, where);
+  if (state.winner || !state.activeRun) return;
+  fireTrigger(state, { type: 'card_accessed', card, where });
   if (state.winner || !state.activeRun) return;
   if (state.pendingPrompts.length > 0) {
     // Let the "when accessed" decision resolve first; this card's access resumes afterwards.
@@ -196,9 +232,13 @@ function accessCard(state: GameState, card: CardInstance, zone: CardInstance[], 
 function offerMidAccess(state: GameState, card: CardInstance, zone: CardInstance[], inArchives: boolean): void {
   const def = cardDef(card);
   const blocked = state.activeRun!.cannotStealOrTrash;
-  const trashCost = def.trash_cost;
+  const cost = trashCost(state, card);
   const canBasicTrash =
-    !blocked && !inArchives && def.type_code !== 'agenda' && trashCost != null && availableCredits(state, 'runner') >= trashCost;
+    !blocked &&
+    !inArchives &&
+    def.type_code !== 'agenda' &&
+    cost != null &&
+    availableCredits(state, 'runner', { kind: 'trash', card }) >= cost;
   const alternatives = blocked || inArchives ? [] : accessAlternatives(state, card);
 
   if (canBasicTrash || alternatives.length > 0) {
@@ -206,10 +246,10 @@ function offerMidAccess(state: GameState, card: CardInstance, zone: CardInstance
       kind: 'access_trash',
       side: 'runner',
       cardInstanceId: card.instanceId,
-      trashCost: canBasicTrash ? trashCost! : null,
+      trashCost: canBasicTrash ? cost! : null,
       alternatives,
       message: canBasicTrash
-        ? `Runner: pay ${trashCost} [credit] to trash ${def.title}?`
+        ? `Runner: pay ${cost} [credit] to trash ${def.title}?`
         : `Runner: use an ability on ${def.title}?`,
     });
     return;
@@ -248,6 +288,7 @@ function stealAgenda(state: GameState, card: CardInstance, zone: CardInstance[])
   const def = cardDef(card);
   removeCard(zone, card);
   card.isRezzed = true;
+  card.faceUp = undefined;
   card.advancementCounters = 0;
   state.runner.scoreArea.push(card);
   const pts = def.agenda_points || 0;
@@ -264,15 +305,63 @@ function stealAgenda(state: GameState, card: CardInstance, zone: CardInstance[])
 export function trashAccessedCard(state: GameState, card: CardInstance): void {
   const found = locateCorpCard(state, card.instanceId);
   if (!found) return;
-  const wasInstalled = Object.values(state.corp.servers).some(s => s.root.includes(card) || s.ice.includes(card));
-  removeCard(found.zone, card);
-  card.isRezzed = false;
-  card.advancementCounters = 0;
-  card.tokens = {};
-  // Cards trashed by the Runner go to Archives face up.
-  state.corp.archives.faceUp.push(card);
+  const server = Object.values(state.corp.servers).find(s => s.root.includes(card) || s.ice.includes(card));
+  const wasRezzed = card.isRezzed;
+  runnerTrashCorpCard(state, card);
   const run = state.activeRun;
-  if (run && wasInstalled && getCardScript(card.cardCode)?.persistent) run.persistentIds.push(card.instanceId);
+  if (run && server && getCardScript(card.cardCode)?.persistent) {
+    run.persistentIds.push(card.instanceId);
+    run.persistentServers[card.instanceId] = server.id;
+  }
   bumpTurnFlag(state, TurnFlag.accessTrashes);
   fireTrigger(state, { type: 'trashed_on_access', card });
+  fireTrigger(state, { type: 'runner_trashed_corp_card', card, wasInstalled: !!server, wasRezzed }, [card]);
+}
+
+/**
+ * Moves a Corp card the Runner trashes to Archives face up (from a server,
+ * HQ or R&D). Programs hosted on it go to the heap. Fires no triggers.
+ */
+function runnerTrashCorpCard(state: GameState, card: CardInstance): void {
+  const found = locateCorpCard(state, card.instanceId);
+  if (!found) return;
+  removeCard(found.zone, card);
+  for (const hostedId of card.hostedCardIds) {
+    const hosted = state.runner.rig.programs.find(c => c.instanceId === hostedId);
+    if (!hosted) continue;
+    removeCard(state.runner.rig.programs, hosted);
+    state.runner.memoryUnitsUsed -= cardDef(hosted).memory_cost || 0;
+    hosted.hostedOnId = undefined;
+    hosted.tokens = {};
+    state.runner.heap.push(hosted);
+  }
+  card.hostedCardIds = [];
+  card.isRezzed = false;
+  card.faceUp = false;
+  card.advancementCounters = 0;
+  card.tokens = {};
+  state.corp.archives.faceUp.push(card);
+}
+
+/** The Runner trashes an installed Corp card with a card ability (Charm Offensive). */
+export function runnerTrashInstalledCorpCard(state: GameState, card: CardInstance): void {
+  const wasRezzed = card.isRezzed;
+  runnerTrashCorpCard(state, card);
+  addLog(state, 'runner', `Runner trashed ${cardDef(card).title}.`);
+  fireTrigger(state, { type: 'runner_trashed_corp_card', card, wasInstalled: true, wasRezzed }, [card]);
+}
+
+/**
+ * The Runner accesses cards outside of a run (Detente). Uses a run state
+ * that is not a run: no run abilities apply and it is not counted as a run.
+ */
+export function accessOutsideRun(state: GameState, ids: string[]): void {
+  if (state.activeRun || ids.length === 0) return;
+  const access = newRunState('hq', {});
+  access.phase = 'access';
+  access.accessOnly = true;
+  access.breached = true;
+  access.accessQueue = ids;
+  state.activeRun = access;
+  continueAccess(state);
 }

@@ -65,4 +65,10 @@ export interface CardInstance {
   hostedOnId?: string;
   /** Turn key (see turnKey()) when this card was installed, for "this turn" checks. */
   installedTurn?: string;
+  /** An identity turned to its other side (Dewi Subrotoputri, Nebula Talent Management). */
+  flipped?: boolean;
+  /** An installed Corp card that is faceup without being rezzed (agendas installed with BANGUN). */
+  faceUp?: boolean;
+  /** Cards hosted faceup on this card without being installed (Bling, Madani, Detente). */
+  hostedCards?: CardInstance[];
 }

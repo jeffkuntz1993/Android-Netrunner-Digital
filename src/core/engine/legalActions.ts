@@ -4,7 +4,8 @@ import { GameState } from '../types/state';
 import { isLegalAction } from './gameEngine';
 import { activePrompt } from './prompts';
 import { breakerScript } from './ice';
-import { activeCards } from './triggers';
+import { abilitySources, abilityUsableFrom } from './actions/ability';
+import { canInstallFaceUp, playableHostZones } from './actions/install';
 import { getCardScript } from '../scripts';
 import { cardDef } from '../cards';
 import { isAdvanceable } from './helpers';
@@ -63,11 +64,16 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
             candidates.push({ type: 'PLAY_OPERATION_OR_EVENT', player: 'corp', cardInstanceId: card.instanceId });
             continue;
           }
+          const faceUpToo = canInstallFaceUp(state, card);
           candidates.push({ type: 'INSTALL_CARD', player: 'corp', cardInstanceId: card.instanceId, asNewRemote: true });
+          if (faceUpToo) candidates.push({ type: 'INSTALL_CARD', player: 'corp', cardInstanceId: card.instanceId, asNewRemote: true, faceUp: true });
           for (const server of servers) {
             if (!server.isRemote && (type === 'agenda' || type === 'asset')) continue;
             if (type === 'ice' && server.ice.length > state.corp.credits) continue;
             candidates.push({ type: 'INSTALL_CARD', player: 'corp', cardInstanceId: card.instanceId, targetServerId: server.id });
+            if (faceUpToo) {
+              candidates.push({ type: 'INSTALL_CARD', player: 'corp', cardInstanceId: card.instanceId, targetServerId: server.id, faceUp: true });
+            }
           }
         }
       }
@@ -93,7 +99,7 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
       }
     }
   } else if (actionPhase && hasClick) {
-    for (const card of state.runner.grip) {
+    for (const card of [...state.runner.grip, ...playableHostZones(state).flat()]) {
       if (cardDef(card).type_code === 'event') {
         candidates.push({ type: 'PLAY_OPERATION_OR_EVENT', player: 'runner', cardInstanceId: card.instanceId });
       } else if (getCardScript(card.cardCode)?.installsOnIce) {
@@ -114,13 +120,12 @@ function candidateActions(state: GameState, side: SideCode): GameAction[] {
 
 /** Every ability on the side's active cards; the engine filters out the unusable ones. */
 function abilityCandidates(state: GameState, side: SideCode): GameAction[] {
-  return activeCards(state, side).flatMap(card =>
-    (getCardScript(card.cardCode)?.abilities ?? []).map((_, abilityIndex) => ({
-      type: 'USE_ABILITY' as const,
-      player: side,
-      cardInstanceId: card.instanceId,
-      abilityIndex,
-    }))
+  return abilitySources(state, side).flatMap(({ card, where }) =>
+    (getCardScript(card.cardCode)?.abilities ?? []).flatMap((ability, abilityIndex) =>
+      abilityUsableFrom(ability, where, cardDef(card).side_code === side)
+        ? [{ type: 'USE_ABILITY' as const, player: side, cardInstanceId: card.instanceId, abilityIndex }]
+        : []
+    )
   );
 }
 

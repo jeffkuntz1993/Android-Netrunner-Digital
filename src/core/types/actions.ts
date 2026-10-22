@@ -46,6 +46,8 @@ export interface InstallCardAction extends BaseAction {
   asNewRemote?: boolean;
   /** Runner programs that install onto a card (Botulus, Tranquilizer): the host ice. */
   hostInstanceId?: string;
+  /** Corp: install an agenda faceup (BANGUN). */
+  faceUp?: boolean;
 }
 
 export interface PlayOperationOrEventAction extends BaseAction {
