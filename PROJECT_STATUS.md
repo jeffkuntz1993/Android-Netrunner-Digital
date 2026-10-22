@@ -62,9 +62,12 @@ Netrunner/
 │   ├── Rulebook/                       <-- Official NSG Comprehensive Rules PDF (v26.03)
 │   │   └── Null_Signal_Games_Netrunner_Comprehensive_Rules_v26.03.pdf
 │   └── Cards/
-│       └── System Gateway/             <-- Local card assets & high-res images
-│           ├── system-gateway-cards.json
-│           └── images/                 <-- 77 downloaded card JPGs (named {code}.jpg)
+│       ├── System Gateway/             <-- Local card assets & high-res images
+│       │   ├── system-gateway-cards.json
+│       │   └── images/                 <-- 77 downloaded card JPGs (named {code}.jpg)
+│       └── Elevation/                  <-- Elevation card data (not yet playable; scripts/download-elevation.mjs)
+│           ├── elevation-cards.json    <-- 82 cards (codes 35001–35082)
+│           └── images/                 <-- {code}.jpg, fetched by the script
 ├── src/
 │   ├── core/                           <-- Pure TypeScript Game Engine
 │   │   ├── index.ts                    <-- Public engine API (import from here)
@@ -233,3 +236,4 @@ Netrunner/
 | **2026-10-21** | Claude | Roadmap M1: `PLAY_OPERATION_OR_EVENT` basic action (click + cost, card to Archives/heap face up, then effect); `src/core/scripts/` card-script registry (`canPlay`/`onPlay`/`onPromptAnswer`) with generic `effect_choice`/`effect_cards` prompts; `runsThisTurn` and `CardInstance.installedTurn` tracking; `drawCards` helper; `installRunnerCardFrom` for installs from effects. Scripted 11 cards (see roadmap above). UI: Play button for selected operations/events (disabled with "not implemented" for unscripted cards), effect prompts in `PromptPanel`. `tests/operationsEvents.test.ts` (92 tests total). |
 | **2026-10-22** | Claude | Visual clarity: `ServerColumn` takes the active `run` (replaces unused `isRunTarget`) and highlights the target server, the current ice and the root by run phase (CSS pulses in `index.css`, off with prefers-reduced-motion). New `src/ui/components/HandRow.tsx` renders HQ and the Grip with framer-motion `AnimatePresence` (enter, layout, exit; exit drops if the card is now in the heap/Archives, lifts otherwise). |
 | **2026-10-22** | Claude | Card fates: `src/ui/cardFates.ts` (`cardFates(prev, next)`: stolen, scored, and trashed = installed or accessed-from-HQ/R&D cards now in Archives/heap; hand discards excluded) and `CardFates.tsx` overlay, driven by a `gameState` effect in App so AI moves show too. `PromptPanel` caps discard/effect_cards selection at the max and marks hand cards `notInstalled`. Tests: `tests/cardFates.test.ts`. |
+| **2026-10-22** | Claude | Elevation card data: `Resources/Cards/Elevation/elevation-cards.json` holds the 82 Elevation cards (pack `elev`, codes 35001–35082, 34 Runner / 48 Corp), in the same format as the Gateway JSON (NetrunnerDB card fields, sorted keys, `faction_cost` 0 when absent). New `scripts/download-elevation.mjs` (copy of the Gateway script) fetches the JSON and card images into `Resources/Cards/Elevation/images/`. Data only: no card scripts, nothing imported by the game yet. |
