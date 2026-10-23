@@ -11,9 +11,9 @@ import {
   isLegalAction,
   SideCode,
 } from './core';
-import { Difficulty } from './ai';
 import { AIClient } from './ai/client';
-import { DECKS, DEFAULT_CORP_DECK, DEFAULT_RUNNER_DECK, DeckList, deckGameSetup } from './data/decks';
+import { DECKS, DEFAULT_CORP_DECK, DEFAULT_RUNNER_DECK, deckGameSetup } from './data/decks';
+import { GameConfig, SavedGame, clearSavedGame, loadSavedGame, saveGame } from './ui/savedGame';
 import { loadCustomDecks } from './data/customDecks';
 import { DeckPicker } from './ui/components/DeckPicker';
 import { CardView } from './ui/components/CardView';
@@ -74,15 +74,6 @@ function randomSeed(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0];
 }
 
-interface GameConfig {
-  seed: number;
-  corpDeck: DeckList;
-  runnerDeck: DeckList;
-  /** The side the computer plays, or null for two people. */
-  ai: SideCode | null;
-  difficulty: Difficulty;
-}
-
 /**
  * `?seed=123&corp=<deck id>&runner=<deck id>` starts that exact game (to
  * replay a deal), and `&ai=corp` or `&ai=runner` hands one side to the
@@ -104,8 +95,28 @@ function configFromUrl(): GameConfig | null {
   };
 }
 
+/**
+ * The game to open on: a `?seed=` link, or else the game in progress before
+ * the page reloaded. A saved game resumes a link only if it is that same deal.
+ */
+function startingGame(): { config: GameConfig | null; saved: SavedGame | null } {
+  const fromUrl = configFromUrl();
+  const saved = loadSavedGame();
+  if (fromUrl) {
+    const same =
+      saved &&
+      saved.config.seed === fromUrl.seed &&
+      saved.config.corpDeck.id === fromUrl.corpDeck.id &&
+      saved.config.runnerDeck.id === fromUrl.runnerDeck.id &&
+      saved.config.ai === fromUrl.ai;
+    return { config: fromUrl, saved: same ? saved : null };
+  }
+  return { config: saved?.config ?? null, saved };
+}
+
 export default function App() {
-  const [config, setConfig] = useState<GameConfig | null>(configFromUrl);
+  const [start] = useState(startingGame);
+  const [config, setConfig] = useState<GameConfig | null>(start.config);
   const [lastDecks, setLastDecks] = useState({ corp: DEFAULT_CORP_DECK, runner: DEFAULT_RUNNER_DECK });
 
   if (!config) {
@@ -124,12 +135,15 @@ export default function App() {
     <Game
       key={config.seed}
       config={config}
+      saved={start.saved?.config.seed === config.seed ? start.saved : null}
       onNewGame={() => {
+        clearSavedGame();
         // Drop ?seed=... so a reload doesn't restart the old deal
         if (window.location.search) window.history.replaceState(null, '', window.location.pathname);
         setConfig(null);
       }}
       onRematch={() => {
+        clearSavedGame();
         if (window.location.search) window.history.replaceState(null, '', window.location.pathname);
         setConfig({ ...config, seed: randomSeed() });
       }}
@@ -137,10 +151,20 @@ export default function App() {
   );
 }
 
-function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame: () => void; onRematch: () => void }) {
+function Game({
+  config,
+  saved,
+  onNewGame,
+  onRematch,
+}: {
+  config: GameConfig;
+  saved: SavedGame | null;
+  onNewGame: () => void;
+  onRematch: () => void;
+}) {
   const [gameOverHidden, setGameOverHidden] = useState(false);
-  const [gameState, setGameState] = useState(() =>
-    createInitialGameState(deckGameSetup(config.seed, config.corpDeck, config.runnerDeck))
+  const [gameState, setGameState] = useState(
+    () => saved?.state ?? createInitialGameState(deckGameSetup(config.seed, config.corpDeck, config.runnerDeck))
   );
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -152,12 +176,12 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
   // Who is looking. Pass and play shows one side at a time and hands over
   // (behind a cover screen) whenever the other side has to act.
   const [viewMode, setViewMode] = useState<ViewMode>(savedViewMode);
-  const [hotseatSide, setHotseatSide] = useState<'corp' | 'runner'>('corp');
+  const [hotseatSide, setHotseatSide] = useState<'corp' | 'runner'>(saved?.table.hotseatSide ?? 'corp');
   // Runs started so far, and the Corp rez windows already passed, so each window asks once
-  const [runSerial, setRunSerial] = useState(0);
-  const [passedRezWindows, setPassedRezWindows] = useState<string[]>([]);
+  const [runSerial, setRunSerial] = useState(saved?.table.runSerial ?? 0);
+  const [passedRezWindows, setPassedRezWindows] = useState<string[]>(saved?.table.passedRezWindows ?? []);
   // Cards the Runner accessed in the latest run, shown until dismissed or the next run
-  const [accessed, setAccessed] = useState<string[]>([]);
+  const [accessed, setAccessed] = useState<string[]>(saved?.table.accessed ?? []);
   // Cards just stolen, scored or trashed, shown briefly in the middle of the table
   const [fates, setFates] = useState<ShownFate[]>([]);
   const prevStateRef = useRef(gameState);
@@ -197,6 +221,13 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
       // Not saved; the choice still applies to this game
     }
   }, [viewMode, aiSide]);
+
+  // Save after every move so a reload (the browser discarding a background
+  // tab, or the dev server reconnecting) resumes this game; a finished game is dropped
+  useEffect(() => {
+    if (gameState.winner) clearSavedGame();
+    else saveGame({ config, state: gameState, table: { runSerial, passedRezWindows, hotseatSide, accessed } });
+  }, [config, gameState, runSerial, passedRezWindows, hotseatSide, accessed]);
 
   // Watch every state change (the person's moves and the computer's) for steals, scores and trashes
   useEffect(() => {
