@@ -55,8 +55,8 @@ const IceSlot: React.FC<{
       className={`relative card-sideways rounded-xl ${atRunner ? 'run-ice' : ''} ${lit ? 'host-link-lit' : ''}`}
     >
       {children}
-      {/* Along the card's top edge (the right side, lying sideways), clear of the badges in the corners */}
-      <IceTypeIcons types={types} side="ice" className="absolute right-0.5 top-1/2 -translate-y-1/2" />
+      {/* Bottom of the right edge (the card's top edge, lying sideways): clear of the Unrezzed tag and the Rez/Advance buttons */}
+      <IceTypeIcons types={types} side="ice" className="absolute right-0.5 bottom-0.5" />
       {hosted.length > 0 && (
         <div
           className="absolute left-0.5 top-0.5 z-20 max-w-[85%] flex items-center gap-0.5 rounded bg-pink-950/95 border border-pink-500 px-0.5 text-[8px] leading-3 font-bold text-pink-100 pointer-events-none"
@@ -243,7 +243,8 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
                   {iceLabel}
                 </div>
               )}
-              <div className={`${overlay} flex-row`}>
+              {/* Leaves the right edge to the ice type icons */}
+              <div className={`${overlay} flex-row right-7`}>
                 {canRez(iceCard) && onRezCard && (
                   <button
                     onClick={(e) => {
