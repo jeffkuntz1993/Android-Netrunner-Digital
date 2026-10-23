@@ -51,7 +51,7 @@ import {
   VolumeX,
   Ban,
 } from 'lucide-react';
-import { CreditIcon } from './ui/components/CreditIcon';
+import { CreditIcon, Credits } from './ui/components/CreditIcon';
 import { Keyword } from './ui/components/Keyword';
 import { labelKeyword } from './ui/glossary';
 
@@ -622,7 +622,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
                         className="px-3.5 py-1.5 bg-red-950 hover:bg-red-900 border border-red-700 text-red-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow"
                         title="The Runner is tagged: spend a click and 2 credits to trash this resource"
                       >
-                        <Trash2 className="w-3.5 h-3.5" /> Trash {res ? cardDef(res).title : 'resource'} (2c)
+                        <Trash2 className="w-3.5 h-3.5" /> Trash {res ? cardDef(res).title : 'resource'} (1 click + <Credits amount={2} />)
                       </button>
                     );
                   })}
@@ -801,7 +801,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
                     disabled={!isLegalAction(gameState, { type: 'REMOVE_TAG', player: 'runner' })}
                     className="px-3.5 py-1.5 bg-pink-950 hover:bg-pink-900 border border-pink-700 text-pink-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
                   >
-                    <Tag className="w-3.5 h-3.5 text-red-400" /> Remove Tag (2c)
+                    <Tag className="w-3.5 h-3.5 text-red-400" /> Remove Tag (1 click + <Credits amount={2} />)
                   </button>
                 )}
                 {playButton('runner')}
