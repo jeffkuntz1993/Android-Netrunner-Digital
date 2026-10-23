@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b2230"/>
+      <stop offset="1" stop-color="#05070c"/>
+    </linearGradient>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M20 0H0V20" fill="none" stroke="#22d3ee" stroke-opacity="0.08" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="300" height="420" rx="14" fill="url(#bg)"/>
+  <rect width="300" height="420" rx="14" fill="url(#grid)"/>
+  <path d="M28 14H272L286 28V392L272 406H28L14 392V28Z" fill="none" stroke="#22d3ee" stroke-opacity="0.75" stroke-width="3"/>
+  <path d="M38 26H262L274 38V382L262 394H38L26 382V38Z" fill="none" stroke="#22d3ee" stroke-opacity="0.3" stroke-width="1.5"/>
+  <g fill="none" stroke="#22d3ee" stroke-opacity="0.45" stroke-width="2">
+    <path d="M26 110H80L100 130H130"/>
+    <path d="M274 110H220L200 130H170"/>
+    <path d="M26 310H80L100 290H130"/>
+    <path d="M274 310H220L200 290H170"/>
+    <path d="M150 26V90"/>
+    <path d="M150 394V330"/>
+  </g>
+  <g fill="#22d3ee" fill-opacity="0.7">
+    <circle cx="130" cy="130" r="4"/><circle cx="170" cy="130" r="4"/>
+    <circle cx="130" cy="290" r="4"/><circle cx="170" cy="290" r="4"/>
+    <circle cx="150" cy="90" r="4"/><circle cx="150" cy="330" r="4"/>
+  </g>
+  <g fill="none" stroke="#22d3ee" stroke-width="5">
+    <path d="M150 150L210 185V245L150 280L90 245V185Z"/>
+    <path d="M150 180L184 200V240L150 260L116 240V200Z" stroke-opacity="0.6"/>
+  </g>
+  <rect x="140" y="205" width="20" height="20" fill="#22d3ee"/>
+  <text x="150" y="372" text-anchor="middle" font-family="'Share Tech Mono', ui-monospace, monospace" font-size="26" letter-spacing="8" fill="#22d3ee">CORP</text>
+</svg>

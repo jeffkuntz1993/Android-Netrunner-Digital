@@ -2,11 +2,13 @@ import { SideCode } from '../core/types/card';
 
 export { ALL_CARDS, ALL_CARDS as SYSTEM_GATEWAY_CARDS, CARD_SETS, getCardDefinition, cardDef } from '../core/cards';
 
+// Card art belongs to Null Signal Games and isn't shipped with the app; it is
+// loaded from NetrunnerDB's image host at runtime.
 export function getCardImageUrl(code: string): string {
-  // Use local fast assets from public/cards, fallback handled by img onError
-  return `/cards/${code}.jpg`;
+  return `https://card-images.netrunnerdb.com/v2/large/${code}.jpg`;
 }
 
-export function getCardBackUrl(side: SideCode = 'corp', style: 'nsg' | 'classic' = 'nsg'): string {
-  return `/card-backs/${side}-${style}.png`;
+// Our own card backs (NSG's backs aren't licensed for public use)
+export function getCardBackUrl(side: SideCode = 'corp'): string {
+  return `/card-backs/${side}.svg`;
 }

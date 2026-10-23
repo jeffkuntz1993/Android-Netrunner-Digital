@@ -9,8 +9,7 @@
 
 ## 1. Project Overview & Rules Reference
 This project is an open-source digital implementation of **Android: Netrunner**, adhering strictly to the **Null Signal Games (NSG)** rules and card formats.
-* **Local Comprehensive Rulebook (Official PDF):** [`Resources/Rulebook/Null_Signal_Games_Netrunner_Comprehensive_Rules_v26.03.pdf`](Resources/Rulebook/Null_Signal_Games_Netrunner_Comprehensive_Rules_v26.03.pdf) *(Consult this local file for official timing structures, trigger rules, and definitions)*
-* **Online Rules Reference:** [Null Signal Games Comprehensive Rules](https://rules.nullsignal.games/)
+* **Rules Reference:** [Null Signal Games Comprehensive Rules](https://rules.nullsignal.games/) (v26.03 or later; consult it for official timing structures, trigger rules, and definitions)
 * **Card Database:** Null Signal Games releases via [NetrunnerDB API v2.0](https://netrunnerdb.com/api/2.0/public/cards)
 * **Active Card Pools:**
   * ✅ **System Gateway** (`sg`) — Primary foundation (77 cards)
@@ -59,15 +58,12 @@ Netrunner/
 ├── vite.config.ts
 ├── tailwind.config.js
 ├── Resources/
-│   ├── Rulebook/                       <-- Official NSG Comprehensive Rules PDF (v26.03)
-│   │   └── Null_Signal_Games_Netrunner_Comprehensive_Rules_v26.03.pdf
-│   └── Cards/
-│       ├── System Gateway/             <-- Local card assets & high-res images
-│       │   ├── system-gateway-cards.json
-│       │   └── images/                 <-- 77 downloaded card JPGs (named {code}.jpg)
-│       └── Elevation/                  <-- Elevation card data (in the card pool via src/data/elevation-cards.json; scripts/download-elevation.mjs)
-│           ├── elevation-cards.json    <-- 82 cards (codes 35001–35082)
-│           └── images/                 <-- {code}.jpg, fetched by the script
+│   └── Cards/                          <-- Card data from NetrunnerDB (no images: card art is loaded from card-images.netrunnerdb.com at runtime)
+│       ├── System Gateway/
+│       │   └── system-gateway-cards.json
+│       └── Elevation/                  <-- In the card pool via src/data/elevation-cards.json; scripts/download-elevation.mjs
+│           └── elevation-cards.json    <-- 82 cards (codes 35001–35082)
+├── public/card-backs/                  <-- Our own corp.svg / runner.svg (NSG card art and backs are not licensed for redistribution, so none are in the repo)
 ├── src/
 │   ├── core/                           <-- Pure TypeScript Game Engine
 │   │   ├── index.ts                    <-- Public engine API (import from here)
@@ -126,7 +122,7 @@ Netrunner/
 
 ### Phase 1: Foundational Engine & Gateway Pool (CURRENT)
 - [x] Workspace scaffolding (Vite + React 19 + TypeScript + Tailwind + Vitest).
-- [x] Download System Gateway cards & images to `Resources/Cards/System Gateway`.
+- [x] Download System Gateway card data to `Resources/Cards/System Gateway`.
 - [x] Core state types (`GameState`, `CorpState`, `RunnerState`, `ServerState`, `RunState`).
 - [x] Turn loop & basic click actions (gain credit, draw card, end turn).
 - [x] Card installation (Ice on servers, Cards in remote roots, Runner Rig).
@@ -197,7 +193,7 @@ Netrunner/
 * **Run unit tests:** `npm test`
 * **Run tests in watch mode:** `npm run test:watch`
 * **Build production bundle:** `npm run build`
-* **Sync/update card assets:** `npm run sync-cards`
+* **Sync/update card data:** `npm run sync-cards`
 * **Replay a specific deal:** open the app with `?seed=<number>` (the current seed is shown in the header).
 
 ---
@@ -249,3 +245,4 @@ Netrunner/
 | **2026-10-23** | Claude | Card-name hover moved into a shared `CardNameText` component and added to `PromptPanel` (prompt message and effect-choice buttons, e.g. MuslihaT). |
 | **2026-10-23** | Claude | Deck import (`src/data/deckImport.ts`, `ImportDeckModal`, "Import from NetrunnerDB" on the deck picker): parses NetrunnerDB plain-text exports and their Markdown/BBCode copies, OCTGN .o8d files and "3 Sure Gamble" lists; a NetrunnerDB decklist or shared-deck link is fetched from the public API (CORS allowed), and codes outside our pool are looked up by title so reprints still match. Titles match ignoring case, accents and quote style. Missing cards are listed and left out; a missing identity falls back to the side's first identity with a note. Shows `validateDeck` problems, then saves as a custom deck or opens it in the deckbuilder. Tests: `tests/deckImport.test.ts` (round-trips every built-in deck). |
 | **2026-10-23** | Claude | Corp AI protects its remotes (Jeff's playtest feedback). `src/ai/corpAI.ts`: agendas are installed only behind ice that is rezzed or affordable to rez (`guards()`), never in a naked remote unless they can be scored at once or HQ is over the hand limit; agendas are advanced over several turns only while guarded; installs, advances and other spending that would drop the Corp below the credits needed to rez one piece of ice in front of an agenda remote are penalised (`rezReserve()` / `reservePenalty()`). Naked economy assets and bluff/trap installs stay on purpose. Normal-vs-Normal batches: Corp wins 38% → 42% (216 games, SG + Elevation decks) and 22% → 33% (40 games, SG decks). Also: the engine deletes `faceUp`/`installedTurn` instead of setting them to undefined, so a saved and reloaded game serialises identically. |
+| **2026-10-23** | Claude | Repo prepared for going public: removed all bundled card images (`Resources/Cards/*/images`, `public/cards`), the NSG card backs and the rules PDF. Card images now load from NetrunnerDB (`getCardImageUrl` in `src/data/cards.ts`; a text placeholder shows if one fails); card backs are our own SVGs in `public/card-backs/`; the download scripts only fetch card data; local file paths removed from the docs; README credits. |

@@ -49,9 +49,6 @@ export const CardZoomModal: React.FC<CardZoomModalProps> = ({
             src={getCardImageUrl(card.cardCode)}
             alt={def.title}
             className="w-full h-auto max-h-[460px] object-contain rounded-xl shadow-2xl border border-slate-800"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = `https://card-images.netrunnerdb.com/v2/large/${card.cardCode}.jpg`;
-            }}
           />
         </div>
 

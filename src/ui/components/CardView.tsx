@@ -133,15 +133,7 @@ const CardFace: React.FC<CardViewProps> = ({
             isUnrezzed ? 'opacity-85 brightness-95' : 'opacity-100'
           }`}
           loading="lazy"
-          onError={(e) => {
-            // Fallback from local path to NetrunnerDB CDN URL
-            const target = e.currentTarget;
-            if (!target.src.includes('netrunnerdb.com')) {
-              target.src = `https://card-images.netrunnerdb.com/v2/large/${card.cardCode}.jpg`;
-            } else {
-              setImageError(true);
-            }
-          }}
+          onError={() => setImageError(true)}
         />
       ) : (
         /* Fallback graphic placeholder if image completely fails */

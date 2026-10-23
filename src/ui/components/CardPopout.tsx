@@ -21,7 +21,6 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
   canPeek = true,
 }) => {
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const [imgSrc, setImgSrc] = useState(() => getCardImageUrl(card.cardCode));
   const def = cardDef(card);
 
   const isHiddenSecured = isFaceDown && !canPeek;
@@ -99,13 +98,9 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
           {/* The whole card, uncropped (some cards have their art at the bottom) */}
           <div className="relative w-[44%] max-w-[260px] shrink-0">
             <img
-              src={imgSrc}
+              src={getCardImageUrl(card.cardCode)}
               alt={def.title}
               className="w-full h-auto rounded-xl border border-slate-800 shadow-inner bg-black/60"
-              onError={() => {
-                // Fallback to NetrunnerDB large CDN image
-                setImgSrc(`https://card-images.netrunnerdb.com/v2/large/${card.cardCode}.jpg`);
-              }}
             />
             {card.advancementCounters > 0 && (
               <div className="absolute top-2 right-2 bg-amber-400 text-black font-black text-xs px-2 py-0.5 rounded-full shadow-lg border border-amber-200">
