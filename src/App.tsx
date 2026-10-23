@@ -742,14 +742,13 @@ function Game({
                 <>
                   <CardView card={runner.identity} size="fit" notInstalled onInspect={setInspectedCard} />
                   <div />
-                  <Pile label="Stack" count={runner.stack.length} side="runner" size="fit" hideLabel testId="pile-stack" />
+                  <Pile label="Stack" count={runner.stack.length} side="runner" size="fit" testId="pile-stack" />
                   <Pile
                     label="Heap"
                     count={runner.heap.length}
                     side="runner"
                     topCard={runner.heap[runner.heap.length - 1]}
                     size="fit"
-                    hideLabel
                     onClick={() => setZone('heap')}
                     testId="pile-heap"
                   />
