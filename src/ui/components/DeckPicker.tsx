@@ -187,7 +187,7 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
             </button>
           </div>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 max-h-[50vh] md:max-h-[65vh] overflow-y-auto pr-1" data-testid={`deck-list-${side}`}>
           {summaries
             .filter(s => s.deck.side === side)
             .map(s => {
@@ -296,35 +296,33 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
       {storageFailed && (
         <p className="text-xs text-amber-400 mb-4">This browser would not save your decks, so they will be lost when the page closes.</p>
       )}
-      <div className="w-full max-w-5xl flex flex-col md:flex-row gap-6">
-        {column('corp', corpId, setCorpId)}
-        {column('runner', runnerId, setRunnerId)}
-      </div>
-      <div className="mt-8 flex flex-col items-center gap-2">
-        <span className="text-[11px] uppercase tracking-wider text-slate-500 font-bold">Opponent</span>
-        <div className="flex flex-wrap justify-center gap-2" role="radiogroup" aria-label="Opponent">
-          {OPPONENTS.map(o => (
-            <button
-              key={o.id}
-              role="radio"
-              aria-checked={opponent === o.id}
-              onClick={() => chooseOpponent(o.id)}
-              title={o.hint}
-              data-testid={`opponent-${o.id}`}
-              className={`px-4 py-2 rounded-xl border text-xs font-bold transition-colors ${
-                opponent === o.id
-                  ? 'bg-indigo-600 border-indigo-400 text-white'
-                  : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500'
-              }`}
-            >
-              {o.label}
-            </button>
-          ))}
+      <div className="w-full max-w-5xl mb-6 flex flex-wrap items-start justify-center gap-x-8 gap-y-4" data-testid="game-settings">
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-[11px] uppercase tracking-wider text-slate-500 font-bold">Opponent</span>
+          <div className="flex flex-wrap justify-center gap-2" role="radiogroup" aria-label="Opponent">
+            {OPPONENTS.map(o => (
+              <button
+                key={o.id}
+                role="radio"
+                aria-checked={opponent === o.id}
+                onClick={() => chooseOpponent(o.id)}
+                title={o.hint}
+                data-testid={`opponent-${o.id}`}
+                className={`px-4 py-2 rounded-xl border text-xs font-bold transition-colors ${
+                  opponent === o.id
+                    ? 'bg-indigo-600 border-indigo-400 text-white'
+                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <span className="text-[11px] text-slate-500">{OPPONENTS.find(o => o.id === opponent)!.hint}</span>
         </div>
-        <span className="text-[11px] text-slate-500">{OPPONENTS.find(o => o.id === opponent)!.hint}</span>
         {opponent !== 'people' && (
-          <>
-            <span className="mt-3 text-[11px] uppercase tracking-wider text-slate-500 font-bold">Difficulty</span>
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-[11px] uppercase tracking-wider text-slate-500 font-bold">Difficulty</span>
             <div className="flex flex-wrap justify-center gap-2" role="radiogroup" aria-label="Difficulty">
               {DIFFICULTIES.map(d => (
                 <button
@@ -346,25 +344,31 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
                 </button>
               ))}
             </div>
-            <span className="text-[11px] text-slate-500 text-center max-w-md">{DIFFICULTIES.find(d => d.id === difficulty)!.hint}</span>
-          </>
+            <span className="text-[11px] text-slate-500 text-center max-w-xs">{DIFFICULTIES.find(d => d.id === difficulty)!.hint}</span>
+          </div>
         )}
+        <div className="flex flex-col items-center gap-2 self-center">
+          {selectedProblems.length > 0 && (
+            <p className="text-xs text-amber-400 text-center max-w-xs">A selected deck is not legal yet. Fix it in the deckbuilder to play it.</p>
+          )}
+          <button
+            onClick={() => {
+              const deck = (id: string) => summaries.find(s => s.deck.id === id)!.deck;
+              onStart(deck(corpId), deck(runnerId), opponent === 'ai-corp' ? 'corp' : opponent === 'ai-runner' ? 'runner' : null, difficulty);
+            }}
+            disabled={selectedProblems.length > 0}
+            data-testid="start-game"
+            className="disabled:opacity-40 disabled:cursor-not-allowed px-8 py-3 bg-amber-400 hover:bg-amber-300 text-black font-cyber tracking-widest font-bold rounded-2xl shadow-lg flex items-center gap-2"
+          >
+            <Play className="w-4 h-4" /> Start game
+          </button>
+        </div>
       </div>
-      {selectedProblems.length > 0 && (
-        <p className="mt-6 text-xs text-amber-400">A selected deck is not legal yet. Fix it in the deckbuilder to play it.</p>
-      )}
-      <button
-        onClick={() => {
-          const deck = (id: string) => summaries.find(s => s.deck.id === id)!.deck;
-          onStart(deck(corpId), deck(runnerId), opponent === 'ai-corp' ? 'corp' : opponent === 'ai-runner' ? 'runner' : null, difficulty);
-        }}
-        disabled={selectedProblems.length > 0}
-        data-testid="start-game"
-        className="disabled:opacity-40 disabled:cursor-not-allowed mt-6 px-8 py-3 bg-amber-400 hover:bg-amber-300 text-black font-cyber tracking-widest font-bold rounded-2xl shadow-lg flex items-center gap-2"
-      >
-        <Play className="w-4 h-4" /> Start game
-      </button>
-      <p className="mt-10 text-[10px] text-slate-500">
+      <div className="w-full max-w-5xl flex flex-col md:flex-row gap-6">
+        {column('corp', corpId, setCorpId)}
+        {column('runner', runnerId, setRunnerId)}
+      </div>
+      <p className="mt-8 text-[10px] text-slate-500">
         Game symbols by Null Signal Games,{' '}
         <a
           href="https://creativecommons.org/licenses/by-nd/4.0/"
