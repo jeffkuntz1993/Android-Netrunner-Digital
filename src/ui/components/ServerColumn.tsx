@@ -33,10 +33,13 @@ const ICE_PHASE_LABEL: Partial<Record<RunState['phase'], string>> = {
   pass_ice: 'Passing',
 };
 
-/** Rez, advance and score sit over the bottom of the card, so they cost no table height. */
+/**
+ * Rez, advance and score sit over the lower card, so they cost no table height. They stop
+ * short of the bottom edge, which keeps the card's inspect button and counters clickable.
+ */
 const smallButton =
   'px-0.5 w-full bg-cyan-950/95 hover:bg-cyan-800 text-cyan-200 text-[9px] leading-4 font-mono font-bold whitespace-nowrap rounded border border-cyan-500 shadow flex items-center justify-center gap-0.5 transition-all';
-const overlay = 'absolute inset-x-0.5 bottom-0.5 z-30 flex flex-col gap-0.5';
+const overlay = 'absolute inset-x-0.5 bottom-7 z-30 flex flex-col gap-0.5';
 
 export const ServerColumn: React.FC<ServerColumnProps> = ({
   server,
