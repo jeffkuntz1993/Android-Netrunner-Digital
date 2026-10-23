@@ -51,7 +51,7 @@ import {
   VolumeX,
   Ban,
 } from 'lucide-react';
-import { CreditIcon, Credits } from './ui/components/CreditIcon';
+import { CreditIcon, Credits, MuIcon } from './ui/components/CreditIcon';
 import { Keyword } from './ui/components/Keyword';
 import { labelKeyword } from './ui/glossary';
 
@@ -935,7 +935,7 @@ function Game({
                 <span className="font-bold">{runner.clicks}</span> / {runner.maxClicks} <Keyword id="click">Clicks</Keyword>
               </div>
               <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-400 shadow">
-                <Zap className="w-4 h-4 text-cyan-400" />
+                <MuIcon className="w-4 h-4 text-cyan-400" />
                 <span><Keyword id="mu">MU</Keyword>: {runner.memoryUnitsUsed} / {runner.memoryUnitsTotal}</span>
               </div>
               <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-400 shadow">

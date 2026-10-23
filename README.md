@@ -23,6 +23,6 @@ npm test
 
 ## Credits
 
-Game symbols (such as the credit icon) by [Null Signal Games](https://nullsignal.games/), from the NSG Visual Assets pack v1.5, licensed [CC BY-ND 4.0](https://creativecommons.org/licenses/by-nd/4.0/). They are used unmodified apart from colour.
+Game symbols (such as the credit and MU icons) by [Null Signal Games](https://nullsignal.games/), from the NSG Visual Assets pack v1.5, licensed [CC BY-ND 4.0](https://creativecommons.org/licenses/by-nd/4.0/). They are used unmodified apart from colour.
 
 Card data and card images come from [NetrunnerDB](https://netrunnerdb.com/); images are loaded from NetrunnerDB at runtime and are not included in this repository. Netrunner card text and art are © Null Signal Games and/or Fantasy Flight Games. This is an unofficial fan project, not produced, endorsed or supported by Null Signal Games or Fantasy Flight Games.
