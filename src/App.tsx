@@ -10,7 +10,10 @@ import {
   getLegalActions,
   isLegalAction,
   SideCode,
+  breakerScript,
+  iceSubtypes,
 } from './core';
+import type { IceSubtype } from './core/scripts/types';
 import { AIClient } from './ai/client';
 import { DECKS, DEFAULT_CORP_DECK, DEFAULT_RUNNER_DECK, deckGameSetup } from './data/decks';
 import { GameConfig, SavedGame, clearSavedGame, loadSavedGame, saveGame } from './ui/savedGame';
@@ -395,6 +398,12 @@ function Game({
     );
   };
 
+  // What each icebreaker breaks (AI breakers: everything), matched against the icons on ice
+  const breakerTypes = (card: CardInstance): IceSubtype[] => {
+    const breaks = breakerScript(card)?.breaks;
+    return breaks === 'any' ? ['barrier', 'code gate', 'sentry'] : breaks ? [breaks] : [];
+  };
+
   // Runner cards installed on Corp ice (trojans), and where each one sits, for the host tags
   const onIce = [...runner.rig.programs, ...runner.rig.hardware, ...runner.rig.resources].filter(c => c.hostedOnId);
   const iceHostLabel = (card: CardInstance): string | undefined => {
@@ -702,6 +711,7 @@ function Game({
                 }
                 onInspectCard={(card) => setInspectedCard(card)}
                 hostedOnIce={(ice) => onIce.filter(c => c.hostedOnId === ice.instanceId)}
+                iceTypes={(ice) => iceSubtypes(ice, gameState)}
                 anchor={
                   server.id === 'hq' ? (
                     <CardView card={corp.identity} size="fit" notInstalled onInspect={setInspectedCard} />
@@ -751,6 +761,7 @@ function Game({
               rig={runner.rig}
               onInspectCard={setInspectedCard}
               hostLabel={iceHostLabel}
+              breaks={breakerTypes}
               aside={
                 <>
                   <CardView card={runner.identity} size="fit" notInstalled onInspect={setInspectedCard} />

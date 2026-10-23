@@ -5,6 +5,8 @@ import { CardView } from './CardView';
 import { cardDef } from '../../data/cards';
 import { Database, Crosshair, Zap, ChevronsUp, Award, Bug } from 'lucide-react';
 import { clearHostLink, lightHostLink, useHostLinkLit } from '../hostLinks';
+import { IceTypeIcons } from './IceTypeIcons';
+import type { IceSubtype } from '../../core/scripts/types';
 import { Credits } from './CreditIcon';
 
 interface ServerColumnProps {
@@ -27,6 +29,8 @@ interface ServerColumnProps {
   anchor?: React.ReactNode;
   /** Runner cards installed on a piece of this server's ice (Botulus, Tranquilizer). */
   hostedOnIce?: (ice: CardInstance) => CardInstance[];
+  /** The ice's subtypes (barrier, code gate, sentry), shown as icons when the viewer can see the ice. */
+  iceTypes?: (ice: CardInstance) => IceSubtype[];
 }
 
 
@@ -34,12 +38,13 @@ interface ServerColumnProps {
  * A piece of ice lying sideways. Trojans on it are named in a tag, and hovering
  * the ice outlines it with them (hover the trojan in the rig for the reverse).
  */
-const IceSlot: React.FC<{ ice: CardInstance; hosted: CardInstance[]; atRunner: boolean; children: React.ReactNode }> = ({
-  ice,
-  hosted,
-  atRunner,
-  children,
-}) => {
+const IceSlot: React.FC<{
+  ice: CardInstance;
+  hosted: CardInstance[];
+  types: IceSubtype[];
+  atRunner: boolean;
+  children: React.ReactNode;
+}> = ({ ice, hosted, types, atRunner, children }) => {
   const lit = useHostLinkLit(ice.instanceId);
   const link = hosted.length > 0 ? [ice.instanceId, ...hosted.map(h => h.instanceId)] : null;
   return (
@@ -50,6 +55,8 @@ const IceSlot: React.FC<{ ice: CardInstance; hosted: CardInstance[]; atRunner: b
       className={`relative card-sideways rounded-xl ${atRunner ? 'run-ice' : ''} ${lit ? 'host-link-lit' : ''}`}
     >
       {children}
+      {/* Along the card's top edge (the right side, lying sideways), clear of the badges in the corners */}
+      <IceTypeIcons types={types} side="ice" className="absolute right-0.5 top-1/2 -translate-y-1/2" />
       {hosted.length > 0 && (
         <div
           className="absolute left-0.5 top-0.5 z-20 max-w-[85%] flex items-center gap-0.5 rounded bg-pink-950/95 border border-pink-500 px-0.5 text-[8px] leading-3 font-bold text-pink-100 pointer-events-none"
@@ -93,6 +100,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
   onInspectCard,
   anchor,
   hostedOnIce = () => [],
+  iceTypes = () => [],
 }) => {
   const canCorpPeek = perspective !== 'runner';
   const isRunTarget = run !== null;
@@ -212,7 +220,14 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
       {server.ice.length > 0 && (
         <div className="flex flex-col gap-1 items-center" title={`${server.ice.length} ice`}>
           {server.ice.map((iceCard) => (
-            <IceSlot key={iceCard.instanceId} ice={iceCard} hosted={hostedOnIce(iceCard)} atRunner={runIceId === iceCard.instanceId}>
+            <IceSlot
+              key={iceCard.instanceId}
+              ice={iceCard}
+              hosted={hostedOnIce(iceCard)}
+              // Unrezzed ice keeps its type secret from the Runner
+              types={iceCard.isRezzed || canCorpPeek ? iceTypes(iceCard) : []}
+              atRunner={runIceId === iceCard.instanceId}
+            >
               {/* Ice lies sideways, as on the table; the zoom panel shows it upright */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90">
                 <CardView
