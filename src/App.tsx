@@ -27,6 +27,7 @@ import { AbilityBar } from './ui/components/AbilityBar';
 import { ZoneGroup, ZoneViewer } from './ui/components/ZoneViewer';
 import { Pile } from './ui/components/Pile';
 import { HandRow } from './ui/components/HandRow';
+import { ZoomContext, ZoomPanel, createZoomStore } from './ui/components/ZoomPanel';
 import { CardFates, ShownFate } from './ui/components/CardFates';
 import { cardFates } from './ui/cardFates';
 import { HandoffScreen } from './ui/components/HandoffScreen';
@@ -170,6 +171,7 @@ function Game({
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [cardScale, setCardScale] = useState<'normal' | 'large' | 'huge'>('normal');
+  const [zoomStore] = useState(createZoomStore);
   const [inspectedCard, setInspectedCard] = useState<CardInstance | null>(null);
   const [zone, setZone] = useState<'archives' | 'heap' | 'corp-score' | 'runner-score' | 'removed' | null>(null);
   const [sound, setSound] = useState(soundEnabled);
@@ -331,7 +333,7 @@ function Game({
     <button
       onClick={() => setZone(id)}
       data-testid={`zone-${id}`}
-      className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-600 px-3 py-1.5 rounded-xl text-slate-300 shadow transition-colors"
+      className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-600 px-2 py-0.5 rounded-lg text-slate-300 shadow transition-colors"
       title={`Browse ${label}`}
     >
       {icon}
@@ -385,29 +387,31 @@ function Game({
       ? corp.servers[activeRun.server]?.ice[activeRun.icePosition]
       : undefined;
 
-  // Determine size classes according to selected scale
-  const handCardSize = cardScale === 'huge' ? 'lg' : cardScale === 'large' ? 'md' : 'sm';
-  const boardCardSize = cardScale === 'huge' ? 'lg' : cardScale === 'large' ? 'md' : 'sm';
+  // Board cards follow the window height (--card-w in index.css); Large and Huge scale them up
+  const cardScaleValue = cardScale === 'huge' ? 1.4 : cardScale === 'large' ? 1.2 : 1;
 
   return (
-    <div className="min-h-screen text-slate-100 flex flex-col font-mono selection:bg-cyber-neonYellow selection:text-black">
+    <div
+      className="min-h-screen lg:h-screen lg:overflow-hidden text-slate-100 flex flex-col font-mono selection:bg-cyber-neonYellow selection:text-black"
+      style={{ '--card-scale': cardScaleValue } as React.CSSProperties}
+    >
       {/* Top Header Bar */}
-      <header className="h-16 border-b border-amber-400/40 bg-slate-950/90 px-4 sm:px-6 flex items-center justify-between backdrop-blur-md sticky top-0 z-30 shadow-lg">
+      <header className="h-12 shrink-0 min-w-0 overflow-x-auto border-b border-amber-400/40 bg-slate-950/90 px-3 gap-3 flex items-center justify-between backdrop-blur-md sticky top-0 z-30 shadow-lg">
         <div className="flex items-center gap-3">
           <button
             onClick={leaveGame}
             data-testid="home-logo"
             title="Back to deck selection"
-            className="font-cyber font-black tracking-widest text-base sm:text-lg glitch-title hover:brightness-125 transition"
+            className="font-cyber font-black tracking-widest text-sm 2xl:text-lg whitespace-nowrap glitch-title hover:brightness-125 transition"
           >
             NETRUNNER // PROTOCOL
           </button>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs bg-slate-900 border border-slate-700 px-2.5 py-1 rounded text-slate-300 font-bold hidden sm:inline">
+            <span className="text-xs bg-slate-900 border border-slate-700 px-2 py-0.5 rounded text-slate-300 font-bold whitespace-nowrap hidden sm:inline">
               TURN {gameState.turnNumber} • {activePlayer.toUpperCase()}'S TURN
             </span>
             <span
-              className="text-[10px] text-slate-500 font-mono hidden md:inline"
+              className="text-[10px] text-slate-500 font-mono whitespace-nowrap hidden 2xl:inline"
               title={`Open the app with ?seed=${gameState.rng.seed}&corp=${config.corpDeck.id}&runner=${config.runnerDeck.id}${aiSide ? `&ai=${aiSide}&difficulty=${config.difficulty}` : ''} to replay this deal`}
             >
               SEED {gameState.rng.seed}
@@ -430,7 +434,7 @@ function Game({
                 !(activePlayer === 'corp' ? corpCanAct : runnerCanAct) ||
                 !isLegalAction(gameState, { type: 'END_TURN', player: activePlayer })
               }
-              className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all shadow flex items-center gap-1 disabled:opacity-40 ${
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all shadow flex items-center gap-1 whitespace-nowrap disabled:opacity-40 ${
                 activePlayer === 'corp'
                   ? 'bg-cyan-700 hover:bg-cyan-600 text-white border-cyan-500 shadow-cyan-950'
                   : 'bg-pink-700 hover:bg-pink-600 text-white border-pink-500 shadow-pink-950'
@@ -443,16 +447,16 @@ function Game({
         </div>
 
         {/* Score Board */}
-        <div className="flex items-center gap-4 sm:gap-6">
+        <div className="flex items-center gap-3 2xl:gap-6">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-cyan-400">CORP</span>
-            <div className="flex items-center bg-cyan-950/60 border border-cyan-800 px-2.5 sm:px-3 py-1 rounded-full text-xs font-bold text-cyan-300">
+            <div className="flex items-center whitespace-nowrap bg-cyan-950/60 border border-cyan-800 px-2.5 py-0.5 rounded-full text-xs font-bold text-cyan-300">
               <Award className="w-3.5 h-3.5 mr-1 text-cyan-400" /> {corp.score} / 7
             </div>
           </div>
           <div className="text-slate-600 font-bold text-xs sm:text-sm">vs</div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center bg-pink-950/60 border border-pink-800 px-2.5 sm:px-3 py-1 rounded-full text-xs font-bold text-pink-300">
+            <div className="flex items-center whitespace-nowrap bg-pink-950/60 border border-pink-800 px-2.5 py-0.5 rounded-full text-xs font-bold text-pink-300">
               <Award className="w-3.5 h-3.5 mr-1 text-pink-400" /> {runner.score} / 7
             </div>
             <span className="text-xs font-bold text-pink-400">RUNNER</span>
@@ -460,10 +464,10 @@ function Game({
         </div>
 
         {/* Card Zoom & Game Controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2">
           {/* Card Size Selector */}
           <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
-            <span className="px-2 text-[10px] text-slate-500 font-bold uppercase hidden md:inline flex items-center gap-1">
+            <span className="px-2 text-[10px] text-slate-500 font-bold uppercase hidden 2xl:inline-flex items-center gap-1">
               <ZoomIn className="w-3 h-3" /> Size:
             </span>
             <button
@@ -557,11 +561,13 @@ function Game({
       </header>
 
       {/* Main Tabletop */}
-      <div className="flex-1 w-full flex flex-col xl:flex-row gap-3 p-3">
-      <main className="flex-1 min-w-0 flex flex-col gap-3 overflow-hidden">
+      <div className="flex-1 min-h-0 w-full flex flex-col lg:flex-row gap-2 p-2">
+      {/* Cards on the table send their hover to the zoom panel in the side bar */}
+      <ZoomContext.Provider value={zoomStore}>
+      <main className="flex-1 min-w-0 min-h-0 flex flex-col gap-2">
         {/* Victory Banner */}
         {winner && (
-          <div className="p-5 bg-gradient-to-r from-amber-950/80 to-pink-950/80 border-2 border-amber-500 chamfer flex items-center justify-between shadow-2xl">
+          <div className="shrink-0 p-3 bg-gradient-to-r from-amber-950/80 to-pink-950/80 border-2 border-amber-500 chamfer flex items-center justify-between shadow-2xl">
             <div>
               <h2 className="text-xl font-cyber font-black text-amber-400">
                 GAME OVER // {winner.toUpperCase()} VICTORIOUS
@@ -586,17 +592,17 @@ function Game({
         )}
 
         {/* CORP SECTOR (TOP HALF) */}
-        <section id="corp-board" className="bg-slate-950/60 border border-cyan-900/80 chamfer hud-frame hud-corp p-3 sm:p-4 shadow-xl relative backdrop-blur-sm w-full min-w-0">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-2 pb-2 border-b border-cyan-950">
+        <section id="corp-board" className="flex-1 min-h-0 flex flex-col gap-1.5 bg-slate-950/60 border border-cyan-900/80 chamfer hud-frame hud-corp p-2 shadow-xl relative backdrop-blur-sm w-full min-w-0">
+          <div className="shrink-0 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pb-1 border-b border-cyan-950">
             {/* Identity & Header */}
             <div className="flex items-center gap-3">
-              <span className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_10px_#00f0ff]" />
-              <div>
-                <h2 className="font-cyber font-bold text-sm tracking-wider text-cyan-400">
-                  CORP INFRASTRUCTURE
+              <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#00f0ff]" />
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-cyber font-bold text-xs tracking-wider text-cyan-400">
+                  CORP
                 </h2>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-slate-300 font-mono font-bold">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-300 font-mono font-bold truncate max-w-[18rem]" title={cardDef(corp.identity).title}>
                     {cardDef(corp.identity).title}
                   </span>
                   <button
@@ -611,104 +617,41 @@ function Game({
             </div>
 
             {/* Corp Stats */}
-            <div className="flex items-center gap-3 text-xs font-mono flex-wrap">
-              <div className="flex items-center gap-1.5 bg-cyan-950/80 border border-cyan-800 px-3 py-1.5 rounded-xl text-cyan-300 shadow">
-                <CreditIcon className="w-4 h-4 text-amber-400" />
+            <div className="flex items-center gap-1.5 text-[11px] font-mono flex-wrap">
+              <div className="flex items-center gap-1.5 bg-cyan-950/80 border border-cyan-800 px-2 py-0.5 rounded-lg text-cyan-300 shadow">
+                <CreditIcon className="w-3.5 h-3.5 text-amber-400" />
                 <span className="font-bold">{corp.credits}</span> <Keyword id="credit">Credits</Keyword>
               </div>
-              <div className="flex items-center gap-1.5 bg-cyan-950/80 border border-cyan-800 px-3 py-1.5 rounded-xl text-cyan-300 shadow">
-                <Clock className="w-4 h-4 text-red-400" />
+              <div className="flex items-center gap-1.5 bg-cyan-950/80 border border-cyan-800 px-2 py-0.5 rounded-lg text-cyan-300 shadow">
+                <Clock className="w-3.5 h-3.5 text-red-400" />
                 <span className="font-bold">{corp.clicks}</span> / {corp.maxClicks} <Keyword id="click">Clicks</Keyword>
               </div>
-              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-400 shadow">
-                <Layers className="w-4 h-4 text-slate-500" />
+              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-lg text-slate-400 shadow">
+                <Layers className="w-3.5 h-3.5 text-slate-500" />
                 <span><Keyword id="rd">R&D</Keyword>: {corp.rd.length}</span>
               </div>
               {zoneButton(
                 'archives',
                 'Archives',
                 corp.archives.faceUp.length + corp.archives.faceDown.length,
-                <Archive className="w-4 h-4 text-slate-500" />
+                <Archive className="w-3.5 h-3.5 text-slate-500" />
               )}
-              {zoneButton('corp-score', 'Scored', corp.scoreArea.length, <Award className="w-4 h-4 text-cyan-400" />)}
+              {zoneButton('corp-score', 'Scored', corp.scoreArea.length, <Award className="w-3.5 h-3.5 text-cyan-400" />)}
               {gameState.removedFromGame.length > 0 &&
-                zoneButton('removed', 'Removed', gameState.removedFromGame.length, <Ban className="w-4 h-4 text-slate-500" />)}
+                zoneButton('removed', 'Removed', gameState.removedFromGame.length, <Ban className="w-3.5 h-3.5 text-slate-500" />)}
             </div>
           </div>
 
-          {/* Dedicated Corp Action Bar (Always fully on-screen) */}
-          {activePlayer === 'corp' && corpCanAct && (
-            <div className="flex items-center justify-between flex-wrap gap-3 p-3 bg-cyan-950/40 border border-cyan-800/80 chamfer-sm mb-4 shadow-inner">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-cyan-400 font-mono uppercase mr-1">
-                  Corp Actions ({corp.clicks} Clicks):
-                </span>
-                <button
-                  onClick={() => handleAction({ type: 'GAIN_CREDIT', player: 'corp' })}
-                  disabled={corp.clicks < 1}
-                  className="px-3.5 py-1.5 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700 text-cyan-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
-                >
-                  <CreditIcon className="w-3.5 h-3.5 text-amber-400" /> +1 Credit
-                </button>
-                <button
-                  onClick={() => handleAction({ type: 'DRAW_CARD', player: 'corp' })}
-                  disabled={corp.clicks < 1}
-                  className="px-3.5 py-1.5 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700 text-cyan-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
-                >
-                  <Layers className="w-3.5 h-3.5 text-cyan-400" /> Draw Card
-                </button>
-                <button
-                  onClick={() => handleAction({ type: 'PURGE_VIRUS', player: 'corp' })}
-                  disabled={!isLegalAction(gameState, { type: 'PURGE_VIRUS', player: 'corp' })}
-                  className="px-3.5 py-1.5 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700 text-cyan-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
-                  title="Spend 3 clicks to remove every virus counter"
-                >
-                  <Biohazard className="w-3.5 h-3.5 text-lime-400" /> Purge (3 clicks)
-                </button>
-                {getLegalActions(gameState, 'corp')
-                  .filter(a => a.type === 'TRASH_RESOURCE')
-                  .map(a => {
-                    const res = a.type === 'TRASH_RESOURCE' ? findCardAnywhere(gameState, a.cardInstanceId) : undefined;
-                    return (
-                      <button
-                        key={a.type === 'TRASH_RESOURCE' ? a.cardInstanceId : ''}
-                        onClick={() => handleAction(a)}
-                        className="px-3.5 py-1.5 bg-red-950 hover:bg-red-900 border border-red-700 text-red-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow"
-                        title="The Runner is tagged: spend a click and 2 credits to trash this resource"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" /> Trash {res ? cardDef(res).title : 'resource'} (1 click + <Credits amount={2} />)
-                      </button>
-                    );
-                  })}
-                {playButton('corp')}
-                {selectedCard && !selectedIsPlayable && cardDef(selectedCard).side_code === 'corp' && (
-                  <CorpInstallOptions state={gameState} card={selectedCard} onAction={handleAction} />
-                )}
-              </div>
 
-              {/* End Turn Button - Prominently Anchored */}
-              <button
-                onClick={() => handleAction({ type: 'END_TURN', player: 'corp' })}
-              disabled={!isLegalAction(gameState, { type: 'END_TURN', player: 'corp' })}
-                className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs font-bold rounded-xl border border-cyan-400 transition-all shadow-lg shadow-cyan-950 flex items-center gap-1.5 ml-auto hover:scale-105 disabled:opacity-40 disabled:hover:scale-100"
-              >
-                End Corp Turn <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
-          {corpCanAct && <AbilityBar state={gameState} side="corp" onAction={handleAction} />}
-
-          <div className="flex flex-col xl:flex-row gap-3 mt-3 min-w-0">
+          <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-2 min-w-0">
           {/* Servers Grid */}
-          <div className="flex flex-wrap items-start gap-3 flex-1 min-w-0">
+          <div className="flex items-start gap-2 flex-1 min-w-0 min-h-0 overflow-auto pt-2 pb-1">
             {Object.values(corp.servers).map((server) => (
               <ServerColumn
                 key={server.id}
                 server={server}
                 activePlayer={activePlayer}
                 perspective={viewer}
-                cardSize={boardCardSize}
                 run={activeRun?.server === server.id ? activeRun : null}
                 onInitiateRun={
                   runnerCanAct
@@ -735,21 +678,17 @@ function Game({
                 onInspectCard={(card) => setInspectedCard(card)}
                 anchor={
                   server.id === 'hq' ? (
-                    <div className="flex flex-col items-center gap-1 shrink-0">
-                      <CardView card={corp.identity} size={boardCardSize} notInstalled onInspect={setInspectedCard} />
-                      <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
-                        Identity · {corp.hq.length} in HQ
-                      </span>
-                    </div>
+                    <CardView card={corp.identity} size="fit" notInstalled onInspect={setInspectedCard} />
                   ) : server.id === 'rd' ? (
-                    <Pile label="R&D" count={corp.rd.length} side="corp" size={boardCardSize} testId="pile-rd" />
+                    <Pile label="R&D" count={corp.rd.length} side="corp" size="fit" hideLabel testId="pile-rd" />
                   ) : server.id === 'archives' ? (
                     <Pile
                       label="Archives"
                       count={corp.archives.faceUp.length + corp.archives.faceDown.length}
                       side="corp"
                       topCard={corp.archives.faceUp[corp.archives.faceUp.length - 1]}
-                      size={boardCardSize}
+                      size="fit"
+                      hideLabel
                       onClick={() => setZone('archives')}
                       testId="pile-archives"
                     />
@@ -759,15 +698,13 @@ function Game({
             ))}
           </div>
           {/* Corp HQ Hand: beside the servers on wide screens */}
-          <div className="w-full min-w-0 xl:w-[24rem] 2xl:w-[26rem] xl:shrink-0">
-            <div className="text-xs text-cyan-400 font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
+          <div className="min-w-0 lg:max-w-[45%] shrink-0 flex flex-col overflow-x-auto overflow-y-hidden">
+            <div className="text-[11px] text-cyan-400 font-bold uppercase tracking-wider">
               <span><Keyword id="hq">HQ</Keyword> Hand (<Keyword id="hand-size">{corp.hq.length} / {corp.handSizeLimit}</Keyword>)</span>
-              <span className="text-[10px] text-slate-500 lowercase">hover to preview</span>
             </div>
             <HandRow
               cards={corp.hq}
               side="corp"
-              size={handCardSize}
               canSee={canSeeCorpSecrets(viewer)}
               isSelectable={activePlayer === 'corp' && corpCanAct}
               selectedCardId={selectedCardId}
@@ -779,28 +716,26 @@ function Game({
           </div>
         </section>
 
-        {/* RUNNER SECTOR (BOTTOM HALF) */}
-        <section id="runner-board" className="bg-slate-950/60 border border-pink-900/80 chamfer hud-frame hud-runner p-3 sm:p-4 shadow-xl relative backdrop-blur-sm w-full min-w-0">
-          <div className="flex flex-col xl:flex-row gap-3 mb-3 min-w-0">
+        {/* RUNNER SECTOR (BOTTOM): the rig is two rows, so it takes what it needs and the Corp gets the rest */}
+        <section id="runner-board" className="flex-none lg:max-h-[55%] min-h-0 flex flex-col gap-1.5 bg-slate-950/60 border border-pink-900/80 chamfer hud-frame hud-runner p-2 shadow-xl relative backdrop-blur-sm w-full min-w-0">
+          <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-2 min-w-0">
           {/* Runner Rig (Installed Programs, Hardware, Resources) */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 min-h-0 overflow-auto">
             <RigView
               rig={runner.rig}
-              cardSize={boardCardSize}
               onInspectCard={setInspectedCard}
               aside={
                 <>
-                  <div className="flex flex-col items-center gap-1 shrink-0">
-                    <CardView card={runner.identity} size={boardCardSize} notInstalled onInspect={setInspectedCard} />
-                    <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Identity</span>
-                  </div>
-                  <Pile label="Stack" count={runner.stack.length} side="runner" size={boardCardSize} testId="pile-stack" />
+                  <CardView card={runner.identity} size="fit" notInstalled onInspect={setInspectedCard} />
+                  <div />
+                  <Pile label="Stack" count={runner.stack.length} side="runner" size="fit" hideLabel testId="pile-stack" />
                   <Pile
                     label="Heap"
                     count={runner.heap.length}
                     side="runner"
                     topCard={runner.heap[runner.heap.length - 1]}
-                    size={boardCardSize}
+                    size="fit"
+                    hideLabel
                     onClick={() => setZone('heap')}
                     testId="pile-heap"
                   />
@@ -809,15 +744,13 @@ function Game({
             />
           </div>
           {/* Runner Grip Hand: beside the rig on wide screens */}
-          <div className="w-full min-w-0 xl:w-[24rem] 2xl:w-[26rem] xl:shrink-0">
-            <div className="text-xs text-pink-400 font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
+          <div className="min-w-0 lg:max-w-[45%] shrink-0 flex flex-col overflow-x-auto overflow-y-hidden">
+            <div className="text-[11px] text-pink-400 font-bold uppercase tracking-wider">
               <span><Keyword id="grip">Grip</Keyword> Hand (<Keyword id="hand-size">{runner.grip.length} / {runner.handSizeLimit}</Keyword>)</span>
-              <span className="text-[10px] text-slate-500 lowercase">hover to preview</span>
             </div>
             <HandRow
               cards={runner.grip}
               side="runner"
-              size={handCardSize}
               canSee={canSeeRunnerSecrets(viewer)}
               isSelectable={activePlayer === 'runner' && runnerCanAct}
               selectedCardId={selectedCardId}
@@ -828,24 +761,158 @@ function Game({
           </div>
           </div>
 
+
+          <div className="shrink-0 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-1 border-t border-pink-950">
+            {/* Identity & Header */}
+            <div className="flex items-center gap-3">
+              <span className="w-2 h-2 rounded-full bg-pink-400 shadow-[0_0_10px_#ff0055]" />
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-cyber font-bold text-xs tracking-wider text-pink-400">
+                  RUNNER
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-300 font-mono font-bold truncate max-w-[18rem]" title={cardDef(runner.identity).title}>
+                    {cardDef(runner.identity).title}
+                  </span>
+                  <button
+                    onClick={() => setInspectedCard(runner.identity)}
+                    className="text-[10px] text-pink-400 hover:text-pink-200 border border-pink-800/80 bg-pink-950/40 px-1.5 py-0.5 rounded flex items-center gap-1 transition-colors"
+                    title="Inspect Runner Identity card"
+                  >
+                    <Eye className="w-2.5 h-2.5" /> View ID
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Runner Stats */}
+            <div className="flex items-center gap-1.5 text-[11px] font-mono flex-wrap">
+              <div className="flex items-center gap-1.5 bg-pink-950/80 border border-pink-800 px-2 py-0.5 rounded-lg text-pink-300 shadow">
+                <CreditIcon className="w-3.5 h-3.5 text-amber-400" />
+                <span className="font-bold">{runner.credits}</span> <Keyword id="credit">Credits</Keyword>
+              </div>
+              <div className="flex items-center gap-1.5 bg-pink-950/80 border border-pink-800 px-2 py-0.5 rounded-lg text-pink-300 shadow">
+                <Clock className="w-3.5 h-3.5 text-red-400" />
+                <span className="font-bold">{runner.clicks}</span> / {runner.maxClicks} <Keyword id="click">Clicks</Keyword>
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-lg text-slate-400 shadow">
+                <MuIcon className="w-3.5 h-3.5 text-cyan-400" />
+                <span><Keyword id="mu">MU</Keyword>: {runner.memoryUnitsUsed} / {runner.memoryUnitsTotal}</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-lg text-slate-400 shadow">
+                <Layers className="w-3.5 h-3.5 text-slate-500" />
+                <span><Keyword id="stack">Stack</Keyword>: {runner.stack.length}</span>
+              </div>
+              {zoneButton('heap', 'Heap', runner.heap.length, <Trash2 className="w-3.5 h-3.5 text-slate-500" />)}
+              {zoneButton('runner-score', 'Stolen', runner.scoreArea.length, <Award className="w-3.5 h-3.5 text-pink-400" />)}
+              <div
+                className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg shadow border ${
+                  runner.tags > 0 ? 'bg-red-950 border-red-700 text-red-300' : 'bg-slate-900 border-slate-800 text-slate-400'
+                }`}
+                data-testid="runner-tags"
+              >
+                <Tag className="w-3.5 h-3.5" />
+                <span className="font-bold">{runner.tags}</span> <Keyword id="tag">Tag{runner.tags === 1 ? '' : 's'}</Keyword>
+              </div>
+              {runner.coreDamage > 0 && (
+                <div className="flex items-center gap-1.5 bg-red-950 border border-red-800 px-2 py-0.5 rounded-lg text-red-300 shadow">
+                  <span className="font-bold">{runner.coreDamage}</span> <Keyword id="core-damage">Core damage</Keyword>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </section>
+
+      </main>
+      </ZoomContext.Provider>
+
+      {/* Side bar: the hovered card, the acting side's actions, then the log */}
+      <aside className="lg:w-80 2xl:w-96 shrink-0 flex flex-col gap-2 min-h-0">
+        <div className="hidden lg:block shrink-0">
+          <ZoomPanel store={zoomStore} onInspect={setInspectedCard} />
+        </div>
+        <div className="shrink-0 lg:max-h-[40vh] overflow-y-auto flex flex-col gap-2 empty:hidden">
+          {/* Dedicated Corp Action Bar (Always fully on-screen) */}
+          {activePlayer === 'corp' && corpCanAct && (
+            <div className="flex flex-col gap-2 p-2 bg-cyan-950/40 border border-cyan-800/80 chamfer-sm shadow-inner">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-bold text-cyan-400 font-mono uppercase w-full">
+                  Corp Actions ({corp.clicks} Clicks):
+                </span>
+                <button
+                  onClick={() => handleAction({ type: 'GAIN_CREDIT', player: 'corp' })}
+                  disabled={corp.clicks < 1}
+                  className="px-2 py-1 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700 text-cyan-200 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
+                >
+                  <CreditIcon className="w-3.5 h-3.5 text-amber-400" /> +1 Credit
+                </button>
+                <button
+                  onClick={() => handleAction({ type: 'DRAW_CARD', player: 'corp' })}
+                  disabled={corp.clicks < 1}
+                  className="px-2 py-1 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700 text-cyan-200 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
+                >
+                  <Layers className="w-3.5 h-3.5 text-cyan-400" /> Draw Card
+                </button>
+                <button
+                  onClick={() => handleAction({ type: 'PURGE_VIRUS', player: 'corp' })}
+                  disabled={!isLegalAction(gameState, { type: 'PURGE_VIRUS', player: 'corp' })}
+                  className="px-2 py-1 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700 text-cyan-200 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
+                  title="Spend 3 clicks to remove every virus counter"
+                >
+                  <Biohazard className="w-3.5 h-3.5 text-lime-400" /> Purge (3 clicks)
+                </button>
+                {getLegalActions(gameState, 'corp')
+                  .filter(a => a.type === 'TRASH_RESOURCE')
+                  .map(a => {
+                    const res = a.type === 'TRASH_RESOURCE' ? findCardAnywhere(gameState, a.cardInstanceId) : undefined;
+                    return (
+                      <button
+                        key={a.type === 'TRASH_RESOURCE' ? a.cardInstanceId : ''}
+                        onClick={() => handleAction(a)}
+                        className="px-2 py-1 bg-red-950 hover:bg-red-900 border border-red-700 text-red-200 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow"
+                        title="The Runner is tagged: spend a click and 2 credits to trash this resource"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Trash {res ? cardDef(res).title : 'resource'} (1 click + <Credits amount={2} />)
+                      </button>
+                    );
+                  })}
+                {playButton('corp')}
+                {selectedCard && !selectedIsPlayable && cardDef(selectedCard).side_code === 'corp' && (
+                  <CorpInstallOptions state={gameState} card={selectedCard} onAction={handleAction} />
+                )}
+              </div>
+
+              {/* End Turn Button - Prominently Anchored */}
+              <button
+                onClick={() => handleAction({ type: 'END_TURN', player: 'corp' })}
+              disabled={!isLegalAction(gameState, { type: 'END_TURN', player: 'corp' })}
+                className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs font-bold rounded-lg border border-cyan-400 transition-all shadow-lg shadow-cyan-950 flex items-center gap-1.5 self-end disabled:opacity-40 disabled:hover:scale-100"
+              >
+                End Corp Turn <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {corpCanAct && <AbilityBar state={gameState} side="corp" onAction={handleAction} />}
           {/* Dedicated Runner Action Bar (Always fully on-screen) */}
           {activePlayer === 'runner' && runnerCanAct && (
-            <div className="flex items-center justify-between flex-wrap gap-3 p-3 bg-pink-950/40 border border-pink-800/80 chamfer-sm mb-4 shadow-inner">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-pink-400 font-mono uppercase mr-1">
+            <div className="flex flex-col gap-2 p-2 bg-pink-950/40 border border-pink-800/80 chamfer-sm shadow-inner">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-bold text-pink-400 font-mono uppercase w-full">
                   Runner Actions ({runner.clicks} Clicks):
                 </span>
                 <button
                   onClick={() => handleAction({ type: 'GAIN_CREDIT', player: 'runner' })}
                   disabled={runner.clicks < 1}
-                  className="px-3.5 py-1.5 bg-pink-950 hover:bg-pink-900 border border-pink-700 text-pink-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
+                  className="px-2 py-1 bg-pink-950 hover:bg-pink-900 border border-pink-700 text-pink-200 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
                 >
                   <CreditIcon className="w-3.5 h-3.5 text-amber-400" /> +1 Credit
                 </button>
                 <button
                   onClick={() => handleAction({ type: 'DRAW_CARD', player: 'runner' })}
                   disabled={runner.clicks < 1}
-                  className="px-3.5 py-1.5 bg-pink-950 hover:bg-pink-900 border border-pink-700 text-pink-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
+                  className="px-2 py-1 bg-pink-950 hover:bg-pink-900 border border-pink-700 text-pink-200 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
                 >
                   <Layers className="w-3.5 h-3.5 text-pink-400" /> Draw Card
                 </button>
@@ -853,7 +920,7 @@ function Game({
                   <button
                     onClick={() => handleAction({ type: 'REMOVE_TAG', player: 'runner' })}
                     disabled={!isLegalAction(gameState, { type: 'REMOVE_TAG', player: 'runner' })}
-                    className="px-3.5 py-1.5 bg-pink-950 hover:bg-pink-900 border border-pink-700 text-pink-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
+                    className="px-2 py-1 bg-pink-950 hover:bg-pink-900 border border-pink-700 text-pink-200 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 disabled:opacity-40 shadow"
                   >
                     <Tag className="w-3.5 h-3.5 text-red-400" /> Remove Tag (1 click + <Credits amount={2} />)
                   </button>
@@ -872,7 +939,7 @@ function Game({
                         <button
                           key={a.type === 'INSTALL_CARD' ? a.hostInstanceId : ''}
                           onClick={() => handleAction(a)}
-                          className="px-4 py-1.5 bg-cyber-neonPink hover:bg-pink-600 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-lg"
+                          className="px-2 py-1 bg-cyber-neonPink hover:bg-pink-600 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow-lg"
                         >
                           <Plus className="w-3.5 h-3.5" /> Install on {host?.isRezzed ? cardDef(host).title : 'unrezzed ice'} ({server?.name})
                         </button>
@@ -887,7 +954,7 @@ function Game({
                         cardInstanceId: selectedCardId,
                       });
                     }}
-                    className="px-4 py-1.5 bg-cyber-neonPink hover:bg-pink-600 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-lg animate-pulse"
+                    className="px-2 py-1 bg-cyber-neonPink hover:bg-pink-600 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow-lg animate-pulse"
                   >
                     <Plus className="w-3.5 h-3.5" /> Install Card
                   </button>
@@ -901,7 +968,7 @@ function Game({
                       key={`${a.type}-${a.cardInstanceId}-${a.type === 'INSTALL_CARD' ? a.hostInstanceId ?? '' : ''}`}
                       onClick={() => handleAction(a)}
                       data-testid={`hosted-${a.cardInstanceId}`}
-                      className="px-4 py-1.5 bg-pink-900 hover:bg-pink-800 border border-pink-500 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow"
+                      className="px-2 py-1 bg-pink-900 hover:bg-pink-800 border border-pink-500 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow"
                       title="This card is hosted faceup on your hardware"
                     >
                       {a.type === 'INSTALL_CARD' ? <Plus className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
@@ -915,7 +982,7 @@ function Game({
               <button
                 onClick={() => handleAction({ type: 'END_TURN', player: 'runner' })}
               disabled={!isLegalAction(gameState, { type: 'END_TURN', player: 'runner' })}
-                className="px-5 py-2 bg-cyber-neonPink hover:bg-pink-600 text-white font-mono text-xs font-bold rounded-xl border border-pink-400 transition-all shadow-lg shadow-pink-950 flex items-center gap-1.5 ml-auto hover:scale-105 disabled:opacity-40 disabled:hover:scale-100"
+                className="px-3 py-1.5 bg-cyber-neonPink hover:bg-pink-600 text-white font-mono text-xs font-bold rounded-lg border border-pink-400 transition-all shadow-lg shadow-pink-950 flex items-center gap-1.5 self-end disabled:opacity-40 disabled:hover:scale-100"
               >
                 End Runner Turn <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -923,74 +990,8 @@ function Game({
           )}
 
           {runnerCanAct && <AbilityBar state={gameState} side="runner" onAction={handleAction} />}
-
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-2 pt-2 border-t border-pink-950">
-            {/* Identity & Header */}
-            <div className="flex items-center gap-3">
-              <span className="w-3 h-3 rounded-full bg-pink-400 shadow-[0_0_10px_#ff0055]" />
-              <div>
-                <h2 className="font-cyber font-bold text-sm tracking-wider text-pink-400">
-                  RUNNER TERMINAL
-                </h2>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-slate-300 font-mono font-bold">
-                    {cardDef(runner.identity).title}
-                  </span>
-                  <button
-                    onClick={() => setInspectedCard(runner.identity)}
-                    className="text-[10px] text-pink-400 hover:text-pink-200 border border-pink-800/80 bg-pink-950/40 px-1.5 py-0.5 rounded flex items-center gap-1 transition-colors"
-                    title="Inspect Runner Identity card"
-                  >
-                    <Eye className="w-2.5 h-2.5" /> View ID
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Runner Stats */}
-            <div className="flex items-center gap-3 text-xs font-mono flex-wrap">
-              <div className="flex items-center gap-1.5 bg-pink-950/80 border border-pink-800 px-3 py-1.5 rounded-xl text-pink-300 shadow">
-                <CreditIcon className="w-4 h-4 text-amber-400" />
-                <span className="font-bold">{runner.credits}</span> <Keyword id="credit">Credits</Keyword>
-              </div>
-              <div className="flex items-center gap-1.5 bg-pink-950/80 border border-pink-800 px-3 py-1.5 rounded-xl text-pink-300 shadow">
-                <Clock className="w-4 h-4 text-red-400" />
-                <span className="font-bold">{runner.clicks}</span> / {runner.maxClicks} <Keyword id="click">Clicks</Keyword>
-              </div>
-              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-400 shadow">
-                <MuIcon className="w-4 h-4 text-cyan-400" />
-                <span><Keyword id="mu">MU</Keyword>: {runner.memoryUnitsUsed} / {runner.memoryUnitsTotal}</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-400 shadow">
-                <Layers className="w-4 h-4 text-slate-500" />
-                <span><Keyword id="stack">Stack</Keyword>: {runner.stack.length}</span>
-              </div>
-              {zoneButton('heap', 'Heap', runner.heap.length, <Trash2 className="w-4 h-4 text-slate-500" />)}
-              {zoneButton('runner-score', 'Stolen', runner.scoreArea.length, <Award className="w-4 h-4 text-pink-400" />)}
-              <div
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl shadow border ${
-                  runner.tags > 0 ? 'bg-red-950 border-red-700 text-red-300' : 'bg-slate-900 border-slate-800 text-slate-400'
-                }`}
-                data-testid="runner-tags"
-              >
-                <Tag className="w-4 h-4" />
-                <span className="font-bold">{runner.tags}</span> <Keyword id="tag">Tag{runner.tags === 1 ? '' : 's'}</Keyword>
-              </div>
-              {runner.coreDamage > 0 && (
-                <div className="flex items-center gap-1.5 bg-red-950 border border-red-800 px-3 py-1.5 rounded-xl text-red-300 shadow">
-                  <span className="font-bold">{runner.coreDamage}</span> <Keyword id="core-damage">Core damage</Keyword>
-                </div>
-              )}
-            </div>
-          </div>
-
-        </section>
-
-      </main>
-
-      {/* Log in a side bar on wide screens, below the board otherwise */}
-      <aside className="xl:w-80 2xl:w-96 shrink-0 xl:sticky xl:top-[4.75rem] xl:self-start xl:h-[calc(100vh-5.5rem)]">
-        <LogFeed logs={gameState.log} className="h-56 xl:h-full" />
+        </div>
+        <LogFeed logs={gameState.log} className="h-56 lg:h-auto lg:flex-1 lg:min-h-[6rem]" />
       </aside>
       </div>
 

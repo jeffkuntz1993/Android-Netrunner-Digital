@@ -1,0 +1,84 @@
+import React, { createContext, useContext, useState, useSyncExternalStore } from 'react';
+import { CardInstance } from '../../core/types/card';
+import { cardDef, getCardBackUrl, getCardImageUrl } from '../../data/cards';
+import { typeLine } from '../cardLabels';
+import { Eye } from 'lucide-react';
+
+/** The card under the pointer, and whether this viewer may see its face. */
+export interface ZoomTarget {
+  card: CardInstance;
+  hidden: boolean;
+}
+
+/**
+ * Holds the last card hovered on the board. A tiny store rather than App
+ * state, so hovering repaints only the zoom panel and not the whole table.
+ */
+export function createZoomStore() {
+  let current: ZoomTarget | null = null;
+  const listeners = new Set<() => void>();
+  return {
+    get: () => current,
+    show(target: ZoomTarget) {
+      if (current?.card.instanceId === target.card.instanceId && current.hidden === target.hidden) return;
+      current = target;
+      listeners.forEach(l => l());
+    },
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+}
+
+export type ZoomStore = ReturnType<typeof createZoomStore>;
+
+/**
+ * Cards inside this provider send their hover to the zoom panel instead of
+ * opening a floating popout. Modals stay outside it and keep the popout.
+ */
+export const ZoomContext = createContext<ZoomStore | null>(null);
+
+export const useZoom = () => useContext(ZoomContext);
+
+/** Full-size view of the hovered card, as on jinteki.net. Double-click a card for the rules text. */
+export const ZoomPanel: React.FC<{ store: ZoomStore; onInspect: (card: CardInstance) => void }> = ({ store, onInspect }) => {
+  const target = useSyncExternalStore(store.subscribe, store.get);
+  const [failed, setFailed] = useState<string | null>(null);
+
+  if (!target) {
+    return (
+      <div className="zoom-card flex items-center justify-center border border-dashed border-slate-700 text-[11px] text-slate-500 text-center px-6">
+        Hover any card on the table to see it here
+      </div>
+    );
+  }
+
+  const { card, hidden } = target;
+  const def = cardDef(card);
+  const src = hidden ? getCardBackUrl(def.side_code || 'corp') : getCardImageUrl(card.cardCode);
+
+  return (
+    <div className="flex flex-col items-center gap-1" data-testid="zoom-panel">
+      <div className="zoom-card relative border border-amber-400/60 overflow-hidden bg-black">
+        {failed === src ? (
+          <div className="w-full h-full flex items-center justify-center p-3 text-center text-sm text-slate-300">{def.title}</div>
+        ) : (
+          <img src={src} alt={hidden ? 'Face-down card' : def.title} className="w-full h-full object-cover" onError={() => setFailed(src)} />
+        )}
+      </div>
+      <div className="w-full flex items-center justify-between gap-2 text-[11px] font-mono min-w-0">
+        <span className="truncate text-slate-300">{hidden ? 'Face-down card' : `${def.title} · ${typeLine(def)}`}</span>
+        {!hidden && (
+          <button
+            onClick={() => onInspect(card)}
+            className="shrink-0 flex items-center gap-1 text-amber-300 hover:text-amber-100"
+            title="Rules text and details"
+          >
+            <Eye className="w-3 h-3" /> Details
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};

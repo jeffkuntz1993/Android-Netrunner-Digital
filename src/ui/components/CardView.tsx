@@ -6,6 +6,7 @@ import { CardPopout } from './CardPopout';
 import { motion } from 'framer-motion';
 import { Credits } from './CreditIcon';
 import { Keyword } from './Keyword';
+import { useZoom } from './ZoomPanel';
 
 export interface CardViewProps {
   card: CardInstance;
@@ -15,7 +16,8 @@ export interface CardViewProps {
   isSelected?: boolean;
   onClick?: () => void;
   onInspect?: (card: CardInstance) => void;
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  /** fit and fit-sm follow the window height (--card-w in index.css); the rest are fixed. */
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'fit' | 'fit-sm';
   /** Only installed cards are rezzed or unrezzed; hide the badge for cards in hand or in a pile. */
   notInstalled?: boolean;
 }
@@ -47,9 +49,14 @@ const CardFace: React.FC<CardViewProps> = ({
     md: 'w-36 h-52 text-xs',
     lg: 'w-44 h-64 text-sm',
     xl: 'w-56 h-80 text-base',
+    fit: 'card-fit',
+    'fit-sm': 'card-fit-sm',
   }[size];
 
-  const handleMouseEnter = () => setShowTooltip(true);
+  // On the table, hover fills the zoom panel; elsewhere it opens the popout
+  const zoom = useZoom();
+  const hidden = isFaceDown && !canPeek;
+  const handleMouseEnter = () => (zoom ? zoom.show({ card, hidden }) : setShowTooltip(true));
   const handleMouseLeave = () => setShowTooltip(false);
 
   // When face-down and viewer cannot peek (e.g. Runner looking at Corp ICE/Root)

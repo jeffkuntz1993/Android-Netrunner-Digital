@@ -10,7 +10,6 @@ interface ServerColumnProps {
   server: ServerState;
   activePlayer: 'corp' | 'runner';
   perspective?: 'both' | 'corp' | 'runner';
-  cardSize?: 'sm' | 'md' | 'lg';
   /** The run in progress, when it targets this server: highlights the server and the ice the Runner is at. */
   run?: RunState | null;
   onInitiateRun?: (serverId: string) => void;
@@ -27,9 +26,6 @@ interface ServerColumnProps {
   anchor?: React.ReactNode;
 }
 
-/** Ice is drawn one size down, turned sideways, in a box with the card's height as its width. */
-const ICE_SIZE = { sm: 'xs', md: 'sm', lg: 'md' } as const;
-const SIDEWAYS_BOX = { sm: 'w-28 h-20', md: 'w-40 h-28', lg: 'w-52 h-36' } as const;
 
 const ICE_PHASE_LABEL: Partial<Record<RunState['phase'], string>> = {
   approach_ice: 'Approaching',
@@ -37,14 +33,15 @@ const ICE_PHASE_LABEL: Partial<Record<RunState['phase'], string>> = {
   pass_ice: 'Passing',
 };
 
+/** Rez, advance and score sit over the bottom of the card, so they cost no table height. */
 const smallButton =
-  'mt-1 px-2 py-0.5 w-full bg-cyan-950 hover:bg-cyan-800 text-cyan-300 text-[11px] font-mono font-bold rounded border border-cyan-600 shadow flex items-center justify-center gap-1 transition-all';
+  'px-0.5 w-full bg-cyan-950/95 hover:bg-cyan-800 text-cyan-200 text-[9px] leading-4 font-mono font-bold whitespace-nowrap rounded border border-cyan-500 shadow flex items-center justify-center gap-0.5 transition-all';
+const overlay = 'absolute inset-x-0.5 bottom-0.5 z-30 flex flex-col gap-0.5';
 
 export const ServerColumn: React.FC<ServerColumnProps> = ({
   server,
   activePlayer,
   perspective = 'both',
-  cardSize = 'sm',
   run = null,
   onInitiateRun,
   onSelectServer,
@@ -72,21 +69,22 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
       onClick={() => onSelectServer && onSelectServer(server.id)}
       data-testid={`server-${server.id}`}
       data-run-target={isRunTarget || undefined}
-      className={`relative flex flex-col items-center bg-slate-900/70 border rounded-2xl p-3 min-w-[170px] sm:min-w-[190px] transition-all duration-200 shadow-lg ${
+      style={{ minWidth: 'calc(var(--card-h) + 0.75rem)' }}
+      className={`relative shrink-0 flex flex-col items-center gap-1 bg-slate-900/70 border rounded-2xl px-1.5 pt-1 pb-1.5 transition-all duration-200 shadow-lg ${
         isRunTarget
           ? 'border-cyber-neonPink ring-2 ring-cyber-neonPink/60 bg-pink-950/30 run-target'
           : 'border-slate-800 hover:border-slate-600'
       }`}
     >
       {isRunTarget && (
-        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-30 px-2 py-0.5 rounded-full bg-cyber-neonPink text-white text-[10px] font-bold font-mono uppercase tracking-widest shadow-lg flex items-center gap-1 whitespace-nowrap pointer-events-none">
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-30 px-2 py-0.5 rounded-full bg-cyber-neonPink text-white text-[9px] font-bold font-mono uppercase tracking-widest shadow-lg flex items-center gap-1 whitespace-nowrap pointer-events-none">
           <Crosshair className="w-3 h-3" /> Run target
         </div>
       )}
       {/* Server Header */}
-      <div className="flex items-center justify-between w-full mb-3 pb-1.5 border-b border-slate-800 text-xs font-mono">
-        <span className="font-bold text-cyber-neonCyan flex items-center gap-1.5 truncate">
-          <Database className="w-4 h-4 text-cyan-400 shrink-0" />
+      <div className="flex items-center justify-between gap-1 w-full text-[11px] font-mono">
+        <span className="font-bold text-cyber-neonCyan flex items-center gap-1 truncate" title={server.name}>
+          <Database className="w-3 h-3 text-cyan-400 shrink-0" />
           <span className="truncate">{server.name}</span>
         </span>
         {activePlayer === 'runner' && onInitiateRun && (
@@ -95,7 +93,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
               e.stopPropagation();
               onInitiateRun(server.id);
             }}
-            className="px-2 py-0.5 text-xs bg-pink-950/60 text-pink-400 hover:bg-cyber-neonPink hover:text-white rounded-md border border-pink-500 transition-colors flex items-center gap-1 font-bold shrink-0 ml-1"
+            className="px-1.5 py-px text-[10px] bg-pink-950/60 text-pink-400 hover:bg-cyber-neonPink hover:text-white rounded border border-pink-500 transition-colors flex items-center gap-1 font-bold shrink-0"
             title="Initiate Run on this server"
           >
             <Crosshair className="w-3 h-3" /> Run
@@ -105,30 +103,31 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
 
       {/* Server Root on the Corp's side: the central's own card, then assets, agendas and upgrades side by side */}
       <div
-        className={`flex flex-col items-center gap-1.5 w-full pb-2.5 mb-2 border-b border-slate-800 rounded-xl transition-colors ${
+        className={`relative flex gap-1 flex-nowrap justify-center items-start w-full rounded-xl transition-colors ${
           atRoot ? 'bg-pink-500/10 ring-1 ring-cyber-neonPink/60' : ''
         }`}
       >
-        <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider font-bold">
-          Root ({server.root.length})
-          {atRoot && (
-            <span className="ml-1.5 text-cyber-neonPink">· {run?.phase === 'access' ? 'Breaching' : 'Approaching'}</span>
-          )}
-        </div>
-        <div className="flex gap-2 flex-nowrap justify-center items-start min-h-[70px] w-full py-1">
-          {anchor}
-          {server.root.length === 0 && !anchor ? (
-            <span className="text-xs text-slate-600 italic my-auto">Empty</span>
-          ) : (
-            server.root.map((card) => (
-              <div key={card.instanceId} className="flex flex-col items-center">
-                <CardView
-                  card={card}
-                  isFaceDown={!card.isRezzed && !card.faceUp}
-                  canPeek={canCorpPeek}
-                  size={cardSize}
-                  onInspect={onInspectCard}
-                />
+        {atRoot && (
+          <span className="absolute -top-1 left-1/2 -translate-x-1/2 z-30 px-1.5 rounded-full bg-cyber-neonPink text-white text-[9px] font-bold uppercase tracking-wider whitespace-nowrap pointer-events-none">
+            {run?.phase === 'access' ? 'Breaching' : 'Approaching'}
+          </span>
+        )}
+        {anchor}
+        {server.root.length === 0 && !anchor ? (
+          <div className="card-fit rounded-xl border border-dashed border-slate-800 flex items-center justify-center text-[10px] text-slate-600 italic">
+            Empty
+          </div>
+        ) : (
+          server.root.map((card) => (
+            <div key={card.instanceId} className="relative">
+              <CardView
+                card={card}
+                isFaceDown={!card.isRezzed && !card.faceUp}
+                canPeek={canCorpPeek}
+                size="fit"
+                onInspect={onInspectCard}
+              />
+              <div className={overlay}>
                 {canRez(card) && onRezCard && (
                   <button
                     onClick={(e) => {
@@ -137,7 +136,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
                     }}
                     className={smallButton}
                   >
-                    <Zap className="w-3 h-3 text-amber-400" /> Rez (<Credits amount={cardDef(card).cost || 0} />)
+                    <Zap className="w-2.5 h-2.5 text-amber-400" /> Rez (<Credits amount={cardDef(card).cost || 0} />)
                   </button>
                 )}
                 {canAdvance(card) && onAdvanceCard && (
@@ -148,7 +147,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
                     }}
                     className={smallButton}
                   >
-                    <ChevronsUp className="w-3 h-3 text-amber-400" /> Advance ({card.advancementCounters}
+                    <ChevronsUp className="w-2.5 h-2.5 text-amber-400" /> Adv ({card.advancementCounters}
                     {cardDef(card).advancement_cost ? `/${cardDef(card).advancement_cost}` : ''})
                   </button>
                 )}
@@ -160,72 +159,68 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
                     }}
                     className={smallButton}
                   >
-                    <Award className="w-3 h-3 text-amber-400" /> Score
+                    <Award className="w-2.5 h-2.5 text-amber-400" /> Score
                   </button>
                 )}
               </div>
-            ))
-          )}
-        </div>
-      </div>
-      {/* Protecting Ice, on the Runner's side of the root: innermost at the top, outermost at the bottom */}
-      <div className="flex flex-col gap-2.5 mt-auto mb-1 w-full items-center min-h-[90px] border border-dashed border-slate-800/90 rounded-xl p-2 bg-black/40">
-        <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider mb-0.5 font-bold">
-          Ice Wall ({server.ice.length})
-        </div>
-        {server.ice.length === 0 ? (
-          <span className="text-xs text-slate-600 italic py-4">No Ice Installed</span>
-        ) : (
-          server.ice.map((iceCard) => (
-            <div key={iceCard.instanceId} className="flex flex-col items-center w-full">
-              {runIceId === iceCard.instanceId && iceLabel && (
-                <div className="mb-1 px-2 py-0.5 rounded-full bg-amber-400 text-black text-[10px] font-bold font-mono uppercase tracking-wider shadow">
-                  {iceLabel}
-                </div>
-              )}
-              {/* Ice lies sideways, as on the table; the hover popout shows it upright */}
-              <div
-                data-run-ice={runIceId === iceCard.instanceId || undefined}
-                className={`relative ${SIDEWAYS_BOX[cardSize]} rounded-xl ${runIceId === iceCard.instanceId ? 'run-ice' : ''}`}
-              >
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90">
-                  <CardView
-                    card={iceCard}
-                    isFaceDown={!iceCard.isRezzed}
-                    canPeek={canCorpPeek}
-                    size={ICE_SIZE[cardSize]}
-                    onInspect={onInspectCard}
-                  />
-                </div>
-              </div>
-              {canRez(iceCard) && onRezCard && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRezCard(iceCard.instanceId);
-                  }}
-                  className="mt-1.5 w-full py-1 bg-cyan-950 hover:bg-cyan-800 text-cyan-300 hover:text-cyan-100 text-xs font-mono font-bold rounded-lg border border-cyan-600 shadow-md flex items-center justify-center gap-1 transition-all"
-                  title={`Rez ${cardDef(iceCard).title} for ${cardDef(iceCard).cost || 0} credits`}
-                >
-                  <Zap className="w-3.5 h-3.5 text-amber-400" /> Rez (<Credits amount={cardDef(iceCard).cost || 0} />)
-                </button>
-              )}
-              {canAdvance(iceCard) && onAdvanceCard && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAdvanceCard(iceCard.instanceId, server.id);
-                  }}
-                  className={smallButton}
-                >
-                  <ChevronsUp className="w-3 h-3 text-amber-400" /> Advance ({iceCard.advancementCounters})
-                </button>
-              )}
             </div>
           ))
         )}
       </div>
 
+      {/* Protecting Ice, on the Runner's side of the root: innermost at the top, outermost at the bottom */}
+      {server.ice.length > 0 && (
+        <div className="flex flex-col gap-1 items-center" title={`${server.ice.length} ice`}>
+          {server.ice.map((iceCard) => (
+            <div
+              key={iceCard.instanceId}
+              data-run-ice={runIceId === iceCard.instanceId || undefined}
+              className={`relative card-sideways rounded-xl ${runIceId === iceCard.instanceId ? 'run-ice' : ''}`}
+            >
+              {/* Ice lies sideways, as on the table; the zoom panel shows it upright */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90">
+                <CardView
+                  card={iceCard}
+                  isFaceDown={!iceCard.isRezzed}
+                  canPeek={canCorpPeek}
+                  size="fit"
+                  onInspect={onInspectCard}
+                />
+              </div>
+              {runIceId === iceCard.instanceId && iceLabel && (
+                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-30 px-1.5 rounded-full bg-amber-400 text-black text-[9px] font-bold font-mono uppercase tracking-wider shadow whitespace-nowrap pointer-events-none">
+                  {iceLabel}
+                </div>
+              )}
+              <div className={`${overlay} flex-row`}>
+                {canRez(iceCard) && onRezCard && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRezCard(iceCard.instanceId);
+                    }}
+                    className={smallButton}
+                    title={`Rez ${cardDef(iceCard).title} for ${cardDef(iceCard).cost || 0} credits`}
+                  >
+                    <Zap className="w-2.5 h-2.5 text-amber-400" /> Rez (<Credits amount={cardDef(iceCard).cost || 0} />)
+                  </button>
+                )}
+                {canAdvance(iceCard) && onAdvanceCard && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAdvanceCard(iceCard.instanceId, server.id);
+                    }}
+                    className={smallButton}
+                  >
+                    <ChevronsUp className="w-2.5 h-2.5 text-amber-400" /> Adv ({iceCard.advancementCounters})
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

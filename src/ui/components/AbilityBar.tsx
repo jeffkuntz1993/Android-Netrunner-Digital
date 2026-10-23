@@ -19,7 +19,7 @@ export const AbilityBar: React.FC<AbilityBarProps> = ({ state, side, onAction })
       : 'bg-pink-950 hover:bg-pink-900 border-pink-700 text-pink-200';
 
   return (
-    <div className="flex items-center gap-2 flex-wrap mb-3" data-testid={`ability-bar-${side}`}>
+    <div className="flex items-center gap-1.5 flex-wrap" data-testid={`ability-bar-${side}`}>
       <span className={`text-xs font-bold font-mono uppercase mr-1 ${side === 'corp' ? 'text-cyan-400' : 'text-pink-400'}`}>
         Card abilities:
       </span>
@@ -40,7 +40,7 @@ export const AbilityBar: React.FC<AbilityBarProps> = ({ state, side, onAction })
           <button
             key={`${action.cardInstanceId}-${action.abilityIndex}`}
             onClick={() => onAction(action)}
-            className={`px-3 py-1.5 border text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow ${accent}`}
+            className={`px-2 py-1 border text-[11px] text-left font-bold rounded-lg transition-all flex items-center gap-1.5 shadow ${accent}`}
             title={ability.label}
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />

@@ -6,7 +6,6 @@ import { CardView } from './CardView';
 interface HandRowProps {
   cards: CardInstance[];
   side: 'corp' | 'runner';
-  size: 'sm' | 'md' | 'lg';
   /** Can this viewer see the faces? If not, cards come and go face down. */
   canSee: boolean;
   isSelectable: boolean;
@@ -20,14 +19,13 @@ interface HandRowProps {
 type ExitCustom = ReadonlySet<string>;
 
 /**
- * A hand of cards that animates its changes: a drawn card slides in from the
+ * A hand of cards, fanned so each overlaps the last, that animates its changes: a drawn card slides in from the
  * deck, a played or installed card lifts out toward the table, a discarded
  * card drops away, and the rest close the gap.
  */
 export const HandRow: React.FC<HandRowProps> = ({
   cards,
   side,
-  size,
   canSee,
   isSelectable,
   selectedCardId,
@@ -41,7 +39,7 @@ export const HandRow: React.FC<HandRowProps> = ({
     <MotionConfig reducedMotion="user">
       <div
         data-testid={`hand-${side}`}
-        className="relative flex gap-2 xl:gap-x-0 overflow-x-auto xl:overflow-x-visible xl:flex-wrap min-w-0 py-1 xl:pl-1 w-full"
+        className="hand-fan relative flex min-w-0 pt-2 pb-1 px-1"
       >
         <AnimatePresence initial={false} mode="popLayout" custom={discardedIds}>
           {cards.map(card => (
@@ -49,7 +47,7 @@ export const HandRow: React.FC<HandRowProps> = ({
               key={card.instanceId}
               layout
               custom={discardedIds}
-              className="relative shrink-0 hover:z-10 xl:[&:not(:first-child)]:-ml-10 rounded-xl"
+              className="relative shrink-0 hover:z-10 rounded-xl"
               initial={{ opacity: 0, x: 40, y: -24, scale: 0.8, boxShadow: `0 0 0px ${glow}` }}
               animate={{
                 opacity: 1,
@@ -70,7 +68,7 @@ export const HandRow: React.FC<HandRowProps> = ({
             >
               <CardView
                 card={card}
-                size={size}
+                size="fit"
                 notInstalled
                 isFaceDown={!canSee}
                 canPeek={canSee}
