@@ -60,4 +60,5 @@ const svgHtml = (viewBox: string, path: string, label: string) =>
   `<svg viewBox="${viewBox}" fill="currentColor" fill-rule="nonzero" class="${DEFAULT_CLASS}" role="img" aria-label="${label}"><path d="${path}"/></svg>`;
 
 export const CREDIT_ICON_HTML = svgHtml(CREDIT_VIEWBOX, CREDIT_PATH, 'credit');
+export const MU_ICON_HTML = svgHtml(MU_VIEWBOX, MU_PATH, 'memory unit');
 export const RECURRING_CREDIT_ICON_HTML = svgHtml(RECURRING_CREDIT_VIEWBOX, RECURRING_CREDIT_PATH, 'recurring credit');

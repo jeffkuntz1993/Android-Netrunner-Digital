@@ -3,10 +3,10 @@ import { createPortal } from 'react-dom';
 import { CardInstance } from '../../core/types/card';
 import { cardDef, getCardImageUrl } from '../../data/cards';
 import { FACTION_COLOR, FACTION_LABEL, typeLine } from '../cardLabels';
-import { X, Shield, Zap, Award, Trash2, AlertCircle } from 'lucide-react';
+import { X, Shield, Award, Trash2, AlertCircle } from 'lucide-react';
 import { annotateKeywords } from '../glossary';
 import { Keyword } from './Keyword';
-import { CreditIcon, CREDIT_ICON_HTML, RECURRING_CREDIT_ICON_HTML } from './CreditIcon';
+import { CreditIcon, CREDIT_ICON_HTML, RECURRING_CREDIT_ICON_HTML, MU_ICON_HTML, MuIcon } from './CreditIcon';
 
 interface CardZoomModalProps {
   card: CardInstance | null;
@@ -107,9 +107,9 @@ export const CardZoomModal: React.FC<CardZoomModalProps> = ({
               )}
               {def.memory_cost !== null && def.memory_cost !== undefined && (
                 <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
-                  <Zap className="w-4 h-4 text-pink-400" />
+                  <MuIcon className="w-4 h-4 text-pink-400" />
                   <Keyword id="mu" className="text-slate-400">Memory:</Keyword>
-                  <span className="font-bold text-pink-300">{def.memory_cost} MU</span>
+                  <span className="font-bold text-pink-300 inline-flex items-center gap-[0.15em]">{def.memory_cost}<MuIcon /></span>
                 </div>
               )}
               {def.trash_cost !== null && def.trash_cost !== undefined && (
@@ -132,7 +132,7 @@ export const CardZoomModal: React.FC<CardZoomModalProps> = ({
                       .replace(/\[subroutine\]/g, '<span data-kw="subroutine" class="kw-label text-cyan-400 font-bold block mt-1">↳ Subroutine: </span>')
                       .replace(/\[trash\]/g, ' <span data-kw="trash" class="kw-label">🗑️</span> ')
                       .replace(/\[recurring-credit\]/g, ` <span data-kw="recurring-credit" class="kw-label text-amber-300">${RECURRING_CREDIT_ICON_HTML}</span> `)
-                      .replace(/\[mu\]/g, '<span data-kw="mu" class="kw-label font-bold"> MU</span>')
+                      .replace(/\[mu\]/g, `<span data-kw="mu" class="kw-label font-bold inline-flex items-center">${MU_ICON_HTML}</span>`)
                       .replace(/\[link\]/g, ' <span data-kw="link" class="kw-label">🔗</span> ')
                       .replace(/\n/g, '<br />'),
                   }}
