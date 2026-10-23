@@ -105,13 +105,17 @@
     overflow-x: hidden;
   }
 
-  /* CRT scanlines over everything; purely decorative, never catches clicks */
-  body::after {
+  /*
+   * CRT scanlines on the backdrop only. They sit behind the app, so card art,
+   * buttons and other solid surfaces stay sharp; see-through panels still show
+   * them faintly. Purely decorative, never catches clicks.
+   */
+  body::before {
     content: '';
     position: fixed;
     inset: 0;
     pointer-events: none;
-    z-index: 9999;
+    z-index: -1;
     background: repeating-linear-gradient(
       to bottom,
       rgb(0 0 0 / var(--scanline-opacity)) 0,

@@ -175,7 +175,11 @@ function Game({
 
   // Who is looking. Pass and play shows one side at a time and hands over
   // (behind a cover screen) whenever the other side has to act.
-  const [viewMode, setViewMode] = useState<ViewMode>(savedViewMode);
+  // Against the computer a game starts in the person's own view (Open table is
+  // still in the menu); two-player games start in the last mode used.
+  const [viewMode, setViewMode] = useState<ViewMode>(() =>
+    config.ai === 'corp' ? 'runner' : config.ai === 'runner' ? 'corp' : savedViewMode(),
+  );
   const [hotseatSide, setHotseatSide] = useState<'corp' | 'runner'>(saved?.table.hotseatSide ?? 'corp');
   // Runs started so far, and the Corp rez windows already passed, so each window asks once
   const [runSerial, setRunSerial] = useState(saved?.table.runSerial ?? 0);
