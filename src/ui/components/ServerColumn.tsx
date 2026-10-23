@@ -3,7 +3,8 @@ import { RunState, ServerState } from '../../core/types/state';
 import { CardInstance } from '../../core/types/card';
 import { CardView } from './CardView';
 import { cardDef } from '../../data/cards';
-import { Database, Crosshair, Zap, ChevronsUp, Award } from 'lucide-react';
+import { Database, Crosshair, Zap, ChevronsUp, Award, Bug } from 'lucide-react';
+import { clearHostLink, lightHostLink, useHostLinkLit } from '../hostLinks';
 import { Credits } from './CreditIcon';
 
 interface ServerColumnProps {
@@ -24,8 +25,43 @@ interface ServerColumnProps {
   onInspectCard?: (card: CardInstance) => void;
   /** A central server's own card, first in its root: HQ's identity, R&D's deck, the Archives pile. */
   anchor?: React.ReactNode;
+  /** Runner cards installed on a piece of this server's ice (Botulus, Tranquilizer). */
+  hostedOnIce?: (ice: CardInstance) => CardInstance[];
 }
 
+
+/**
+ * A piece of ice lying sideways. Trojans on it are named in a tag, and hovering
+ * the ice outlines it with them (hover the trojan in the rig for the reverse).
+ */
+const IceSlot: React.FC<{ ice: CardInstance; hosted: CardInstance[]; atRunner: boolean; children: React.ReactNode }> = ({
+  ice,
+  hosted,
+  atRunner,
+  children,
+}) => {
+  const lit = useHostLinkLit(ice.instanceId);
+  const link = hosted.length > 0 ? [ice.instanceId, ...hosted.map(h => h.instanceId)] : null;
+  return (
+    <div
+      data-run-ice={atRunner || undefined}
+      onMouseEnter={link ? () => lightHostLink(link) : undefined}
+      onMouseLeave={link ? clearHostLink : undefined}
+      className={`relative card-sideways rounded-xl ${atRunner ? 'run-ice' : ''} ${lit ? 'host-link-lit' : ''}`}
+    >
+      {children}
+      {hosted.length > 0 && (
+        <div
+          className="absolute left-0.5 top-0.5 z-20 max-w-[85%] flex items-center gap-0.5 rounded bg-pink-950/95 border border-pink-500 px-0.5 text-[8px] leading-3 font-bold text-pink-100 pointer-events-none"
+          data-testid={`hosts-${ice.instanceId}`}
+        >
+          <Bug className="w-2.5 h-2.5 shrink-0" />
+          <span className="truncate">{hosted.map(h => cardDef(h).title).join(', ')}</span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ICE_PHASE_LABEL: Partial<Record<RunState['phase'], string>> = {
   approach_ice: 'Approaching',
@@ -56,6 +92,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
   canScore = () => false,
   onInspectCard,
   anchor,
+  hostedOnIce = () => [],
 }) => {
   const canCorpPeek = perspective !== 'runner';
   const isRunTarget = run !== null;
@@ -175,11 +212,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
       {server.ice.length > 0 && (
         <div className="flex flex-col gap-1 items-center" title={`${server.ice.length} ice`}>
           {server.ice.map((iceCard) => (
-            <div
-              key={iceCard.instanceId}
-              data-run-ice={runIceId === iceCard.instanceId || undefined}
-              className={`relative card-sideways rounded-xl ${runIceId === iceCard.instanceId ? 'run-ice' : ''}`}
-            >
+            <IceSlot key={iceCard.instanceId} ice={iceCard} hosted={hostedOnIce(iceCard)} atRunner={runIceId === iceCard.instanceId}>
               {/* Ice lies sideways, as on the table; the zoom panel shows it upright */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90">
                 <CardView
@@ -220,7 +253,7 @@ export const ServerColumn: React.FC<ServerColumnProps> = ({
                   </button>
                 )}
               </div>
-            </div>
+            </IceSlot>
           ))}
         </div>
       )}

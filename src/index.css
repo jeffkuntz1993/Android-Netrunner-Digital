@@ -332,3 +332,8 @@
   width: min(100%, calc(40vh / 1.4));
   aspect-ratio: 5 / 7;
 }
+/* A trojan and its host ice, outlined together while either is hovered */
+.host-link-lit {
+  box-shadow: 0 0 0 2px rgb(var(--runner-400)), 0 0 18px rgb(var(--runner-500) / 0.7);
+  z-index: 25;
+}

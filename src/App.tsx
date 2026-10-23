@@ -395,6 +395,17 @@ function Game({
     );
   };
 
+  // Runner cards installed on Corp ice (trojans), and where each one sits, for the host tags
+  const onIce = [...runner.rig.programs, ...runner.rig.hardware, ...runner.rig.resources].filter(c => c.hostedOnId);
+  const iceHostLabel = (card: CardInstance): string | undefined => {
+    if (!card.hostedOnId) return undefined;
+    const server = Object.values(corp.servers).find(s => s.ice.some(i => i.instanceId === card.hostedOnId));
+    const ice = server?.ice.find(i => i.instanceId === card.hostedOnId);
+    if (!server || !ice) return undefined;
+    const name = ice.isRezzed || canSeeCorpSecrets(viewer) ? cardDef(ice).title : 'unrezzed ice';
+    return `${server.name} · ${name}`;
+  };
+
   const rezAction = (card: CardInstance): GameAction => ({ type: 'REZ_CARD', player: 'corp', cardInstanceId: card.instanceId });
   const approachedIce =
     activeRun && activeRun.phase === 'approach_ice' && activeRun.icePosition !== null
@@ -690,6 +701,7 @@ function Game({
                   corpCanAct && isLegalAction(gameState, { type: 'SCORE_AGENDA', player: 'corp', cardInstanceId: card.instanceId })
                 }
                 onInspectCard={(card) => setInspectedCard(card)}
+                hostedOnIce={(ice) => onIce.filter(c => c.hostedOnId === ice.instanceId)}
                 anchor={
                   server.id === 'hq' ? (
                     <CardView card={corp.identity} size="fit" notInstalled onInspect={setInspectedCard} />
@@ -738,6 +750,7 @@ function Game({
             <RigView
               rig={runner.rig}
               onInspectCard={setInspectedCard}
+              hostLabel={iceHostLabel}
               aside={
                 <>
                   <CardView card={runner.identity} size="fit" notInstalled onInspect={setInspectedCard} />
