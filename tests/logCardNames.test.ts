@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { splitCardNames } from '../src/ui/components/LogFeed';
+import { splitCardNames } from '../src/ui/components/CardNameText';
 import { ALL_CARDS } from '../src/data/cards';
 
 const code = (title: string) => ALL_CARDS.find(c => c.title === title)!.code;

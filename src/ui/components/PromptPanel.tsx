@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CardInstance, GameState, PromptChoice, activePrompt, availableCredits, cardDef, findCardAnywhere, isLegalAction, locateCorpCard } from '../../core';
 import { CardView } from './CardView';
 import { Check, RefreshCw, Trash2, X } from 'lucide-react';
+import { CardNameText } from './CardNameText';
 import { Credits } from './CreditIcon';
 import { FloatingPanel } from './FloatingPanel';
 
@@ -70,7 +71,7 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
         </div>
       }
     >
-        <h3 className="text-sm text-slate-100 font-bold mb-4">{prompt.message}</h3>
+        <h3 className="text-sm text-slate-100 font-bold mb-4"><CardNameText text={prompt.message} /></h3>
 
         {prompt.kind === 'mulligan' && (
           <>
@@ -130,7 +131,7 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({ state, onAnswer, onIns
                 className={`${button} bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-100`}
                 onClick={() => answer({ kind: 'effect_choice', optionId: option.id })}
               >
-                {option.label}
+                <CardNameText text={option.label} focusable={false} />
               </button>
             ))}
           </div>
