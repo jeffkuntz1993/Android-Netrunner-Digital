@@ -30,6 +30,7 @@ import { AbilityBar } from './ui/components/AbilityBar';
 import { ZoneGroup, ZoneViewer } from './ui/components/ZoneViewer';
 import { Pile } from './ui/components/Pile';
 import { HandRow } from './ui/components/HandRow';
+import { PhaseTracker } from './ui/components/PhaseTracker';
 import { ZoomContext, ZoomPanel, createZoomStore } from './ui/components/ZoomPanel';
 import { CardFates, ShownFate } from './ui/components/CardFates';
 import { cardFates } from './ui/cardFates';
@@ -436,14 +437,14 @@ function Game({
             onClick={leaveGame}
             data-testid="home-logo"
             title="Back to deck selection"
-            className="font-cyber font-black tracking-widest text-sm 2xl:text-lg whitespace-nowrap glitch-title hover:brightness-125 transition"
+            className="font-cyber font-black tracking-wider 2xl:tracking-widest text-xs 2xl:text-lg whitespace-nowrap glitch-title hover:brightness-125 transition"
           >
             NETRUNNER // PROTOCOL
           </button>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs bg-slate-900 border border-slate-700 px-2 py-0.5 rounded text-slate-300 font-bold whitespace-nowrap hidden sm:inline">
-              TURN {gameState.turnNumber} • {activePlayer.toUpperCase()}'S TURN
-            </span>
+            <div className="hidden sm:block">
+              <PhaseTracker state={gameState} />
+            </div>
             <span
               className="text-[10px] text-slate-500 font-mono whitespace-nowrap hidden 2xl:inline"
               title={`Open the app with ?seed=${gameState.rng.seed}&corp=${config.corpDeck.id}&runner=${config.runnerDeck.id}${aiSide ? `&ai=${aiSide}&difficulty=${config.difficulty}` : ''} to replay this deal`}
@@ -483,17 +484,17 @@ function Game({
         {/* Score Board */}
         <div className="flex items-center gap-3 2xl:gap-6">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-cyan-400">CORP</span>
-            <div className="flex items-center whitespace-nowrap bg-cyan-950/60 border border-cyan-800 px-2.5 py-0.5 rounded-full text-xs font-bold text-cyan-300">
+            <span className="text-xs font-bold text-cyan-400 hidden 2xl:inline">CORP</span>
+            <div title="Corp agenda points" className="flex items-center whitespace-nowrap bg-cyan-950/60 border border-cyan-800 px-2.5 py-0.5 rounded-full text-xs font-bold text-cyan-300">
               <Award className="w-3.5 h-3.5 mr-1 text-cyan-400" /> {corp.score} / 7
             </div>
           </div>
-          <div className="text-slate-600 font-bold text-xs sm:text-sm">vs</div>
+          <div className="text-slate-600 font-bold text-xs hidden 2xl:block">vs</div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center whitespace-nowrap bg-pink-950/60 border border-pink-800 px-2.5 py-0.5 rounded-full text-xs font-bold text-pink-300">
+            <div title="Runner agenda points" className="flex items-center whitespace-nowrap bg-pink-950/60 border border-pink-800 px-2.5 py-0.5 rounded-full text-xs font-bold text-pink-300">
               <Award className="w-3.5 h-3.5 mr-1 text-pink-400" /> {runner.score} / 7
             </div>
-            <span className="text-xs font-bold text-pink-400">RUNNER</span>
+            <span className="text-xs font-bold text-pink-400 hidden 2xl:inline">RUNNER</span>
           </div>
         </div>
 
