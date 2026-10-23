@@ -305,6 +305,69 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     text: 'The card is set aside for the rest of the game. It is not trashed and cannot come back.',
     match: ['remove (?:this \\w+ )?from the game'],
   },
+  threat: {
+    term: 'Threat / threat level',
+    text: 'The threat level is the highest number of agenda points either player has in their score area. "Threat N →" abilities are only active while the threat level is N or more.',
+    match: ['threat level', 'threat \\d+'],
+  },
+  dividends: {
+    term: 'Dividends',
+    text: 'When the Corp scores this agenda, it gets 1 agenda counter (or N for Dividends N) for each advancement counter on it beyond its advancement requirement.',
+    match: ['dividends(?: \\d+)?'],
+  },
+  sabotage: {
+    term: 'Sabotage',
+    text: 'To sabotage N, the Corp trashes N cards of their choice, split however they like between HQ and the top of R&D.',
+    match: ['sabotage(?: \\d+)?'],
+  },
+  forfeit: {
+    term: 'Forfeit',
+    text: 'Remove an agenda from your own score area from the game, usually to pay a cost. Its agenda points no longer count for you.',
+    match: ['forfeit(?:s|ed)?'],
+  },
+  'additional-cost': {
+    term: 'Additional cost',
+    text: 'An extra cost you must pay on top of the normal cost to play or use the card. If you cannot pay it, you cannot play it.',
+    match: ['additional cost'],
+  },
+  bypass: {
+    term: 'Bypass',
+    text: 'Get past a piece of ice without finishing the encounter: no subroutines or further "when encountered" abilities resolve, and the run continues.',
+    match: ['bypass(?:es|ed)?'],
+  },
+  reveal: {
+    term: 'Reveal',
+    text: 'Show a card to both players. It then goes back where it was, unless the effect says otherwise.',
+    match: ['reveal(?:s|ed)?'],
+    basic: true,
+  },
+  'power-counter': {
+    term: 'Power counter',
+    text: 'A general-purpose counter that a card\'s own abilities place and spend.',
+    match: ['power counters?'],
+  },
+  'agenda-counter': {
+    term: 'Agenda counter',
+    text: 'A counter placed on a scored agenda, which that agenda\'s abilities can spend.',
+    match: ['agenda counters?'],
+  },
+  'trash-symbol': {
+    term: 'Trash symbol',
+    text: 'As part of the ability\'s cost, trash this card. An ability with this cost can only be used once.',
+  },
+
+  // Subtypes that card text refers to
+  barrier: { term: 'Barrier', text: 'An ice subtype. Barriers mostly end the run. Fracters break barrier subroutines.', match: ['barriers?'] },
+  'code-gate': { term: 'Code gate', text: 'An ice subtype. Code gates often tax the Runner or disrupt their plans. Decoders break code gate subroutines.', match: ['code gates?'] },
+  sentry: { term: 'Sentry', text: 'An ice subtype. Sentries tend to hurt the Runner: damage, tags or trashed programs. Killers break sentry subroutines.', match: ['sentry', 'sentries'] },
+  fracter: { term: 'Fracter', text: 'An icebreaker that breaks barrier subroutines.', match: ['fracters?'] },
+  decoder: { term: 'Decoder', text: 'An icebreaker that breaks code gate subroutines.', match: ['decoders?'] },
+  killer: { term: 'Killer', text: 'An icebreaker that breaks sentry subroutines.', match: ['killers?'] },
+  ai: { term: 'AI', text: 'An icebreaker subtype. AI breakers can usually interface with ice of any subtype, but often at a high cost.', match: ['AI'] },
+  bioroid: { term: 'Bioroid', text: 'An ice and card subtype. Many bioroid ice let the Runner break subroutines by spending clicks instead of using icebreakers.', match: ['bioroids?'] },
+  trojan: { term: 'Trojan', text: 'A program subtype installed on (hosted by) a piece of ice. If that ice leaves play or is uninstalled, the trojan is trashed.', match: ['trojans?'] },
+  region: { term: 'Region', text: 'An upgrade subtype. Each server can only have 1 region installed in or protecting it.', match: ['regions?'] },
+
   unrezzed: {
     term: 'Unrezzed',
     text: 'An installed Corp card still facedown. It has no effect until the Corp pays to rez it. The Runner cannot see it unless they access it.',
@@ -354,7 +417,7 @@ export function keywordsIn(html: string): string[] {
 }
 
 /** Rules symbols in raw card text that have their own glossary entry. */
-const SYMBOL_TERMS: Record<string, string> = { '[recurring-credit]': 'recurring-credit', '[mu]': 'mu', '[link]': 'link' };
+const SYMBOL_TERMS: Record<string, string> = { '[recurring-credit]': 'recurring-credit', '[mu]': 'mu', '[link]': 'link', '[trash]': 'trash-symbol' };
 
 /** The less obvious terms on a card, for the keyword list in the hover popout. */
 export function cardKeywords(text: string): string[] {

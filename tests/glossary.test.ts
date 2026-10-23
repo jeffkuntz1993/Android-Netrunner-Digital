@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import cards from '../src/data/system-gateway-cards.json';
-import { GLOSSARY, annotateKeywords, cardKeywords, labelKeyword } from '../src/ui/glossary';
+import { GLOSSARY, annotateKeywords, cardKeywords, keywordsIn, labelKeyword } from '../src/ui/glossary';
 
 describe('keyword glossary', () => {
   it('marks the first mention of each term, preferring the longest match', () => {
@@ -29,6 +29,14 @@ describe('keyword glossary', () => {
   it('lists the less obvious terms on a card, including rules symbols', () => {
     expect(cardKeywords('+1[mu]\nLimit 1 <strong>console</strong> per player.')).toEqual(['console', 'mu']);
     expect(cardKeywords('Gain 9[credit].')).toEqual([]);
+  });
+
+  it('explains threat, sabotage and other keyword abilities', () => {
+    expect(keywordsIn('Threat 2 → When the Runner trashes this asset')).toContain('threat');
+    expect(keywordsIn('If the threat level is 4 or greater, end the run.')).toContain('threat');
+    expect(keywordsIn('remove 2 hosted power counters to sabotage 3.')).toEqual(expect.arrayContaining(['power-counter', 'sabotage']));
+    expect(keywordsIn('Dividends 1 (When you score this agenda')).toContain('dividends');
+    expect(cardKeywords('[click], [trash]<strong>:</strong> Gain 2[credit].')).toContain('trash-symbol');
   });
 
   it('has an entry for each pile label', () => {
