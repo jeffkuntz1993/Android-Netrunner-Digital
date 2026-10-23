@@ -62,7 +62,7 @@ export function scoreAgenda(state: GameState, action: ScoreAgendaAction): void {
 
   removeCard(server.root, card);
   card.isRezzed = true;
-  card.faceUp = undefined;
+  delete card.faceUp;
   state.corp.scoreArea.push(card);
   const pts = def.agenda_points || 0;
   state.corp.score += pts;
@@ -128,7 +128,7 @@ export function completeRez(state: GameState, card: CardInstance): void {
 /** Rezzes a card without paying (rez action after payment, or "ignoring all costs") and fires rez triggers. */
 export function rezForFree(state: GameState, card: CardInstance): void {
   card.isRezzed = true;
-  card.faceUp = undefined;
+  delete card.faceUp;
   refillRecurring(card);
   enforceInstallLimits(state, card);
   fireTrigger(state, { type: 'rezzed', card });

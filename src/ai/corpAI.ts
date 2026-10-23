@@ -119,14 +119,17 @@ export class HeuristicCorpAI implements Agent {
         );
         return viruses - 3.5;
       }
-      case 'ADVANCE_CARD':
-        return this.advanceScore(state, action.cardInstanceId, action.serverId);
+      case 'ADVANCE_CARD': {
+        const score = this.advanceScore(state, action.cardInstanceId, action.serverId);
+        return score >= 40 ? score : score - reservePenalty(state, corp.credits - 1);
+      }
       case 'INSTALL_CARD': {
         const card = corp.hq.find(c => c.instanceId === action.cardInstanceId);
         if (!card) return -Infinity;
         const server = action.asNewRemote ? null : corp.servers[action.targetServerId ?? ''] ?? null;
         // BANGUN's faceup agendas hurt the Runner but tell them what is there
-        return this.installScore(state, card, server) - (action.faceUp ? 0.5 : 0);
+        const installCost = type(card) === 'ice' && server ? server.ice.length : 0;
+        return this.installScore(state, card, server) - (action.faceUp ? 0.5 : 0) - reservePenalty(state, corp.credits - installCost);
       }
       case 'REZ_CARD': {
         if (state.activeRun) return -Infinity;
@@ -170,8 +173,9 @@ export class HeuristicCorpAI implements Agent {
       if (!next) break;
       resolved = next;
     }
-    const score = evaluate(resolved, 'corp') - before;
+    let score = evaluate(resolved, 'corp') - before;
     if (!spendsClick && score <= 0.3) return -Infinity;
+    score -= reservePenalty(state, resolved.corp.credits);
     return score;
   }
 
@@ -216,8 +220,8 @@ export class HeuristicCorpAI implements Agent {
       const need = (def.advancement_cost ?? 0) - card.advancementCounters;
       if (need <= 0) return -Infinity;
       if (need <= corp.clicks && need <= corp.credits) return 40 + card.advancementCounters;
-      // Can't finish this turn: build counters only behind ice
-      return server.ice.length > 0 ? 3 + 0.5 * card.advancementCounters : 0.2;
+      // Can't finish this turn: build counters only behind ice we can rez
+      return guards(state, server, corp.credits - 1) > 0 ? 3 + 0.5 * card.advancementCounters : -Infinity;
     }
     if (def.type_code === 'asset') {
       // Traps: advancing makes them look like agendas (Urtica Cipher, Clearinghouse)
@@ -262,12 +266,15 @@ export class HeuristicCorpAI implements Agent {
         );
       }
       case 'agenda': {
-        if (!server) return agendasInHand >= 3 || hq.length > corp.handSizeLimit ? 1 : -2;
-        if (server.root.some(isAgendaOrAsset)) return -Infinity;
-        if (server.ice.length === 0) return -2;
         const def = cardDef(card);
         const finishNow = (def.advancement_cost ?? 0) <= corp.clicks - 1 && (def.advancement_cost ?? 0) <= corp.credits;
-        return finishNow ? 45 : 8 + Math.min(server.ice.length, 3) * 0.3;
+        // A naked remote only to dodge a discard (or to score it straight away)
+        if (!server) return finishNow ? 44 : hq.length > corp.handSizeLimit ? 0.5 : -2;
+        if (server.root.some(isAgendaOrAsset)) return -Infinity;
+        if (finishNow) return 45;
+        // Only behind ice that is rezzed or that we can afford to rez
+        const guarded = guards(state, server, corp.credits);
+        return guarded === 0 ? -2 : 8 + Math.min(guarded, 3) * 0.6;
       }
       case 'asset': {
         const econ = ECON_ASSETS[card.cardCode];
@@ -303,4 +310,37 @@ function serverImportance(state: GameState, server: ServerState | undefined): nu
   if (server.root.some(c => c.advancementCounters > 0)) return 1; // a trap: let them in
   if (server.root.some(c => c.isRezzed && ECON_ASSETS[c.cardCode])) return 3;
   return server.root.length > 0 ? 2 : 0.5;
+}
+
+/** Ice on this server that is rezzed or that `credits` could rez (cheapest first). */
+function guards(state: GameState, server: ServerState, credits: number): number {
+  let count = server.ice.filter(ice => ice.isRezzed).length;
+  const costs = server.ice.filter(ice => !ice.isRezzed).map(ice => rezCost(state, ice)).sort((a, b) => a - b);
+  for (const cost of costs) {
+    if (cost > credits) break;
+    credits -= cost;
+    count++;
+  }
+  return count;
+}
+
+/**
+ * Credits to keep back so every remote holding an agenda has at least one
+ * piece of ice the Corp can rez when the Runner comes in.
+ */
+function rezReserve(state: GameState): number {
+  let reserve = 0;
+  for (const server of Object.values(state.corp.servers)) {
+    if (!server.isRemote || !server.root.some(c => type(c) === 'agenda')) continue;
+    if (server.ice.some(ice => ice.isRezzed)) continue;
+    const costs = server.ice.map(ice => rezCost(state, ice));
+    if (costs.length > 0) reserve = Math.max(reserve, Math.min(...costs));
+  }
+  return reserve;
+}
+
+/** Penalty for an action that drops the Corp below its rez reserve. */
+function reservePenalty(state: GameState, creditsAfter: number): number {
+  const reserve = rezReserve(state);
+  return reserve > 0 && state.corp.credits >= reserve && creditsAfter < reserve ? 3 : 0;
 }

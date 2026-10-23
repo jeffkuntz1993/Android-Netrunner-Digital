@@ -1381,7 +1381,7 @@ function swapWithInstalled(state: GameState, installedId: string, otherId: strin
   outgoing.tokens = {};
   zone[zone.indexOf(other)] = outgoing;
   other.isRezzed = false;
-  other.installedTurn = undefined;
+  delete other.installedTurn;
   found.server.ice[index] = other;
   addLog(state, 'corp', `Corp swapped the approached ice with a piece of ice from ${zone === state.corp.hq ? 'HQ' : 'Archives'}.`);
 }

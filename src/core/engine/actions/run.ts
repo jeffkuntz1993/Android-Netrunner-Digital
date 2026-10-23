@@ -288,7 +288,7 @@ function stealAgenda(state: GameState, card: CardInstance, zone: CardInstance[])
   const def = cardDef(card);
   removeCard(zone, card);
   card.isRezzed = true;
-  card.faceUp = undefined;
+  delete card.faceUp;
   card.advancementCounters = 0;
   state.runner.scoreArea.push(card);
   const pts = def.agenda_points || 0;
