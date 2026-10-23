@@ -50,6 +50,7 @@ import {
   Volume2,
   VolumeX,
   Ban,
+  Flag,
 } from 'lucide-react';
 import { CreditIcon, Credits, MuIcon } from './ui/components/CreditIcon';
 import { Keyword } from './ui/components/Keyword';
@@ -346,6 +347,14 @@ function Game({
     if (!gameState.winner && !window.confirm('Leave this game and go back to deck selection? The game in progress will be lost.')) return;
     onNewGame();
   };
+  // Concede: against the computer the person concedes; in two-player games the
+  // side holding the device (pass and play) or the player whose turn it is
+  const concedingSide: SideCode = humanSide ?? (viewMode === 'hotseat' ? hotseatSide : gameState.activePlayer);
+  const concede = () => {
+    const name = concedingSide === 'corp' ? 'Corp' : 'Runner';
+    if (!window.confirm(`Forfeit this game? The ${name} concedes and the ${concedingSide === 'corp' ? 'Runner' : 'Corp'} wins.`)) return;
+    handleAction({ type: 'CONCEDE', player: concedingSide });
+  };
 
   const { corp, runner, activePlayer, activeRun, winner, winReason } = gameState;
   const discardedIds = new Set(
@@ -527,6 +536,16 @@ function Game({
           >
             {sound ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
+          {!gameState.winner && (
+            <button
+              onClick={concede}
+              className="p-2 bg-slate-900 hover:bg-red-950 text-slate-400 hover:text-red-300 rounded-lg border border-slate-800 hover:border-red-800 transition-colors"
+              title={`Forfeit (the ${concedingSide === 'corp' ? 'Corp' : 'Runner'} concedes)`}
+              data-testid="forfeit"
+            >
+              <Flag className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={leaveGame}
             className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg border border-slate-800 transition-colors"

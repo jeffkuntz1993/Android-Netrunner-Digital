@@ -142,6 +142,7 @@ Netrunner/
 - [x] Random deck button for each side on the deck picker: picks a legal official sample or custom deck, never a starter deck.
 - [x] Roadmap M7 — UI: Corp installs into any legal server (ice on centrals, upgrades, replacing a remote's card); browsable Archives, Heap, score areas and removed-from-game; view modes (Open table, Pass and play with a hand-off screen and Corp rez windows during runs, Corp view, Runner view) that hide each side's secrets; card flip animations; synthesized sound effects with mute; prompts no longer cover the header.
 - [x] Support Agenda scoring & advancement counters with victory checks.
+- [x] Forfeit: a flag button in the header asks to confirm, then sends `CONCEDE` (legal for either side at any time, even mid-run or with a decision pending). Against the computer the person concedes; in pass and play the side holding the device; in Open table the player whose turn it is.
 
 ### Phase 2: Card Ability System & Advanced Timing
 - [x] Implement card effect triggers (e.g., `when_installed`, `when_rezzed`, `on_access`, `trash_ability`). (Roadmap M3)

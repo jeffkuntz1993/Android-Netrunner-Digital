@@ -24,7 +24,9 @@ export type GameActionType =
   | 'USE_ABILITY'
   | 'REMOVE_TAG'
   | 'TRASH_RESOURCE'
-  | 'END_TURN';
+  | 'END_TURN'
+  // Either player, at any time
+  | 'CONCEDE';
 
 export interface BaseAction {
   type: GameActionType;
@@ -144,6 +146,11 @@ export interface EndTurnAction extends BaseAction {
   type: 'END_TURN';
 }
 
+/** A player concedes: the game ends at once and the other side wins. */
+export interface ConcedeAction extends BaseAction {
+  type: 'CONCEDE';
+}
+
 export type GameAction =
   | GainCreditAction
   | DrawCardAction
@@ -165,4 +172,5 @@ export type GameAction =
   | UseAbilityAction
   | RemoveTagAction
   | TrashResourceAction
-  | EndTurnAction;
+  | EndTurnAction
+  | ConcedeAction;

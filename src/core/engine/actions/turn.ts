@@ -1,4 +1,4 @@
-import { EndTurnAction } from '../../types/actions';
+import { ConcedeAction, EndTurnAction } from '../../types/actions';
 import { SideCode } from '../../types/card';
 import { GameState } from '../../types/state';
 import { addLog } from '../log';
@@ -10,6 +10,14 @@ import { flatline } from '../damage';
 
 export function handSize(state: GameState, side: SideCode): number {
   return side === 'corp' ? state.corp.hq.length : state.runner.grip.length;
+}
+
+/** A player may concede at any time, even mid-run or while a decision is pending; the other side wins. */
+export function concede(state: GameState, action: ConcedeAction): void {
+  const winner: SideCode = action.player === 'corp' ? 'runner' : 'corp';
+  state.winner = winner;
+  state.winReason = `${sideName(action.player)} conceded`;
+  addLog(state, 'system', `${sideName(winner)} wins: ${sideName(action.player)} conceded.`);
 }
 
 /**

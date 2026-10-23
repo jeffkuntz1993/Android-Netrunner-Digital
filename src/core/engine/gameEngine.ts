@@ -5,7 +5,7 @@ import { drawCard, gainCredit, purgeVirus, removeTag, trashResource } from './ac
 import { installCard } from './actions/install';
 import { advanceCard, rezCard, scoreAgenda } from './actions/corp';
 import { continueRun, initiateRun, jackOut } from './actions/run';
-import { endTurn } from './actions/turn';
+import { concede, endTurn } from './actions/turn';
 import { resolvePrompt } from './actions/prompt';
 import { playOperationOrEvent } from './actions/play';
 import { bioroidBreak, boostBreaker, breakSubroutine } from './actions/breaking';
@@ -40,6 +40,7 @@ const handlers: ActionHandlers = {
   CONTINUE_RUN: continueRun,
   JACK_OUT: jackOut,
   END_TURN: endTurn,
+  CONCEDE: concede,
   RESOLVE_PROMPT: resolvePrompt,
   PLAY_OPERATION_OR_EVENT: playOperationOrEvent,
   PURGE_VIRUS: purgeVirus,
@@ -61,8 +62,8 @@ export function executeAction(prevState: GameState, action: GameAction): GameSta
   if (prevState.winner) {
     throw new IllegalActionError('Game is already over.');
   }
-  // While a decision is pending, answering it is the only legal action.
-  if (prevState.pendingPrompts.length > 0 && action.type !== 'RESOLVE_PROMPT') {
+  // While a decision is pending, answering it (or conceding) is the only legal action.
+  if (prevState.pendingPrompts.length > 0 && action.type !== 'RESOLVE_PROMPT' && action.type !== 'CONCEDE') {
     const p = prevState.pendingPrompts[0];
     throw new IllegalActionError(`Waiting on a decision: ${p.message}`);
   }
