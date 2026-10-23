@@ -107,7 +107,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({ initial, onSave, onCan
   );
 
   return (
-    <div className="min-h-screen bg-[#07080c] text-slate-100 font-mono px-4 py-6">
+    <div className="min-h-screen text-slate-100 font-mono px-4 py-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-wrap items-center gap-3 mb-5">
           <button

@@ -2,13 +2,238 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Theme tokens. Everything colour-related in the UI resolves to these
+ * (tailwind.config.js maps slate/cyan/pink/amber and the cyber-* names onto
+ * them), so tweak the look here. Values are space-separated RGB channels so
+ * Tailwind's opacity modifiers (bg-pink-500/30) keep working.
+ *
+ * Palette: Night City yellow and red over phosphor-tinted gunmetal, with a
+ * cold cyan for the Corp and terminal green for the log.
+ */
+:root {
+  /* Base surfaces */
+  --bg: 6 8 9;
+  --bg-deep: 3 4 5;
+  --surface: 12 17 19;
+  --line: 34 46 50;
+  --terminal: 57 255 136;
+  --grid: 0 240 255;
+
+  /* Neutrals (Tailwind "slate"): gunmetal with a faint phosphor tint */
+  --neutral-50: 241 250 246;
+  --neutral-100: 226 240 235;
+  --neutral-200: 204 222 216;
+  --neutral-300: 170 192 186;
+  --neutral-400: 128 151 147;
+  --neutral-500: 100 122 120;
+  --neutral-600: 56 72 72;
+  --neutral-700: 34 46 48;
+  --neutral-800: 20 29 31;
+  --neutral-900: 11 17 19;
+  --neutral-950: 6 9 10;
+
+  /* Corp (Tailwind "cyan"): ice-blue neon */
+  --corp-50: 236 254 255;
+  --corp-100: 204 251 255;
+  --corp-200: 153 246 255;
+  --corp-300: 94 240 255;
+  --corp-400: 0 232 255;
+  --corp-500: 0 196 224;
+  --corp-600: 0 152 178;
+  --corp-700: 0 112 134;
+  --corp-800: 0 72 88;
+  --corp-900: 0 42 54;
+  --corp-950: 0 22 30;
+
+  /* Runner (Tailwind "pink"): hot signal red */
+  --runner-50: 255 240 243;
+  --runner-100: 255 214 223;
+  --runner-200: 255 173 192;
+  --runner-300: 255 117 150;
+  --runner-400: 255 61 104;
+  --runner-500: 255 0 60;
+  --runner-600: 214 0 51;
+  --runner-700: 163 0 42;
+  --runner-800: 110 0 29;
+  --runner-900: 66 0 18;
+  --runner-950: 36 0 10;
+
+  /* Signal (Tailwind "amber"): Night City yellow */
+  --signal-50: 255 253 230;
+  --signal-100: 255 251 194;
+  --signal-200: 255 247 133;
+  --signal-300: 254 242 71;
+  --signal-400: 252 238 10;
+  --signal-500: 224 208 0;
+  --signal-600: 179 165 0;
+  --signal-700: 133 122 0;
+  --signal-800: 87 79 0;
+  --signal-900: 46 42 0;
+  --signal-950: 26 23 0;
+
+  /* Shape and effects */
+  --chamfer: 10px;
+  --chamfer-sm: 6px;
+  --chamfer-btn: 5px;
+  --scanline-opacity: 0.16;
+  --glow: 0 0 6px;
+
+  color-scheme: dark;
+}
+
+/* Users who ask for more contrast get no scanlines or text glow */
+@media (prefers-contrast: more) {
+  :root {
+    --scanline-opacity: 0;
+    --glow: 0 0 0;
+  }
+}
+
 @layer base {
   body {
-    background-color: #08090d;
-    color: #e2e8f0;
-    font-family: 'Fira Code', monospace;
+    background-color: rgb(var(--bg));
+    /* Faint blueprint grid with a dark vignette, like an old vector display */
+    background-image:
+      radial-gradient(ellipse at center, transparent 40%, rgb(var(--bg-deep) / 0.85) 100%),
+      linear-gradient(rgb(var(--grid) / 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--grid) / 0.035) 1px, transparent 1px);
+    background-size: 100% 100%, 32px 32px, 32px 32px;
+    background-attachment: fixed;
+    color: rgb(var(--neutral-100));
+    font-family: 'Share Tech Mono', 'Fira Code', monospace;
     overflow-x: hidden;
   }
+
+  /* CRT scanlines over everything; purely decorative, never catches clicks */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgb(0 0 0 / var(--scanline-opacity)) 0,
+      rgb(0 0 0 / var(--scanline-opacity)) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  }
+
+  /* Display type glows faintly, like phosphor */
+  .font-cyber {
+    text-shadow: var(--glow) currentColor;
+    text-transform: uppercase;
+  }
+
+  ::selection {
+    background: rgb(var(--signal-400));
+    color: rgb(var(--bg-deep));
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--signal-400));
+    outline-offset: 2px;
+  }
+
+  /*
+   * Framed buttons get clipped corners. Round ones (pips, close buttons) and
+   * buttons wrapping card art keep their shape.
+   */
+  button:is([class*="bg-"], [class*="border"]):not(.rounded-full):not(:has(img)) {
+    clip-path: polygon(
+      var(--chamfer-btn) 0, 100% 0, 100% calc(100% - var(--chamfer-btn)),
+      calc(100% - var(--chamfer-btn)) 100%, 0 100%, 0 var(--chamfer-btn)
+    );
+  }
+  /* clip-path would cut an outside focus ring, so clipped things draw it inside */
+  button:is([class*="bg-"], [class*="border"]):not(.rounded-full):not(:has(img)):focus-visible,
+  .chamfer:focus-visible,
+  .chamfer-sm:focus-visible {
+    outline-offset: -3px;
+  }
+}
+
+@layer components {
+  /* Clipped corners: top-left and bottom-right cut at 45 degrees */
+  .chamfer {
+    clip-path: polygon(
+      var(--chamfer) 0, 100% 0, 100% calc(100% - var(--chamfer)),
+      calc(100% - var(--chamfer)) 100%, 0 100%, 0 var(--chamfer)
+    );
+  }
+  .chamfer-sm {
+    clip-path: polygon(
+      var(--chamfer-sm) 0, 100% 0, 100% calc(100% - var(--chamfer-sm)),
+      calc(100% - var(--chamfer-sm)) 100%, 0 100%, 0 var(--chamfer-sm)
+    );
+  }
+  /* Only the bottom-right corner, for tabs and headers */
+  .chamfer-br {
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--chamfer-sm)), calc(100% - var(--chamfer-sm)) 100%, 0 100%);
+  }
+
+  /*
+   * HUD frame: bright corner brackets on the two corners .chamfer leaves square
+   * (top-right, bottom-left). Colour comes from --hud, default the text colour.
+   */
+  .hud-frame {
+    position: relative;
+  }
+  .hud-frame::before,
+  .hud-frame::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+    border: 0 solid var(--hud, currentColor);
+    z-index: 1;
+  }
+  .hud-frame::before {
+    top: 0;
+    right: 0;
+    border-top-width: 2px;
+    border-right-width: 2px;
+  }
+  .hud-frame::after {
+    bottom: 0;
+    left: 0;
+    border-bottom-width: 2px;
+    border-left-width: 2px;
+  }
+  .hud-corp { --hud: rgb(var(--corp-400)); }
+  .hud-runner { --hud: rgb(var(--runner-500)); }
+  .hud-signal { --hud: rgb(var(--signal-400)); }
+
+  /* Chromatic split title, the Night City glitch look */
+  .glitch-title {
+    color: rgb(var(--signal-400));
+    text-shadow:
+      -2px 0 rgb(var(--runner-500) / 0.85),
+      2px 0 rgb(var(--corp-400) / 0.7),
+      0 0 18px rgb(var(--signal-400) / 0.35);
+  }
+}
+
+/* Blinking block cursor at the end of the terminal log */
+@keyframes terminal-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.terminal-cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1em;
+  vertical-align: -0.15em;
+  background: rgb(var(--terminal));
+  box-shadow: 0 0 6px rgb(var(--terminal) / 0.6);
+  animation: terminal-blink 1.1s step-end infinite;
+}
+.terminal-text {
+  color: rgb(var(--terminal) / 0.85);
+  text-shadow: var(--glow) rgb(var(--terminal) / 0.35);
 }
 
 /* Custom Cyberpunk Scrollbar */
@@ -17,30 +242,29 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0d1117;
+  background: rgb(var(--bg-deep));
 }
 ::-webkit-scrollbar-thumb {
-  background: #21262d;
-  border-radius: 3px;
+  background: rgb(var(--neutral-700));
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #00f0ff;
+  background: rgb(var(--signal-400));
 }
 
 /* Neon glow helper classes */
 .glow-cyan {
-  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+  box-shadow: 0 0 15px rgb(var(--corp-400) / 0.4);
 }
 .glow-pink {
-  box-shadow: 0 0 15px rgba(255, 0, 85, 0.4);
+  box-shadow: 0 0 15px rgb(var(--runner-500) / 0.4);
 }
 .glow-yellow {
-  box-shadow: 0 0 15px rgba(255, 230, 0, 0.4);
+  box-shadow: 0 0 15px rgb(var(--signal-400) / 0.4);
 }
 
 /* Rules keywords: hover for the glossary tooltip (see ui/glossary.ts) */
 .kw {
-  text-decoration: underline dotted rgba(251, 191, 36, 0.7);
+  text-decoration: underline dotted rgb(var(--signal-400) / 0.7);
   text-underline-offset: 3px;
   cursor: help;
 }
@@ -50,12 +274,12 @@
 
 /* Run highlights: the targeted server pulses pink, the ice the Runner is at glows amber */
 @keyframes run-target-pulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(255, 0, 85, 0.35); }
-  50% { box-shadow: 0 0 26px rgba(255, 0, 85, 0.7); }
+  0%, 100% { box-shadow: 0 0 10px rgb(var(--runner-500) / 0.35); }
+  50% { box-shadow: 0 0 26px rgb(var(--runner-500) / 0.7); }
 }
 @keyframes run-ice-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.9), 0 0 12px rgba(251, 191, 36, 0.4); }
-  50% { box-shadow: 0 0 0 2px rgba(251, 191, 36, 1), 0 0 26px rgba(251, 191, 36, 0.75); }
+  0%, 100% { box-shadow: 0 0 0 2px rgb(var(--signal-400) / 0.9), 0 0 12px rgb(var(--signal-400) / 0.4); }
+  50% { box-shadow: 0 0 0 2px rgb(var(--signal-400)), 0 0 26px rgb(var(--signal-400) / 0.75); }
 }
 .run-target {
   animation: run-target-pulse 1.6s ease-in-out infinite;
@@ -65,7 +289,8 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .run-target,
-  .run-ice {
+  .run-ice,
+  .terminal-cursor {
     animation: none;
   }
 }

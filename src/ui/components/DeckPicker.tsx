@@ -195,11 +195,11 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
                   key={s.deck.id}
                   onClick={() => select(s.deck.id)}
                   data-testid={`deck-${s.deck.id}`}
-                  className={`flex items-center gap-3 p-2.5 rounded-2xl border text-left transition-all ${
+                  className={`flex items-center gap-3 p-2.5 chamfer border text-left transition-all ${
                     isSelected
                       ? accent === 'cyan'
-                        ? 'border-cyan-400 bg-cyan-950/60 shadow-[0_0_12px_rgba(34,211,238,0.35)]'
-                        : 'border-pink-400 bg-pink-950/60 shadow-[0_0_12px_rgba(255,0,85,0.35)]'
+                        ? 'border-cyan-400 bg-cyan-950/60 shadow-[inset_0_0_18px_rgb(var(--corp-400)/0.3)]'
+                        : 'border-pink-400 bg-pink-950/60 shadow-[inset_0_0_18px_rgb(var(--runner-500)/0.3)]'
                       : 'border-slate-800 bg-slate-950/70 hover:border-slate-600'
                   }`}
                 >
@@ -263,8 +263,8 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
   };
 
   return (
-    <div className="min-h-screen bg-[#07080c] text-slate-100 font-mono flex flex-col items-center px-4 py-8">
-      <h1 className="font-cyber font-black tracking-widest text-xl sm:text-2xl bg-gradient-to-r from-cyber-neonCyan via-indigo-400 to-cyber-neonPink bg-clip-text text-transparent mb-1">
+    <div className="min-h-screen text-slate-100 font-mono flex flex-col items-center px-4 py-8">
+      <h1 className="font-cyber font-black tracking-widest text-2xl sm:text-4xl glitch-title mb-1">
         NETRUNNER // PROTOCOL
       </h1>
       <p className="text-xs text-slate-400 mb-6 text-center">
@@ -337,7 +337,7 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
         }}
         disabled={selectedProblems.length > 0}
         data-testid="start-game"
-        className="disabled:opacity-40 disabled:cursor-not-allowed mt-6 px-8 py-3 bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white font-bold rounded-2xl shadow-lg flex items-center gap-2"
+        className="disabled:opacity-40 disabled:cursor-not-allowed mt-6 px-8 py-3 bg-amber-400 hover:bg-amber-300 text-black font-cyber tracking-widest font-bold rounded-2xl shadow-lg flex items-center gap-2"
       >
         <Play className="w-4 h-4" /> Start game
       </button>

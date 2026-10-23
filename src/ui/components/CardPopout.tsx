@@ -70,8 +70,8 @@ export const CardPopout: React.FC<CardPopoutProps> = ({
         isHiddenSecured
           ? 'bg-slate-950/95 border-slate-700 shadow-slate-900/80 text-slate-300'
           : isCorp
-          ? 'bg-[#090e17]/95 border-cyan-500 shadow-[0_0_30px_rgba(0,240,255,0.25)] text-slate-100'
-          : 'bg-[#150912]/95 border-pink-500 shadow-[0_0_30px_rgba(255,0,85,0.25)] text-slate-100'
+          ? 'bg-cyan-950/95 border-cyan-500 shadow-[0_0_30px_rgb(var(--corp-400)/0.25)] text-slate-100'
+          : 'bg-pink-950/95 border-pink-500 shadow-[0_0_30px_rgb(var(--runner-500)/0.25)] text-slate-100'
       }`}
     >
       {/* Hidden Corp Card View for Runner */}

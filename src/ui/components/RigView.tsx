@@ -37,7 +37,7 @@ export const RigView: React.FC<RigViewProps> = ({
 }) => {
   return (
     // As on the table: programs in the front row (toward the Corp), then hardware, then resources
-    <div className="flex flex-col 2xl:flex-row gap-3 p-3 bg-slate-900/60 border border-slate-800 rounded-2xl shadow-lg">
+    <div className="flex flex-col 2xl:flex-row gap-3 p-3 bg-slate-900/60 border border-slate-800 chamfer-sm shadow-lg">
       {aside && <div className="flex flex-row gap-3 shrink-0 items-start">{aside}</div>}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 flex-1 min-w-0">
       {/* Programs (Icebreakers, Viruses) */}

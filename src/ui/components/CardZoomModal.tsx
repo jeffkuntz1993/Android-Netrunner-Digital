@@ -30,7 +30,7 @@ export const CardZoomModal: React.FC<CardZoomModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`relative max-w-2xl w-full bg-slate-950 border-2 rounded-2xl p-6 shadow-2xl flex flex-col md:flex-row gap-6 font-mono text-slate-100 ${
+        className={`relative max-w-2xl w-full bg-slate-950 border-2 chamfer p-6 shadow-2xl flex flex-col md:flex-row gap-6 font-mono text-slate-100 ${
           isCorp ? 'border-cyan-500 shadow-cyan-950/50' : 'border-pink-500 shadow-pink-950/50'
         }`}
       >

@@ -35,7 +35,7 @@ export const HandRow: React.FC<HandRowProps> = ({
   onInspect,
   discardedIds,
 }) => {
-  const glow = side === 'corp' ? 'rgba(0, 240, 255, 0.55)' : 'rgba(255, 0, 85, 0.55)';
+  const glow = side === 'corp' ? 'rgb(var(--corp-400) / 0.55)' : 'rgb(var(--runner-500) / 0.55)';
 
   return (
     <MotionConfig reducedMotion="user">

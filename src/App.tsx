@@ -346,15 +346,15 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
   const boardCardSize = cardScale === 'huge' ? 'lg' : cardScale === 'large' ? 'md' : 'sm';
 
   return (
-    <div className="min-h-screen bg-[#07080c] text-slate-100 flex flex-col font-mono selection:bg-cyber-neonCyan selection:text-black">
+    <div className="min-h-screen text-slate-100 flex flex-col font-mono selection:bg-cyber-neonYellow selection:text-black">
       {/* Top Header Bar */}
-      <header className="h-16 border-b border-slate-800 bg-slate-950/90 px-4 sm:px-6 flex items-center justify-between backdrop-blur-md sticky top-0 z-30 shadow-lg">
+      <header className="h-16 border-b border-amber-400/40 bg-slate-950/90 px-4 sm:px-6 flex items-center justify-between backdrop-blur-md sticky top-0 z-30 shadow-lg">
         <div className="flex items-center gap-3">
           <button
             onClick={leaveGame}
             data-testid="home-logo"
             title="Back to deck selection"
-            className="font-cyber font-black tracking-widest text-base sm:text-lg bg-gradient-to-r from-cyber-neonCyan via-indigo-400 to-cyber-neonPink bg-clip-text text-transparent hover:brightness-125 transition"
+            className="font-cyber font-black tracking-widest text-base sm:text-lg glitch-title hover:brightness-125 transition"
           >
             NETRUNNER // PROTOCOL
           </button>
@@ -507,7 +507,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
       <main className="flex-1 min-w-0 flex flex-col gap-3 overflow-hidden">
         {/* Victory Banner */}
         {winner && (
-          <div className="p-5 bg-gradient-to-r from-amber-950/80 to-purple-950/80 border-2 border-amber-500 rounded-2xl flex items-center justify-between shadow-2xl">
+          <div className="p-5 bg-gradient-to-r from-amber-950/80 to-pink-950/80 border-2 border-amber-500 chamfer flex items-center justify-between shadow-2xl">
             <div>
               <h2 className="text-xl font-cyber font-black text-amber-400">
                 GAME OVER // {winner.toUpperCase()} VICTORIOUS
@@ -532,7 +532,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
         )}
 
         {/* CORP SECTOR (TOP HALF) */}
-        <section id="corp-board" className="bg-slate-950/60 border border-cyan-950/80 rounded-3xl p-3 sm:p-4 shadow-xl relative backdrop-blur-sm w-full min-w-0">
+        <section id="corp-board" className="bg-slate-950/60 border border-cyan-900/80 chamfer hud-frame hud-corp p-3 sm:p-4 shadow-xl relative backdrop-blur-sm w-full min-w-0">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-2 pb-2 border-b border-cyan-950">
             {/* Identity & Header */}
             <div className="flex items-center gap-3">
@@ -584,7 +584,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
 
           {/* Dedicated Corp Action Bar (Always fully on-screen) */}
           {activePlayer === 'corp' && corpCanAct && (
-            <div className="flex items-center justify-between flex-wrap gap-3 p-3 bg-cyan-950/40 border border-cyan-800/80 rounded-2xl mb-4 shadow-inner">
+            <div className="flex items-center justify-between flex-wrap gap-3 p-3 bg-cyan-950/40 border border-cyan-800/80 chamfer-sm mb-4 shadow-inner">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold text-cyan-400 font-mono uppercase mr-1">
                   Corp Actions ({corp.clicks} Clicks):
@@ -726,7 +726,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
         </section>
 
         {/* RUNNER SECTOR (BOTTOM HALF) */}
-        <section id="runner-board" className="bg-slate-950/60 border border-pink-950/80 rounded-3xl p-3 sm:p-4 shadow-xl relative backdrop-blur-sm w-full min-w-0">
+        <section id="runner-board" className="bg-slate-950/60 border border-pink-900/80 chamfer hud-frame hud-runner p-3 sm:p-4 shadow-xl relative backdrop-blur-sm w-full min-w-0">
           <div className="flex flex-col xl:flex-row gap-3 mb-3 min-w-0">
           {/* Runner Rig (Installed Programs, Hardware, Resources) */}
           <div className="flex-1 min-w-0">
@@ -776,7 +776,7 @@ function Game({ config, onNewGame, onRematch }: { config: GameConfig; onNewGame:
 
           {/* Dedicated Runner Action Bar (Always fully on-screen) */}
           {activePlayer === 'runner' && runnerCanAct && (
-            <div className="flex items-center justify-between flex-wrap gap-3 p-3 bg-pink-950/40 border border-pink-800/80 rounded-2xl mb-4 shadow-inner">
+            <div className="flex items-center justify-between flex-wrap gap-3 p-3 bg-pink-950/40 border border-pink-800/80 chamfer-sm mb-4 shadow-inner">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold text-pink-400 font-mono uppercase mr-1">
                   Runner Actions ({runner.clicks} Clicks):

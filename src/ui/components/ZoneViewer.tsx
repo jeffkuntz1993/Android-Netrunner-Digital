@@ -30,7 +30,7 @@ export const ZoneViewer: React.FC<ZoneViewerProps> = ({ title, groups, canPeek, 
     >
       <div
         onClick={e => e.stopPropagation()}
-        className="w-full max-w-5xl max-h-full overflow-y-auto bg-slate-950 border-2 border-slate-700 rounded-2xl p-5 shadow-2xl font-mono text-slate-100"
+        className="w-full max-w-5xl max-h-full overflow-y-auto bg-slate-950 border-2 border-slate-700 chamfer p-5 shadow-2xl font-mono text-slate-100"
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-cyber font-bold tracking-wider text-sm">{title}</h3>

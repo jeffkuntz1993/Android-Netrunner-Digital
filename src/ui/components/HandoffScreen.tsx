@@ -20,12 +20,12 @@ const REASON: Record<HandoffScreenProps['reason'], string> = {
 export const HandoffScreen: React.FC<HandoffScreenProps> = ({ to, reason, onReady }) => {
   const isCorp = to === 'corp';
   return (
-    <div className="fixed inset-0 z-[60] bg-[#05060a] flex items-center justify-center p-6" data-testid="handoff">
+    <div className="fixed inset-0 z-[60] bg-cyber-darker flex items-center justify-center p-6" data-testid="handoff">
       <motion.div
         initial={{ opacity: 0, scale: 0.94 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.25 }}
-        className={`max-w-md w-full text-center border-2 rounded-3xl p-8 font-mono bg-slate-950 shadow-2xl ${
+        className={`max-w-md w-full text-center border-2 chamfer p-8 font-mono bg-slate-950 shadow-2xl ${
           isCorp ? 'border-cyan-500 shadow-cyan-950/60' : 'border-pink-500 shadow-pink-950/60'
         }`}
       >

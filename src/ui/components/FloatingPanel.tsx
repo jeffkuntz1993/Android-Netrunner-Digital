@@ -155,7 +155,7 @@ export const FloatingPanel: React.FC<FloatingPanelProps> = ({
     <div
       ref={ref}
       style={style}
-      className={`fixed ${zIndexClass} ${placement} ${widthClass} max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] flex flex-col bg-slate-950/95 backdrop-blur-xl border-2 rounded-2xl shadow-2xl font-mono ${accentClass}`}
+      className={`fixed ${zIndexClass} ${placement} ${widthClass} max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] flex flex-col bg-slate-950/95 backdrop-blur-xl border-2 chamfer shadow-2xl font-mono ${accentClass}`}
       data-testid={testId}
       role={role}
       aria-labelledby={ariaLabelledBy}
