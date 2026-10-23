@@ -1,0 +1,15 @@
+// Cloudflare Workers config: the built site in dist/ served as static
+// assets. Kept in the repo so production (wrangler deploy) and branch
+// previews (wrangler versions upload or wrangler preview) build the same way.
+{
+  "name": "android-netrunner-digital",
+  "compatibility_date": "2026-10-19",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "previews": {}
+}
