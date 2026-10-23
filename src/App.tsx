@@ -56,6 +56,7 @@ import {
 import { CreditIcon, Credits, MuIcon } from './ui/components/CreditIcon';
 import { Keyword } from './ui/components/Keyword';
 import { labelKeyword } from './ui/glossary';
+import { showAlert, showConfirm } from './ui/components/Dialog';
 
 const VIEW_MODE_KEY = 'netrunner.viewMode';
 const AI_DELAY_MS = 650;
@@ -271,7 +272,7 @@ function Game({
       setGameState(nextState);
       setSelectedCardId(null);
     } catch (err: any) {
-      alert(err.message || 'Illegal action');
+      void showAlert(err.message || 'Illegal action', { title: 'Action blocked' });
     }
   };
 
@@ -345,16 +346,29 @@ function Game({
 
   const resetGame = onNewGame;
   // Back to the deck picker; a game still in progress is lost, so ask first
-  const leaveGame = () => {
-    if (!gameState.winner && !window.confirm('Leave this game and go back to deck selection? The game in progress will be lost.')) return;
+  const leaveGame = async () => {
+    if (
+      !gameState.winner &&
+      !(await showConfirm('Leave this game and go back to deck selection? The game in progress will be lost.', {
+        title: 'Leave game',
+        confirmLabel: 'Leave',
+        danger: true,
+      }))
+    )
+      return;
     onNewGame();
   };
   // Concede: against the computer the person concedes; in two-player games the
   // side holding the device (pass and play) or the player whose turn it is
   const concedingSide: SideCode = humanSide ?? (viewMode === 'hotseat' ? hotseatSide : gameState.activePlayer);
-  const concede = () => {
+  const concede = async () => {
     const name = concedingSide === 'corp' ? 'Corp' : 'Runner';
-    if (!window.confirm(`Forfeit this game? The ${name} concedes and the ${concedingSide === 'corp' ? 'Runner' : 'Corp'} wins.`)) return;
+    const ok = await showConfirm(`Forfeit this game? The ${name} concedes and the ${concedingSide === 'corp' ? 'Runner' : 'Corp'} wins.`, {
+      title: 'Forfeit',
+      confirmLabel: 'Forfeit',
+      danger: true,
+    });
+    if (!ok) return;
     handleAction({ type: 'CONCEDE', player: concedingSide });
   };
 

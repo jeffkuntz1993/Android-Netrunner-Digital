@@ -7,6 +7,7 @@ import { DeckBuilder } from './DeckBuilder';
 import { ImportDeckModal } from './ImportDeckModal';
 import type { Difficulty } from '../../ai';
 import { CheckCircle2, AlertTriangle, Play, Plus, Pencil, Copy, Trash2, Dices, FileDown } from 'lucide-react';
+import { showConfirm } from './Dialog';
 
 interface DeckPickerProps {
   initialCorpDeckId: string;
@@ -117,8 +118,8 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
     selectFor(deck.side)(deck.id);
     setEditing(null);
   };
-  const deleteDeck = (deck: DeckList) => {
-    if (!window.confirm(`Delete "${deck.name}"? This cannot be undone.`)) return;
+  const deleteDeck = async (deck: DeckList) => {
+    if (!(await showConfirm(`Delete "${deck.name}"? This cannot be undone.`, { title: 'Delete deck', confirmLabel: 'Delete', danger: true }))) return;
     storeDecks(customDecks.filter(d => d.id !== deck.id));
     const fallback = DECKS.find(d => d.side === deck.side)!.id;
     if ((deck.side === 'corp' ? corpId : runnerId) === deck.id) selectFor(deck.side)(fallback);
