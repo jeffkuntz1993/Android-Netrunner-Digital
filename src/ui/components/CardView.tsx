@@ -53,10 +53,13 @@ const CardFace: React.FC<CardViewProps> = ({
     'fit-sm': 'card-fit-sm',
   }[size];
 
-  // On the table, hover fills the zoom panel; elsewhere it opens the popout
+  // Hover opens the text popout beside the card; on the table it also fills the zoom panel
   const zoom = useZoom();
   const hidden = isFaceDown && !canPeek;
-  const handleMouseEnter = () => (zoom ? zoom.show({ card, hidden }) : setShowTooltip(true));
+  const handleMouseEnter = () => {
+    zoom?.show({ card, hidden });
+    setShowTooltip(true);
+  };
   const handleMouseLeave = () => setShowTooltip(false);
 
   // When face-down and viewer cannot peek (e.g. Runner looking at Corp ICE/Root)
