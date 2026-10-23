@@ -4,8 +4,9 @@ import { DECKS, DeckList, deckCodes, pickRandomDeck, randomDeckPool } from '../.
 import { ALL_CARDS, getCardImageUrl } from '../../data/cards';
 import { loadCustomDecks, newCustomDeckId, saveCustomDecks } from '../../data/customDecks';
 import { DeckBuilder } from './DeckBuilder';
+import { ImportDeckModal } from './ImportDeckModal';
 import type { Difficulty } from '../../ai';
-import { CheckCircle2, AlertTriangle, Play, Plus, Pencil, Copy, Trash2, Dices } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Play, Plus, Pencil, Copy, Trash2, Dices, FileDown } from 'lucide-react';
 
 interface DeckPickerProps {
   initialCorpDeckId: string;
@@ -81,6 +82,7 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
   const [customDecks, setCustomDecks] = useState<DeckList[]>(loadCustomDecks);
   const [storageFailed, setStorageFailed] = useState(false);
   const [editing, setEditing] = useState<DeckList | null>(null);
+  const [importing, setImporting] = useState(false);
   const summaries = useMemo(() => [...DECKS, ...customDecks].map(summarize), [customDecks]);
   const [corpId, setCorpId] = useState(initialCorpDeckId);
   const [runnerId, setRunnerId] = useState(initialRunnerDeckId);
@@ -270,6 +272,27 @@ export const DeckPicker: React.FC<DeckPickerProps> = ({ initialCorpDeckId, initi
       <p className="text-xs text-slate-400 mb-6 text-center">
         Choose a deck for each side. The starter decks are the best place to begin. Build your own with New deck, or copy any deck to tweak it.
       </p>
+      <button
+        onClick={() => setImporting(true)}
+        data-testid="import-deck"
+        title="Import a deck from a NetrunnerDB export, file or link"
+        className="mb-6 -mt-3 px-3 py-1.5 rounded-lg border border-indigo-500/70 hover:border-indigo-300 bg-indigo-950/50 text-xs flex items-center gap-1.5"
+      >
+        <FileDown className="w-3.5 h-3.5" /> Import from NetrunnerDB
+      </button>
+      {importing && (
+        <ImportDeckModal
+          onClose={() => setImporting(false)}
+          onSave={deck => {
+            setImporting(false);
+            saveDeck(deck);
+          }}
+          onEdit={deck => {
+            setImporting(false);
+            setEditing(deck);
+          }}
+        />
+      )}
       {storageFailed && (
         <p className="text-xs text-amber-400 mb-4">This browser would not save your decks, so they will be lost when the page closes.</p>
       )}
